@@ -1,0 +1,4 @@
+#pragma once
+
+#cmakedefine TELLER_BOARD "@TELLER_BOARD@"
+#cmakedefine TELLER_BOARD_KAKUTEH7V2

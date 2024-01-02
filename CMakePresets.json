@@ -1,0 +1,32 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 21,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "default",
+            "displayName": "Default Config",
+            "description": "Default build using Ninja generator",
+            "generator": "Ninja",
+            "toolchainFile": "etc/cmake/stm32_gcc.cmake",
+            "binaryDir": "${sourceDir}/build/default",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": {
+                    "type": "string",
+                    "value": "Debug"
+                },
+                "TELLER_BOARD": {
+                    "type": "string",
+                    "value": "KakuteH7v2"
+                },
+                "STM32_TARGET_TRIPLET": {
+                    "type": "string",
+                    "value": "arm-none-eabi"
+                }
+            }
+        }
+    ]
+}
