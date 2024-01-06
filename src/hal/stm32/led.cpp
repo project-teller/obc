@@ -19,6 +19,12 @@ const led_config_t led_config[NUM_LEDS] = {
     { GPIOC, GPIO_PIN_2, /* inverted = */ true }, /* Heartbeat LED */
     { 0 }, /* Error LED */
 };
+#elif defined TELLER_BOARD_NUCLEO144
+// STM32H743ZI Nucleo-144 dev board, for testing purposes
+const led_config_t led_config[NUM_LEDS] = {
+    { GPIOE, GPIO_PIN_1 }, /* Heartbeat LED */
+    { GPIOB, GPIO_PIN_14 }, /* Error LED */
+};
 #elif defined STM32F1
 // STM32VL-Discovery green led - PC9
 const led_config_t led_config[NUM_LEDS] = {
@@ -29,7 +35,7 @@ const led_config_t led_config[NUM_LEDS] = {
 // STM32H743ZI blue LED
 const led_config_t led_config[NUM_LEDS] = {
     { GPIOB, GPIO_PIN_7 }, /* Heartbeat LED */
-    { 0 }, /* Error LED */
+    { GPIOB, GPIO_PIN_14 }, /* Error LED */
 };
 #elif defined STM32F4
 // STM32F4-Discovery green led - PD12

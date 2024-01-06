@@ -1,6 +1,9 @@
 # Map TELLER_BOARD to TARGET_MCU
 if(TELLER_BOARD STREQUAL "KakuteH7v2")
     set(TARGET_MCU "STM32H7")
+elseif(TELLER_BOARD STREQUAL "Nucleo144")
+	set(TARGET_MCU "STM32H7")
+	set(OPENOCD_BOARD "st_nucleo_h743zi")
 else()
 	set(TARGET_MCU "${TELLER_BOARD}")
 endif()
@@ -107,6 +110,9 @@ stm32_generate_hex_file(${TARGET_NAME})
 get_target_property(FIRMWARE_FILE ${TARGET_NAME} OUTPUT_BINARY_NAME)
 set(FIRMWARE_FILE ${CMAKE_CURRENT_BINARY_DIR}/${FIRMWARE_FILE})
 
+get_target_property(FIRMWARE_HEX_FILE ${TARGET_NAME} OUTPUT_HEX_NAME)
+set(FIRMWARE_HEX_FILE ${CMAKE_CURRENT_BINARY_DIR}/${FIRMWARE_HEX_FILE})
+
 ################################################################################
 # Set up simulation if the board supports simulation in qemu
 ################################################################################
@@ -131,4 +137,23 @@ if(SIMULATOR_COMMAND)
 		USES_TERMINAL
 	)
 	add_dependencies(simulate ${TARGET_NAME})
+endif()
+
+################################################################################
+# Set up programming target if we know how to program the board with OpenOCD
+################################################################################
+
+if(OPENOCD_PROGRAM AND OPENOCD_BOARD)
+	set(OPENOCD_ARGS
+		-f board/${OPENOCD_BOARD}.cfg
+		-c "program ${FIRMWARE_HEX_FILE} verify reset exit"
+	)
+	add_custom_target(
+		upload
+		COMMAND ${OPENOCD_PROGRAM} ${OPENOCD_ARGS}
+		COMMENT "Uploading firmware to board..."
+		VERBATIM
+		USES_TERMINAL
+	)
+	add_dependencies(upload ${TARGET_NAME})
 endif()

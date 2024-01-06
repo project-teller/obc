@@ -120,7 +120,7 @@ endfunction()
 # This function adds post-build generation of the Intel hex file from the target ELF.
 # The generated file will be placed in the same directory as the ELF file.
 function(stm32_generate_hex_file TARGET)
-    _stm32_generate_file(${TARGET} "hex" "ihex" "")
+    _stm32_generate_file(${TARGET} "hex" "ihex" OUTPUT_HEX_NAME)
 endfunction()
 
 # This function takes FAMILY (e.g. L4) and DEVICE (e.g. L496VG) to output TYPE (e.g. L496xx)

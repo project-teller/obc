@@ -20,7 +20,7 @@
                 },
                 "TELLER_BOARD": {
                     "type": "string",
-                    "value": "KakuteH7v2"
+                    "value": "Nucleo144"
                 },
                 "STM32_TARGET_TRIPLET": {
                     "type": "string",

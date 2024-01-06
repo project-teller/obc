@@ -23,6 +23,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 include(${CMAKE_TOOLCHAIN_FILE})
 set(FETCHCONTENT_QUIET FALSE)
 
+# Find OpenOCD for programming
+find_program(OPENOCD_PROGRAM openocd)
+
 # Traverse subdirectories
 add_subdirectory(lib)
 add_subdirectory(src)

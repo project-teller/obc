@@ -2,3 +2,4 @@
 
 #cmakedefine TELLER_BOARD "@TELLER_BOARD@"
 #cmakedefine TELLER_BOARD_KAKUTEH7V2
+#cmakedefine TELLER_BOARD_NUCLEO144
