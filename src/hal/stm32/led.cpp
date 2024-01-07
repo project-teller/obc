@@ -4,8 +4,10 @@
 #include "hal/led.h"
 
 #include "stm32_hal.h"
+#include "utils.h"
 
 using namespace teller::hal::led;
+using namespace teller::hal::utils;
 
 typedef struct {
     GPIO_TypeDef* port;
@@ -98,53 +100,7 @@ static void configure_led(const led_config_t* cfg)
     GPIO_Config.Speed = GPIO_SPEED_FREQ_HIGH;
     GPIO_Config.Pin = cfg->pin;
 
-#ifdef GPIOA
-    if (cfg->port == GPIOA) {
-        __HAL_RCC_GPIOA_CLK_ENABLE();
-    }
-#endif
-
-#ifdef GPIOB
-    if (cfg->port == GPIOB) {
-        __HAL_RCC_GPIOB_CLK_ENABLE();
-    }
-#endif
-
-#ifdef GPIOC
-    if (cfg->port == GPIOC) {
-        __HAL_RCC_GPIOC_CLK_ENABLE();
-    }
-#endif
-
-#ifdef GPIOD
-    if (cfg->port == GPIOD) {
-        __HAL_RCC_GPIOD_CLK_ENABLE();
-    }
-#endif
-
-#ifdef GPIOE
-    if (cfg->port == GPIOE) {
-        __HAL_RCC_GPIOE_CLK_ENABLE();
-    }
-#endif
-
-#ifdef GPIOF
-    if (cfg->port == GPIOF) {
-        __HAL_RCC_GPIOF_CLK_ENABLE();
-    }
-#endif
-
-#ifdef GPIOG
-    if (cfg->port == GPIOG) {
-        __HAL_RCC_GPIOG_CLK_ENABLE();
-    }
-#endif
-
-#ifdef GPIOH
-    if (cfg->port == GPIOH) {
-        __HAL_RCC_GPIOH_CLK_ENABLE();
-    }
-#endif
+    enable_gpio_clocks_for_port(cfg->port);
 
     HAL_GPIO_Init(cfg->port, &GPIO_Config);
 }

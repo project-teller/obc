@@ -73,6 +73,7 @@ add_executable(
 	hal/stm32/led.cpp
 	hal/stm32/system.cpp
 	hal/stm32/uart.cpp
+	hal/stm32/utils.cpp
 
 	tasks/blinker.cpp
 	tasks/serial.cpp
