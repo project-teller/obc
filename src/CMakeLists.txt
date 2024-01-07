@@ -63,6 +63,7 @@ find_package(FreeRTOS COMPONENTS ${FREERTOS_COMP_LIST} REQUIRED)
 # Set target name
 set(TARGET_NAME teller-obc)
 
+# Specify source files, include paths and libraries to link to
 add_executable(
 	${TARGET_NAME}
 
@@ -101,6 +102,16 @@ target_compile_definitions(
 	${TARGET_NAME} PRIVATE
 	USE_CMSIS_RTOS_V2
 	CMSIS_RTOS_V2_DEVICE_HEADER="${CMSIS_RTOS_V2_DEVICE_HEADER}"
+)
+
+# Do not use C++ exceptions and RTTI, but ask for all compiler warnings
+set_target_properties(
+	${TARGET_NAME}
+	PROPERTIES
+	CXX_RTTI OFF
+	CXX_EXCEPTIONS OFF
+	CXX_WARNINGS ALL
+	CXX_WARNINGS_AS_ERRORS ON
 )
 
 stm32_print_size_of_target(${TARGET_NAME})

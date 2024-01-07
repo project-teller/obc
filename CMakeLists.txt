@@ -15,8 +15,13 @@ project(
   LANGUAGES CXX C ASM
 )
 
-# Specify the C++ standard
-set(CMAKE_CXX_STANDARD 11)
+# Include helper functions for hiding differences between compilers
+include(compilers)
+
+# Specify the C++ standard.
+# C++17 required because of nested namespaces.
+# C++20 required because of designated initializers.
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Prepare for fetching STM32Cube, CMSIS and HAL as needed
