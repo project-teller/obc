@@ -1,4 +1,4 @@
-#include "blinker.h"
+#include "tasks/blinker.h"
 #include "hal/led.h"
 
 using namespace teller::hal;
@@ -8,7 +8,7 @@ const osThreadAttr_t teller::tasks::blinkTaskAttr = {
     .priority = osPriorityLow,
 };
 
-void teller::tasks::blinkTask(void* arg)
+__NO_RETURN void teller::tasks::blinkTask(void* arg)
 {
     for (;;) {
         led::set(led::HEARTBEAT);

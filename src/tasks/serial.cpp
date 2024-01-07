@@ -1,4 +1,4 @@
-#include "serial.h"
+#include "tasks/serial.h"
 #include "hal/uart.h"
 
 using namespace teller::hal;
@@ -8,7 +8,7 @@ const osThreadAttr_t teller::tasks::serialTaskAttr = {
     .priority = osPriorityLow,
 };
 
-void teller::tasks::serialTask(void* arg)
+__NO_RETURN void teller::tasks::serialTask(void* arg)
 {
     for (;;) {
         uart::write(uart::TELEMETRY, "hello\n");
