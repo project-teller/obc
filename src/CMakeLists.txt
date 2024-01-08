@@ -75,6 +75,8 @@ add_executable(
 	hal/stm32/uart.cpp
 	hal/stm32/utils.cpp
 
+	modules/errors.cpp
+
 	tasks/blinker.cpp
 	tasks/serial.cpp
 )
