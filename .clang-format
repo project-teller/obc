@@ -1,1 +1,4 @@
 BasedOnStyle: WebKit
+---
+Language: Json
+IndentWidth: 2
