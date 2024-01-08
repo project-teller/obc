@@ -15,7 +15,7 @@ set(TELLER_BOARD_${TELLER_BOARD_UPPERCASE} 1)
 configure_file(config.h.in config.h)
 
 # Figure out which components to link to
-set(HAL_COMP_LIST RCC GPIO UART CORTEX)
+set(HAL_COMP_LIST RCC GPIO UART CORTEX DMA)
 set(CMSIS_COMP_LIST RTOS_V2)
 set(FREERTOS_COMP_LIST "")
 
@@ -95,7 +95,9 @@ target_link_libraries(
 	${HAL_NAMESPACE}::RCC
 	${HAL_NAMESPACE}::RCCEx
 	${HAL_NAMESPACE}::GPIO
+	${HAL_NAMESPACE}::DMA
 	${HAL_NAMESPACE}::UART
+	${HAL_NAMESPACE}::UARTEx
 	${HAL_NAMESPACE}::CORTEX
 	CMSIS::${TARGET_MCU_CMSIS_MODULE}
 	STM32::NoSys
@@ -162,6 +164,18 @@ if(OPENOCD_PROGRAM AND OPENOCD_BOARD)
 		-f board/${OPENOCD_BOARD}.cfg
 		-c "program ${FIRMWARE_HEX_FILE} verify reset exit"
 	)
+
+    get_target_property(TARGET_OUTPUT_NAME ${TARGET_NAME} OUTPUT_NAME)
+    if(TARGET_OUTPUT_NAME)
+        set(TARGET_OUTPUT_NAME "${TARGET_OUTPUT_NAME}.elf")
+    else()
+        set(TARGET_OUTPUT_NAME "${TARGET_NAME}.elf")
+    endif()
+	set(DEBUG_ARGS
+		board/${OPENOCD_BOARD}.cfg
+		${TARGET_OUTPUT_NAME}
+	)
+
 	add_custom_target(
 		upload
 		COMMAND ${OPENOCD_PROGRAM} ${OPENOCD_ARGS}
@@ -170,4 +184,13 @@ if(OPENOCD_PROGRAM AND OPENOCD_BOARD)
 		USES_TERMINAL
 	)
 	add_dependencies(upload ${TARGET_NAME})
+
+	add_custom_target(
+		debug
+		COMMAND ${CMAKE_SOURCE_DIR}/etc/scripts/debug.sh ${DEBUG_ARGS}
+		COMMENT "Running debugger for firmware to board..."
+		VERBATIM
+		USES_TERMINAL
+	)
+	add_dependencies(debug upload)
 endif()

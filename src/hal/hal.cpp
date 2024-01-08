@@ -13,7 +13,7 @@ bool teller::hal::init()
     system::init();
     led::init();
 
-    // success &= uart::init();
+    success &= uart::init();
 
     return success;
 }
