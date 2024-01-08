@@ -8,8 +8,8 @@
   "configurePresets": [
     {
       "name": "default",
-      "displayName": "Default Config",
-      "description": "Default build using Ninja generator",
+      "displayName": "Build (STM32-H743ZI Nucleo-144)",
+      "description": "Build the firmware for STM32-H743ZI Nucleo-144",
       "generator": "Ninja",
       "toolchainFile": "etc/cmake/stm32_gcc.cmake",
       "binaryDir": "${sourceDir}/build/default",
@@ -31,11 +31,12 @@
   ],
   "buildPresets": [
     {
-      "name": "default",
-      "displayName": "Default Config",
+      "name": "upload",
+      "displayName": "Upload firmware (STM32-H743ZI Nucleo-144)",
+      "description": "Upload built firmware with openocd",
       "configurePreset": "default",
       "targets": [
-        "program"
+        "upload"
       ]
     }
   ]
