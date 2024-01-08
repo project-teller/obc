@@ -100,7 +100,7 @@ static void configure_led(const led_config_t* cfg)
     GPIO_Config.Speed = GPIO_SPEED_FREQ_HIGH;
     GPIO_Config.Pin = cfg->pin;
 
-    enable_gpio_clocks_for_port(cfg->port);
+    enableGPIOClocksForPort(cfg->port);
 
     HAL_GPIO_Init(cfg->port, &GPIO_Config);
 }
