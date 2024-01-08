@@ -5,6 +5,7 @@ using namespace teller::hal;
 
 const osThreadAttr_t teller::tasks::serialTaskAttr = {
     .name = "serial",
+    .stack_size = 1024,
     .priority = osPriorityLow,
 };
 
