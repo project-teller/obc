@@ -6,6 +6,7 @@
 #include "modules/errors.h"
 #include "tasks/blinker.h"
 #include "tasks/serial.h"
+#include "tasks/supervisor.h"
 
 int main(void)
 {
@@ -23,6 +24,7 @@ int main(void)
     if (inited) {
         osThreadNew(teller::tasks::blinkTask, NULL, &teller::tasks::blinkTaskAttr);
         osThreadNew(teller::tasks::serialTask, NULL, &teller::tasks::serialTaskAttr);
+        osThreadNew(teller::tasks::supervisorTask, NULL, &teller::tasks::supervisorTaskAttr);
     } else {
         teller::errors::setError(teller::errors::SYSTEM_INIT_ERROR);
     }

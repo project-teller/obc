@@ -1,0 +1,23 @@
+#include "hal/watchdog.h"
+
+#include "stm32_hal.h"
+
+IWDG_HandleTypeDef wdg;
+
+void teller::hal::watchdog::init()
+{
+    /* Watchdog clock runs at 32 kHz. Setting the prescaler to 32 will make the
+     * watchdog counter count down by 1000/s so we have a granularity of 1 msec */
+
+    wdg.Instance = IWDG1;
+    wdg.Init.Prescaler = IWDG_PRESCALER_32;
+    wdg.Init.Reload = 3000; /* ticks, but also msec */
+    wdg.Init.Window = 3000;
+
+    HAL_IWDG_Init(&wdg);
+}
+
+void teller::hal::watchdog::reset()
+{
+    HAL_IWDG_Refresh(&wdg);
+}

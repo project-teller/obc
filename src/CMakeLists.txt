@@ -15,7 +15,7 @@ set(TELLER_BOARD_${TELLER_BOARD_UPPERCASE} 1)
 configure_file(config.h.in config.h)
 
 # Figure out which components to link to
-set(HAL_COMP_LIST RCC GPIO UART CORTEX DMA)
+set(HAL_COMP_LIST RCC GPIO UART CORTEX DMA IWDG)
 set(CMSIS_COMP_LIST RTOS_V2)
 set(FREERTOS_COMP_LIST "")
 
@@ -74,11 +74,13 @@ add_executable(
 	hal/stm32/system.cpp
 	hal/stm32/uart.cpp
 	hal/stm32/utils.cpp
+	hal/stm32/watchdog.cpp
 
 	modules/errors.cpp
 
 	tasks/blinker.cpp
 	tasks/serial.cpp
+	tasks/supervisor.cpp
 )
 target_include_directories(
 	${TARGET_NAME} PRIVATE
@@ -96,6 +98,7 @@ target_link_libraries(
 	${HAL_NAMESPACE}::RCCEx
 	${HAL_NAMESPACE}::GPIO
 	${HAL_NAMESPACE}::DMA
+	${HAL_NAMESPACE}::IWDG
 	${HAL_NAMESPACE}::UART
 	${HAL_NAMESPACE}::UARTEx
 	${HAL_NAMESPACE}::CORTEX
