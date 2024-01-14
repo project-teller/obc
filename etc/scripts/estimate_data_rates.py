@@ -19,7 +19,7 @@ LOG_RATES_HZ = {
     "compass": 10,
     "sun": 10,
     "gmm": 50,
-    "scm": 1
+    "scm": 50
 }
 
 LOG_RECORD_FORMATS = {
@@ -43,6 +43,7 @@ TELEM_RATES_HZ = {
 TELEM_RECORD_FORMATS = {
     # stuff not mentioned here is the same as for the log records
     "heartbeat": "<IBBBBH",  # timestamp, error code, voltage, temperature, modules present, module status bits (2 per module)
+    "time": "<II",   # timestamp, RTC state
 }
 
 MB = 1000 * 1000   # not 1024, intentional
@@ -111,7 +112,7 @@ for title, rates, records, estimate_duration in tests:
 
     print("## Data rates")
     print()
-    data_rate = calculate_data_rate(LOG_RATES_HZ, LOG_RECORD_FORMATS, details=True)
+    data_rate = calculate_data_rate(rates, records, details=True)
     print()
     print(f"Total data rate: {data_rate} bytes/sec")
     print()
