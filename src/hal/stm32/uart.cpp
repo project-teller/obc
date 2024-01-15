@@ -103,11 +103,6 @@ bool teller::hal::uart::write(uart_t index, const char* data)
     return write(index, reinterpret_cast<uint8_t*>(const_cast<char*>(data)), strlen(data));
 }
 
-bool teller::hal::uart::write(uart_t index, const std::string& data)
-{
-    return write(index, data.c_str());
-}
-
 /* ************************************************************************** */
 
 static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t* cfg)
@@ -160,7 +155,7 @@ static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t*
         goto cleanup;
     }
 
-    state->event = osEventFlagsNew(NULL);
+    state->event = osEventFlagsNew(nullptr);
     if (!state->event) {
         goto cleanup;
     }
@@ -195,7 +190,7 @@ static uart_phy_state_t* find_uart_phy_state(UART_HandleTypeDef* huart)
         }
     }
 
-    return NULL;
+    return nullptr;
 }
 
 /* Weakly linked function that is called by the STM32 HAL when a physical UART is

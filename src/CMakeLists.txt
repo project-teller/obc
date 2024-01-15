@@ -77,10 +77,14 @@ add_executable(
 	hal/stm32/watchdog.cpp
 
 	modules/errors.cpp
+	modules/telem.cpp
 
 	tasks/blinker.cpp
 	tasks/serial.cpp
 	tasks/supervisor.cpp
+	tasks/telem.cpp
+
+	utils/crc.c
 )
 target_include_directories(
 	${TARGET_NAME} PRIVATE

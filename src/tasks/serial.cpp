@@ -1,18 +1,19 @@
-#include "tasks/serial.h"
-#include "hal/uart.h"
+#include <cassert>
 
-using namespace teller::hal;
+#include "modules/telem.h"
+#include "tasks/serial.h"
+
+using namespace teller;
 
 const osThreadAttr_t teller::tasks::serialTaskAttr = {
     .name = "serial",
     .stack_size = 1024,
-    .priority = osPriorityLow,
+    .priority = osPriorityHigh,
 };
 
-__NO_RETURN void teller::tasks::serialTask(void* arg)
+void teller::tasks::serialTask(void* arg)
 {
-    for (;;) {
-        uart::write(uart::TELEMETRY, "hello\n");
-        osDelay(700);
+    while (true) {
+        telem::flushNext();
     }
 }

@@ -4,9 +4,11 @@
 
 #include "hal/hal.h"
 #include "modules/errors.h"
+#include "modules/telem.h"
 #include "tasks/blinker.h"
 #include "tasks/serial.h"
 #include "tasks/supervisor.h"
+#include "tasks/telem.h"
 
 int main(void)
 {
@@ -20,11 +22,14 @@ int main(void)
      * error LED won't work but at least we are still logging the errors */
     teller::errors::init();
 
+    inited &= teller::telem::init();
+
     /* The remaining tasks are started only if the HAL initialization was successful */
     if (inited) {
-        osThreadNew(teller::tasks::blinkTask, NULL, &teller::tasks::blinkTaskAttr);
-        osThreadNew(teller::tasks::serialTask, NULL, &teller::tasks::serialTaskAttr);
-        osThreadNew(teller::tasks::supervisorTask, NULL, &teller::tasks::supervisorTaskAttr);
+        osThreadNew(teller::tasks::blinkTask, nullptr, &teller::tasks::blinkTaskAttr);
+        osThreadNew(teller::tasks::serialTask, nullptr, &teller::tasks::serialTaskAttr);
+        osThreadNew(teller::tasks::supervisorTask, nullptr, &teller::tasks::supervisorTaskAttr);
+        osThreadNew(teller::tasks::telemetryTask, nullptr, &teller::tasks::telemetryTaskAttr);
     } else {
         teller::errors::setError(teller::errors::SYSTEM_INIT_ERROR);
     }
