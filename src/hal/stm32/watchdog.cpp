@@ -4,7 +4,13 @@
 
 IWDG_HandleTypeDef wdg;
 
-void teller::hal::watchdog::init()
+bool teller::hal::watchdog::init()
+{
+    /* TODO: check whether the previous reset was triggered by the watchdog */
+    return true;
+}
+
+void teller::hal::watchdog::configure_and_start()
 {
     /* Watchdog clock runs at 32 kHz. Setting the prescaler to 32 will make the
      * watchdog counter count down by 1000/s so we have a granularity of 1 msec */

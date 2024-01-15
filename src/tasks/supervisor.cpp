@@ -15,7 +15,7 @@ const osThreadAttr_t teller::tasks::supervisorTaskAttr = {
 
 __NO_RETURN void teller::tasks::supervisorTask(void* arg)
 {
-    teller::hal::watchdog::init();
+    watchdog::configure_and_start();
 
     // TODO: implement the guidelines outlined above; this is just a placeholder
     // for the time being

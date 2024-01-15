@@ -7,8 +7,19 @@ namespace teller::hal::watchdog {
  *
  * This function is called from the global HAL initialization function at
  * startup time.
+ *
+ * This function does \em not start the watchdog yet; call the \ref configure_and_start()
+ * function to do that.
  */
-void init(void);
+bool init(void);
+
+/**
+ * @brief Configures and starts the watchdog.
+ *
+ * After this function is called, the \ref reset() function of the watchdog must
+ * be called at regular intervals to prevent the system from resetting itself.
+ */
+void configure_and_start(void);
 
 /**
  * @brief Resets the hardware watchdog
