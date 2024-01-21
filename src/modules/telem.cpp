@@ -2,10 +2,10 @@
 #include <cmsis_os2.h>
 #include <cstring>
 
+#include "core/utils/crc.h"
 #include "hal/uart.h"
 #include "modules/errors.h"
 #include "modules/telem.h"
-#include "utils/crc.h"
 
 using namespace std;
 using namespace teller::hal;

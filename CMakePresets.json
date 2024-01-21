@@ -27,6 +27,23 @@
           "value": "arm-none-eabi"
         }
       }
+    },
+    {
+      "name": "test",
+      "displayName": "Test (host machine)",
+      "description": "Run unit tests on the host machine",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/test",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": {
+          "type": "string",
+          "value": "Debug"
+        },
+        "TELLER_BOARD": {
+          "type": "string",
+          "value": "POSIX"
+        }
+      }
     }
   ],
   "buildPresets": [
@@ -38,6 +55,21 @@
       "targets": [
         "upload"
       ]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "test",
+      "displayName": "Run unit tests (host machine)",
+      "description": "Run unit tests on the host machine",
+      "configurePreset": "test",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": true
+      }
     }
   ]
 }

@@ -4,6 +4,9 @@ if(TELLER_BOARD STREQUAL "KakuteH7v2")
 elseif(TELLER_BOARD STREQUAL "Nucleo144")
 	set(TARGET_MCU "STM32H7")
 	set(OPENOCD_BOARD "st_nucleo_h743zi")
+elseif(TELLER_BOARD STREQUAL "POSIX")
+	set(TARGET_MCU "POSIX")
+	set(SKIP_FIRMWARE YES)
 else()
 	set(TARGET_MCU "${TELLER_BOARD}")
 endif()
@@ -46,6 +49,7 @@ elseif(TARGET_MCU STREQUAL "STM32F4")
 	set(TARGET_MCU_FAMILY F4)
 	set(TARGET_MCU_FREERTOS_MODULE ARM_CM4F)
 	set(TARGET_MCU_CMSIS_MODULE STM32::F405RG)
+elseif(TARGET_MCU STREQUAL "POSIX")
 elseif(TARGET_MCU)
 	message(FATAL_ERROR "Unsupported target board: ${TARGET_MCU}")
 else()
@@ -53,12 +57,23 @@ else()
 endif()
 
 # Fetch STM32Cube, CMSIS and HAL
-stm32_fetch_cube(${TARGET_MCU_FAMILY})
+if(TARGET_MCU_FAMILY)
+	# We are compiling for a specific STM32 MCU so fetch all the dependencies
+	# related to this MCU
+	stm32_fetch_cube(${TARGET_MCU_FAMILY})
+else()
+	# We are compiling for POSIX so fetch CMSIS only
+	include(stm32/utilities)
+	stm32_fetch_cmsis()
+endif()
 
 # Find CMSIS, HAL and FreeRTOS
 find_package(CMSIS COMPONENTS ${CMSIS_COMP_LIST} REQUIRED)
 find_package(HAL COMPONENTS ${HAL_COMP_LIST} REQUIRED)
 find_package(FreeRTOS COMPONENTS ${FREERTOS_COMP_LIST} REQUIRED)
+
+# Create core library
+add_subdirectory(core)
 
 # Set target name
 set(TARGET_NAME teller-obc)
@@ -83,8 +98,6 @@ add_executable(
 	tasks/serial.cpp
 	tasks/supervisor.cpp
 	tasks/telem.cpp
-
-	utils/crc.c
 )
 target_include_directories(
 	${TARGET_NAME} PRIVATE
@@ -109,6 +122,7 @@ target_link_libraries(
 	CMSIS::${TARGET_MCU_CMSIS_MODULE}
 	STM32::NoSys
 	${CMSIS_NAMESPACE}::RTOS_V2
+	obccore
 )
 target_compile_definitions(
 	${TARGET_NAME} PRIVATE

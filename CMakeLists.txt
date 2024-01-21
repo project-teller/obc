@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.21)
+cmake_policy(SET CMP0135 NEW)
 
 # Add etc/cmake to CMake's search path so we can put our private stuff there
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/etc/cmake)
@@ -25,12 +26,22 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # Prepare for fetching STM32Cube, CMSIS and HAL as needed
-include(${CMAKE_TOOLCHAIN_FILE})
+if(CMAKE_TOOLCHAIN_FILE)
+  include(${CMAKE_TOOLCHAIN_FILE})
+endif()
 set(FETCHCONTENT_QUIET FALSE)
 
 # Find OpenOCD for programming
 find_program(OPENOCD_PROGRAM openocd)
 
+# Enable unit tests
+enable_testing()
+
 # Traverse subdirectories
 add_subdirectory(lib)
-add_subdirectory(src)
+if(TELLER_BOARD STREQUAL POSIX)
+  add_subdirectory(src/core)
+else()
+  add_subdirectory(src)
+endif()
+add_subdirectory(test)
