@@ -22,4 +22,9 @@ jobs:
         run: |
           cmake . --preset test -B build
           cmake --build build
-          ctest --test-dir build
+          ctest --test-dir build --output-junit report.xml
+
+      - uses: test-summary/action@v2
+        with:
+          paths: "build/report.xml"
+          show: "all"
