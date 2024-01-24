@@ -10,6 +10,7 @@
       "name": "default",
       "displayName": "Build (STM32-H743ZI Nucleo-144)",
       "description": "Build the firmware for STM32-H743ZI Nucleo-144",
+      "generator": "Ninja",
       "toolchainFile": "etc/cmake/stm32_gcc.cmake",
       "binaryDir": "${sourceDir}/build/default",
       "cacheVariables": {
@@ -31,6 +32,7 @@
       "name": "test",
       "displayName": "Test (host machine)",
       "description": "Run unit tests on the host machine",
+      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/test",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": {
