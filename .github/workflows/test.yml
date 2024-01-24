@@ -1,0 +1,21 @@
+name: Run unit tests
+
+on:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/cache@v4
+        with:
+          path: build/_deps
+          key: v1-${{ runner.os }}-tests
+
+      - name: Build and run tests
+        run: |
+          cmake . --preset test -B build
+          cmake --build build
+          ctest --test-dir build
