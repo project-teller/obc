@@ -11,7 +11,7 @@ namespace teller::hal {
  *
  * @return whether the initialization was successful for all subsystems.
  */
-bool init(void);
+[[nodiscard]] bool init(void);
 
 /**
  * @brief Notifies the hardware abstraction layer about fatal errors.

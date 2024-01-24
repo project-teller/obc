@@ -19,7 +19,7 @@ typedef enum {
  *
  * @return whether the initialization was successful
  */
-bool init(void);
+[[nodiscard]] bool init(void);
 
 bool write(uart_t index, std::uint8_t* data, std::uint16_t size);
 bool write(uart_t index, const char* data);

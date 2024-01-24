@@ -7,7 +7,3 @@
 #else
 #include "hal/stm32/mutex.hpp"
 #endif
-
-namespace teller::hal::system {
-
-}

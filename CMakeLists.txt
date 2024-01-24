@@ -20,7 +20,7 @@ project(
 include(compilers)
 
 # Specify the C++ standard.
-# C++17 required because of nested namespaces.
+# C++17 required because of nested namespaces and [[nodiscard]].
 # C++20 required because of designated initializers.
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)

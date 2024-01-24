@@ -11,7 +11,7 @@ namespace teller::hal::watchdog {
  * This function does \em not start the watchdog yet; call the \ref configure_and_start()
  * function to do that.
  */
-bool init(void);
+[[nodiscard]] bool init(void);
 
 /**
  * @brief Configures and starts the watchdog.
