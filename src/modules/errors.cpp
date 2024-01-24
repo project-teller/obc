@@ -1,12 +1,9 @@
-#include <cassert>
-#include <cmsis_os2.h>
-
-#include "hal/led.h"
 #include "modules/errors.h"
+#include "hal/led.h"
+#include "hal/mutex.hpp"
 
 #define ERROR_BIT(x) (1ULL << (x - 1))
 
-using namespace std;
 using namespace teller::hal;
 
 /** Bitmask specifying which error codes are currently active */
@@ -16,24 +13,17 @@ static uint64_t errorCodes = 0;
  * Mutex protecting the error flags to make it safe to modify it from multiple
  * tasks.
  */
-static osMutexId_t errorCodeMutex;
-
-const osMutexAttr_t error_code_mutex_attr = { "errorCodeMutex" };
+static mutex errorCodeMutex;
 
 void teller::errors::init()
 {
-    errorCodeMutex = osMutexNew(&error_code_mutex_attr);
-    assert(errorCodeMutex);
 }
 
 void teller::errors::setError(error_t code, bool present)
 {
-    osStatus_t result;
     uint64_t oldErrorCodes;
     bool notify = false;
-
-    result = osMutexAcquire(errorCodeMutex, osWaitForever);
-    assert(result == osOK);
+    lock_guard<mutex> lock(errorCodeMutex);
 
     oldErrorCodes = errorCodes;
     if (present) {
@@ -46,9 +36,6 @@ void teller::errors::setError(error_t code, bool present)
     if (notify) {
         led::set(led::ERROR, hasAnyErrors());
     }
-
-    result = osMutexRelease(errorCodeMutex);
-    assert(result == osOK);
 }
 
 void teller::errors::clearError(error_t code)

@@ -19,37 +19,35 @@ typedef struct {
     uint16_t length;
 } message_t;
 
-static osMessageQueueId_t queue;
-
-/** Number of chunks that can be enqueued in the task without blocking */
-static const int QUEUE_SIZE = 64;
-
 /** Maximum length of payload allowed in a telemetry message, inclusive */
 static const int MAX_PAYLOAD_LENGTH = 63;
 
 /** Sequence number of next message */
 static uint8_t seq_no = 0;
 
-static bool sendRaw(uint8_t* buf, uint16_t length);
+static bool initLowLevel();
+static bool receiveLowLevel(message_t* message);
+static bool sendLowLevel(uint8_t* buf, uint16_t length);
 
 bool teller::telem::init()
 {
-    queue = osMessageQueueNew(QUEUE_SIZE, sizeof(message_t), nullptr);
-    return queue != nullptr;
+    return initLowLevel();
 }
 
-void teller::telem::flushNext()
+bool teller::telem::flushNext()
 {
-    osStatus_t result;
     message_t message;
 
-    result = osMessageQueueGet(queue, &message, nullptr, osWaitForever);
-    assert(result == osOK);
+    if (!receiveLowLevel(&message)) {
+        return false;
+    }
 
     if (message.data != nullptr) {
         uart::write(uart::TELEMETRY, message.data, message.length);
         free(message.data);
     }
+
+    return true;
 }
 
 bool teller::telem::send(const uint8_t* data, uint16_t length)
@@ -58,7 +56,7 @@ bool teller::telem::send(const uint8_t* data, uint16_t length)
     TELLER_CHECK_OOM(buf);
 
     memcpy(buf, data, length);
-    return sendRaw(buf, length);
+    return sendLowLevel(buf, length);
 }
 
 bool teller::telem::send(const char* data)
@@ -114,7 +112,7 @@ bool teller::telem::send(
     buf[length + 6] = crc & 0xff;
     buf[length + 7] = crc >> 8;
 
-    return sendRaw(buf, length + 8);
+    return sendLowLevel(buf, length + 8);
 }
 
 bool teller::telem::send(
@@ -129,17 +127,30 @@ bool teller::telem::send(
 }
 
 /* ************************************************************************* */
+/* CMSIS-specific implementation of the telemetry module                     */
+/* ************************************************************************* */
 
-bool sendRaw(uint8_t* buf, uint16_t length)
+static osMessageQueueId_t queue;
+
+/** Number of chunks that can be enqueued in the task without blocking */
+static const int QUEUE_SIZE = 64;
+
+bool initLowLevel()
 {
-    message_t message;
-    osStatus_t result;
+    queue = osMessageQueueNew(QUEUE_SIZE, sizeof(message_t), nullptr);
+    return queue != nullptr;
+}
 
-    message.data = buf;
-    message.length = length;
+bool receiveLowLevel(message_t* message)
+{
+    return osMessageQueueGet(queue, message, nullptr, osWaitForever) == osOK;
+}
 
-    result = osMessageQueuePut(queue, &message, 0, osWaitForever);
-    assert(result == osOK);
-
-    return true;
+bool sendLowLevel(uint8_t* buf, uint16_t length)
+{
+    message_t message = {
+        .data = buf,
+        .length = length
+    };
+    return osMessageQueuePut(queue, &message, 0, osWaitForever) == osOK;
 }

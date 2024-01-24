@@ -47,8 +47,10 @@ bool init(void);
  * appropriate UART.
  *
  * Blocks indefinitely if there are no messages to send.
+ *
+ * @return whether a message was received successfully
  */
-void flushNext(void);
+bool flushNext(void);
 
 /**
  * @brief Sends a raw byte sequence to the telemetry module.
