@@ -123,7 +123,7 @@ bool teller::telem::send(
 {
     envelope_t envelope;
     envelope.frame_type = static_cast<uint8_t>(type);
-    envelope.source = GROUND_STATION;
+    envelope.source = ONBOARD_COMPUTER;
     envelope.target = GROUND_STATION;
     return send(envelope, payload, length);
 }
