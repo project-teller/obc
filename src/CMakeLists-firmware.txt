@@ -1,0 +1,140 @@
+# Set target name
+set(TARGET_NAME teller-obc)
+
+# Specify source files, include paths and libraries to link to
+add_executable(
+	${TARGET_NAME}
+
+	main.cpp
+
+	hal/hal.cpp
+	hal/stm32/led.cpp
+	hal/stm32/system.cpp
+	hal/stm32/uart.cpp
+	hal/stm32/utils.cpp
+	hal/stm32/watchdog.cpp
+
+	modules/errors.cpp
+	modules/telem.cpp
+
+	tasks/blinker.cpp
+	tasks/serial.cpp
+	tasks/supervisor.cpp
+	tasks/telem.cpp
+)
+target_include_directories(
+	${TARGET_NAME} PRIVATE
+	${CMAKE_CURRENT_BINARY_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/hal/stm32
+)
+target_link_libraries(
+	${TARGET_NAME} PRIVATE
+	${FREERTOS_NAMESPACE}::EventGroups
+	${FREERTOS_NAMESPACE}::Timers
+	${FREERTOS_NAMESPACE}::Heap::4
+	${FREERTOS_NAMESPACE}::${TARGET_MCU_FREERTOS_MODULE}
+	${HAL_NAMESPACE}::RCC
+	${HAL_NAMESPACE}::RCCEx
+	${HAL_NAMESPACE}::GPIO
+	${HAL_NAMESPACE}::DMA
+	${HAL_NAMESPACE}::IWDG
+	${HAL_NAMESPACE}::UART
+	${HAL_NAMESPACE}::UARTEx
+	${HAL_NAMESPACE}::CORTEX
+	CMSIS::${TARGET_MCU_CMSIS_MODULE}
+	STM32::NoSys
+	${CMSIS_NAMESPACE}::RTOS_V2
+	obccore
+)
+target_compile_definitions(
+	${TARGET_NAME} PRIVATE
+	USE_CMSIS_RTOS_V2
+	CMSIS_RTOS_V2_DEVICE_HEADER="${CMSIS_RTOS_V2_DEVICE_HEADER}"
+)
+
+# Do not use C++ exceptions and RTTI, but ask for all compiler warnings
+set_target_properties(
+	${TARGET_NAME}
+	PROPERTIES
+	CXX_RTTI OFF
+	CXX_EXCEPTIONS OFF
+	CXX_WARNINGS ALL
+	CXX_WARNINGS_AS_ERRORS ON
+)
+
+stm32_print_size_of_target(${TARGET_NAME})
+stm32_generate_binary_file(${TARGET_NAME})
+stm32_generate_hex_file(${TARGET_NAME})
+
+get_target_property(FIRMWARE_FILE ${TARGET_NAME} OUTPUT_BINARY_NAME)
+set(FIRMWARE_FILE ${CMAKE_CURRENT_BINARY_DIR}/${FIRMWARE_FILE})
+
+get_target_property(FIRMWARE_HEX_FILE ${TARGET_NAME} OUTPUT_HEX_NAME)
+set(FIRMWARE_HEX_FILE ${CMAKE_CURRENT_BINARY_DIR}/${FIRMWARE_HEX_FILE})
+
+################################################################################
+# Set up simulation if the board supports simulation in qemu
+################################################################################
+
+if(TARGET_MCU STREQUAL "STM32F4")
+	set(SIMULATOR_COMMAND qemu-system-arm)
+	set(SIMULATOR_ARGS
+		-M netduinoplus2
+		-nographic
+		-monitor telnet::45454,server,nowait
+		-serial mon:stdio
+		-kernel ${FIRMWARE_FILE}
+	)
+endif()
+
+if(SIMULATOR_COMMAND)
+	add_custom_target(
+		simulate
+		COMMAND ${SIMULATOR_COMMAND} ${SIMULATOR_ARGS}
+		COMMENT "Running firmware in simulator. Use Ctrl-A X to exit..."
+		VERBATIM
+		USES_TERMINAL
+	)
+	add_dependencies(simulate ${TARGET_NAME})
+endif()
+
+################################################################################
+# Set up programming target if we know how to program the board with OpenOCD
+################################################################################
+
+if(OPENOCD_PROGRAM AND OPENOCD_BOARD)
+	set(OPENOCD_ARGS
+		-f board/${OPENOCD_BOARD}.cfg
+		-c "program ${FIRMWARE_HEX_FILE} verify reset exit"
+	)
+
+    get_target_property(TARGET_OUTPUT_NAME ${TARGET_NAME} OUTPUT_NAME)
+    if(TARGET_OUTPUT_NAME)
+        set(TARGET_OUTPUT_NAME "${TARGET_OUTPUT_NAME}.elf")
+    else()
+        set(TARGET_OUTPUT_NAME "${TARGET_NAME}.elf")
+    endif()
+	set(DEBUG_ARGS
+		board/${OPENOCD_BOARD}.cfg
+		${TARGET_OUTPUT_NAME}
+	)
+
+	add_custom_target(
+		upload
+		COMMAND ${OPENOCD_PROGRAM} ${OPENOCD_ARGS}
+		COMMENT "Uploading firmware to board..."
+		VERBATIM
+		USES_TERMINAL
+	)
+	add_dependencies(upload ${TARGET_NAME})
+
+	add_custom_target(
+		debug
+		COMMAND ${CMAKE_SOURCE_DIR}/etc/scripts/debug.sh ${DEBUG_ARGS}
+		COMMENT "Running debugger for firmware to board..."
+		VERBATIM
+		USES_TERMINAL
+	)
+	add_dependencies(debug upload)
+endif()

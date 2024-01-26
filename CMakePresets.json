@@ -42,6 +42,10 @@
         "TELLER_BOARD": {
           "type": "string",
           "value": "POSIX"
+        },
+        "TELLER_ENABLE_CODE_COVERAGE": {
+          "type": "boolean",
+          "value": true
         }
       }
     }

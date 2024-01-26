@@ -37,11 +37,24 @@ find_program(OPENOCD_PROGRAM openocd)
 # Enable unit tests
 enable_testing()
 
+# Add support for code coverage
+option(TELLER_ENABLE_CODE_COVERAGE "Enable code coverage calculation" OFF)
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND TELLER_ENABLE_CODE_COVERAGE)
+  include(CodeCoverage)
+  append_coverage_compiler_flags()
+  setup_target_for_coverage_gcovr_html(
+    NAME coverage
+    EXECUTABLE "${CMAKE_CTEST_COMMAND}" "--test-dir" "${PROJECT_BINARY_DIR}"
+    DEPENDENCIES teller-obc-test
+    EXCLUDE
+    "/Applications/Xcode*"
+    "/Library/Developer/*"
+    "lib/googletest/*"
+    "test/*"
+  )
+endif()
+
 # Traverse subdirectories
 add_subdirectory(lib)
-if(TELLER_BOARD STREQUAL POSIX)
-  add_subdirectory(src/core)
-else()
-  add_subdirectory(src)
-endif()
+add_subdirectory(src)
 add_subdirectory(test)
