@@ -3,8 +3,7 @@
 
 #include "core/utils/crc.h"
 
-// Demonstrate some basic assertions.
-TEST(crc, basic)
+TEST(CRCTest, basic)
 {
     uint8_t buf[] = "123456789";
     size_t buf_len = std::strlen(reinterpret_cast<char*>(buf));

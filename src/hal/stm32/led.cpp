@@ -68,9 +68,21 @@ void teller::hal::led::init()
     }
 }
 
+void teller::hal::led::destroy()
+{
+}
+
 void teller::hal::led::clear(led_t led)
 {
     set(led, false);
+}
+
+void teller::hal::led::get(led_t led, bool value)
+{
+    assert(led >= 0 && led < NUM_LEDS);
+
+    const led_config_t* cfg = &led_config[led];
+    return cfg->port != nullptr && HAL_GPIO_ReadPin(cfg->port, cfg->pin) == GPIO_PIN_SET;
 }
 
 void teller::hal::led::set(led_t led, bool value)

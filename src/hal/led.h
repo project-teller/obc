@@ -16,6 +16,15 @@ typedef enum {
  */
 void init(void);
 
+/**
+ * @brief Destructor function for the LED subsystem.
+ *
+ * This function is called from tests to reset the LED subsystem to a known
+ * base state.
+ */
+void destroy(void);
+
+bool get(led_t led);
 void set(led_t led, bool value = true);
 void clear(led_t led);
 

@@ -8,11 +8,14 @@ typedef enum {
     NOT_ENOUGH_MEMORY = 2,
 } error_t;
 
-void init();
+void init(void);
+void destroy(void);
+
 void setError(error_t code, bool present = true);
 void clearError(error_t code);
+void clearAllErrors(void);
 bool hasError(error_t code);
-bool hasAnyErrors();
+bool hasAnyErrors(void);
 
 #define TELLER_CHECK_OOM(ptr)                                            \
     {                                                                    \

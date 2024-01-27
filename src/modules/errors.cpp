@@ -15,8 +15,16 @@ static uint64_t errorCodes = 0;
  */
 static mutex errorCodeMutex;
 
+static void updateErrorLED();
+
 void teller::errors::init()
 {
+    clearAllErrors();
+}
+
+void teller::errors::destroy()
+{
+    clearAllErrors();
 }
 
 void teller::errors::setError(error_t code, bool present)
@@ -34,13 +42,23 @@ void teller::errors::setError(error_t code, bool present)
     notify = oldErrorCodes != errorCodes;
 
     if (notify) {
-        led::set(led::ERROR, hasAnyErrors());
+        updateErrorLED();
     }
 }
 
 void teller::errors::clearError(error_t code)
 {
     setError(code, false);
+}
+
+void teller::errors::clearAllErrors()
+{
+    lock_guard<mutex> lock(errorCodeMutex);
+
+    if (errorCodes != 0) {
+        errorCodes = 0;
+        updateErrorLED();
+    }
 }
 
 bool teller::errors::hasError(error_t code)
@@ -51,4 +69,9 @@ bool teller::errors::hasError(error_t code)
 bool teller::errors::hasAnyErrors()
 {
     return errorCodes != 0;
+}
+
+static void updateErrorLED()
+{
+    led::set(led::ERROR, teller::errors::hasAnyErrors());
 }

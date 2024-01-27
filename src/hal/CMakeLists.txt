@@ -5,6 +5,9 @@ set(HAL_LIBRARIES "")
 # Assemble list of source files, include directories and libraries
 if(TARGET_MCU STREQUAL "POSIX")
     # Nothing to do
+    list(APPEND HAL_SOURCES
+        posix/led.cpp
+    )
 else()
     list(APPEND HAL_SOURCES
         stm32/led.cpp

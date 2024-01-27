@@ -42,7 +42,23 @@ else()
   set(BUILD_FIRMWARE YES)
 endif()
 
+# Enable testing and code coverage support
 enable_testing()
+if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND TELLER_ENABLE_CODE_COVERAGE)
+    include(CodeCoverage)
+    append_coverage_compiler_flags()
+    set(GCOVR_ADDITIONAL_ARGS --gcov-delete --exclude-lines-by-pattern .*assert.*)
+    setup_target_for_coverage_gcovr_html(
+        NAME coverage
+        EXECUTABLE "${CMAKE_CTEST_COMMAND}" "--test-dir" "${PROJECT_BINARY_DIR}"
+        DEPENDENCIES teller-obc-test
+        EXCLUDE
+        "/Applications/Xcode*"
+        "/Library/Developer/*"
+        "lib/googletest/*"
+        "test/*"
+    )
+endif()
 
 # Traverse subdirectories
 add_subdirectory(lib)
