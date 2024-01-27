@@ -1,39 +1,8 @@
 #pragma once
 
-#include <cstdint>
+#include "core/telem.h"
 
 namespace teller::telem {
-
-/**
- * Enum representing the possible components that can be addressed by a
- * telemetry message.
- */
-typedef enum {
-    UNKNOWN_COMPONENT = 0,
-    GROUND_STATION = 1,
-    ONBOARD_COMPUTER = 2,
-    SCINTILLATOR_MODULE = 3,
-} component_t;
-
-typedef struct {
-    std::uint8_t seq_no;
-    std::uint8_t frame_type;
-    component_t source;
-    component_t target;
-} envelope_t;
-
-namespace frames {
-
-    /**
-     * Enum representing the frame types in the telemetry protocol.
-     */
-    typedef enum {
-        UNKNOWN = 0,
-        HEARTBEAT = 1,
-        TEXT_MESSAGE = 2,
-    } frame_type_t;
-
-}
 
 /**
  * Initializes the data structures required by the telemetry module.
@@ -63,7 +32,7 @@ bool flushNext(void);
  * @param length  lengrh of the data to send
  * @return whether the data was sent successfully to the telemetry module
  */
-bool send(const std::uint8_t* data, std::uint16_t length);
+bool send(const std::uint8_t* data, std::uint8_t length);
 
 /**
  * @brief Sends a string to the telemetry module.
@@ -95,7 +64,7 @@ bool send(const char* data);
  * @param length    lengrh of the payload to send
  * @return whether the data was sent successfully to the telemetry module
  */
-bool send(envelope_t envelope, const std::uint8_t* payload, std::uint16_t length);
+bool send(envelope_t envelope, const std::uint8_t* payload, std::uint8_t length);
 
 /**
  * @brief Sends a telemetry message of a given type to the telemetry module.
@@ -108,6 +77,6 @@ bool send(envelope_t envelope, const std::uint8_t* payload, std::uint16_t length
  * @param length    lengrh of the payload to send
  * @return whether the data was sent successfully to the telemetry module
  */
-bool send(frames::frame_type_t type, const std::uint8_t* payload, std::uint16_t length);
+bool send(frames::frame_type_t type, const std::uint8_t* payload, std::uint8_t length);
 
 }

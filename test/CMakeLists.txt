@@ -6,9 +6,10 @@ set(TARGET_NAME teller-obc-test)
 
 add_executable(
     ${TARGET_NAME}
-    crc_test.cpp
-    errors_test.cpp
-    hal_posix_led_test.cpp
+    core/crc_test.cpp
+    core/telem_test.cpp
+    hal/posix_led_test.cpp
+    modules/errors_test.cpp
 )
 target_include_directories(
     ${TARGET_NAME}
@@ -18,6 +19,7 @@ target_include_directories(
 target_link_libraries(
     ${TARGET_NAME}
     GTest::gtest_main
+    GTest::gmock_main
     obc-test
 )
 
