@@ -88,9 +88,9 @@ TEST(TelemetryTest, heartbeatFrameEncoding)
         .voltageInVolts = 4.2,
         .temperateInCelsius = -42.42,
         .rxsmStatusBits = {
-            .lo = true,
             .sods = false,
-            .soe = true
+            .soe = true,
+            .lo = true
         },
         .subsystemStatus = {
             .gmm = SUBSYSTEM_STATUS_OK,
