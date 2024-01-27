@@ -19,10 +19,10 @@ TEST(TelemetryTest, getMessageSizeForPayloadLength)
 TEST(TelemetryTest, serialize)
 {
     envelope_t envelope = {
+        .seq_no = 42,
+        .frame_type = frames::TEXT_MESSAGE,
         .source = GROUND_STATION,
         .target = ONBOARD_COMPUTER,
-        .seq_no = 42,
-        .frame_type = frames::TEXT_MESSAGE
     };
     uint8_t payload[] = { 'h', 'e', 'l', 'l', 'o', '\n' };
     uint8_t result[80];
@@ -64,10 +64,10 @@ TEST(TelemetryTest, serialize)
 TEST(TelemetryTest, serializeInvalidPayload)
 {
     envelope_t envelope = {
+        .seq_no = 42,
+        .frame_type = frames::TEXT_MESSAGE,
         .source = GROUND_STATION,
         .target = ONBOARD_COMPUTER,
-        .seq_no = 42,
-        .frame_type = frames::TEXT_MESSAGE
     };
     uint8_t payload[] = { 'h', 'e', 'l', 'l', 'o', '\n' };
     uint8_t result[80];
