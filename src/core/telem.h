@@ -29,10 +29,20 @@ typedef struct {
     component_t target;
 } envelope_t;
 
+/**
+ * @brief Enum representing the possible status codes of subsystems.
+ */
+typedef enum {
+    SUBSYSTEM_STATUS_CRITICAL = 0,
+    SUBSYSTEM_STATUS_ERROR = 1,
+    SUBSYSTEM_STATUS_WARNING = 2,
+    SUBSYSTEM_STATUS_OK = 3
+} subsystem_status_t;
+
 namespace frames {
 
     /**
-     * Enum representing the frame types in the telemetry protocol.
+     * @brief Enum representing the frame types in the telemetry protocol.
      */
     typedef enum {
         UNKNOWN = 0,
@@ -40,6 +50,66 @@ namespace frames {
         TEXT_MESSAGE = 2,
     } frame_type_t;
 
+    /**
+     * @brief Structure containing all the data required to construct a heartbeat frame.
+     *
+     * This structure is not the same as the wire encoding of the heartbeat
+     * frame. It contains the raw values of the fields, in SI units where
+     * applicable.
+     *
+     * @see heartbeat_frame_t
+     */
+    typedef struct {
+        uint32_t timestampInMsec;
+        uint8_t error;
+        float voltageInVolts;
+        float temperateInCelsius;
+        struct {
+            bool sods;
+            bool soe;
+            bool lo;
+        } rxsmStatusBits;
+        struct {
+            subsystem_status_t gmm;
+            subsystem_status_t scm;
+            subsystem_status_t ads;
+            subsystem_status_t imu;
+            subsystem_status_t mag;
+        } subsystemStatus;
+    } heartbeat_data_t;
+
+    /**
+     * @brief Structure of the payload of a heartbeat frame in the telemetry protocol.
+     *
+     * This structure represents the wire encoding of the heartbeat frame. There
+     * is another structure for the raw values.
+     */
+    typedef struct __attribute__((packed)) {
+        uint32_t timestamp;
+        uint8_t error;
+        uint8_t voltage;
+        int8_t temperature;
+        uint8_t rxsmStatusBits;
+        uint16_t subsystemStatus;
+    } heartbeat_frame_t;
+
+    static_assert(sizeof(heartbeat_frame_t) == 10, "Heartbeat frame size invalid");
+
+    /**
+     * @brief Encodes a heartbeat frame into its wire representation.
+     *
+     * @param data  the data to encode in the telemetry frame
+     * @param encoded  the encoded representation of the telemetry frame
+     */
+    void encodeHeartbeatFrame(const heartbeat_data_t* data, heartbeat_frame_t* encoded);
+
+    /**
+     * @brief Decodes a heartbeat frame from its wire representation.
+     *
+     * @param encoded  the encoded representation of the telemetry frame
+     * @param decoded  the decoded representation of the telemetry frame
+     */
+    void decodeHeartbeatFrame(const heartbeat_frame_t* encoded, heartbeat_data_t* decoded);
 }
 
 /**

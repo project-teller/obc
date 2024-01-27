@@ -78,3 +78,65 @@ TEST(TelemetryTest, serializeInvalidPayload)
     /* Test too small buffer */
     EXPECT_EQ(0, serialize(result, 2, envelope, payload, sizeof(payload)));
 }
+
+TEST(TelemetryTest, heartbeatFrameEncoding)
+{
+    /* clang-format off */
+    frames::heartbeat_data_t heartbeat = {
+        .timestampInMsec = 1234000,
+        .error = 42,
+        .voltageInVolts = 4.2,
+        .temperateInCelsius = -42.42,
+        .rxsmStatusBits = {
+            .lo = true,
+            .sods = false,
+            .soe = true
+        },
+        .subsystemStatus = {
+            .gmm = SUBSYSTEM_STATUS_OK,
+            .scm = SUBSYSTEM_STATUS_WARNING,
+            .ads = SUBSYSTEM_STATUS_ERROR,
+            .imu = SUBSYSTEM_STATUS_CRITICAL,
+            .mag = SUBSYSTEM_STATUS_OK
+        }
+    };
+    frames::heartbeat_frame_t encoded;
+    frames::heartbeat_frame_t expected = {
+        .timestamp = 1234000,
+        .error = 42,
+        .voltage = 42,
+        .temperature = -42,
+        .rxsmStatusBits = 6,
+        .subsystemStatus = 795,
+    };
+    uint8_t expectedBytes[] = { 80, 212, 18, 0, 42, 42, 214, 6, 27, 3 };
+    frames::heartbeat_data_t decoded;
+    /* clang-format on */
+
+    frames::encodeHeartbeatFrame(&heartbeat, &encoded);
+
+    EXPECT_EQ(expected.timestamp, encoded.timestamp);
+    EXPECT_EQ(expected.error, encoded.error);
+    EXPECT_EQ(expected.voltage, encoded.voltage);
+    EXPECT_EQ(expected.temperature, encoded.temperature);
+    EXPECT_EQ(expected.rxsmStatusBits, encoded.rxsmStatusBits);
+    EXPECT_EQ(expected.subsystemStatus, encoded.subsystemStatus);
+
+    EXPECT_EQ(sizeof(expectedBytes), sizeof(expected));
+    EXPECT_EQ(0, memcmp(&expectedBytes, &expected, sizeof(expectedBytes)));
+
+    frames::decodeHeartbeatFrame(&encoded, &decoded);
+
+    EXPECT_EQ(decoded.timestampInMsec, heartbeat.timestampInMsec);
+    EXPECT_EQ(decoded.error, heartbeat.error);
+    EXPECT_EQ(decoded.voltageInVolts, heartbeat.voltageInVolts);
+    EXPECT_EQ(decoded.temperateInCelsius, std::roundf(heartbeat.temperateInCelsius));
+    EXPECT_EQ(decoded.rxsmStatusBits.lo, heartbeat.rxsmStatusBits.lo);
+    EXPECT_EQ(decoded.rxsmStatusBits.sods, heartbeat.rxsmStatusBits.sods);
+    EXPECT_EQ(decoded.rxsmStatusBits.soe, heartbeat.rxsmStatusBits.soe);
+    EXPECT_EQ(decoded.subsystemStatus.gmm, heartbeat.subsystemStatus.gmm);
+    EXPECT_EQ(decoded.subsystemStatus.scm, heartbeat.subsystemStatus.scm);
+    EXPECT_EQ(decoded.subsystemStatus.ads, heartbeat.subsystemStatus.ads);
+    EXPECT_EQ(decoded.subsystemStatus.imu, heartbeat.subsystemStatus.imu);
+    EXPECT_EQ(decoded.subsystemStatus.mag, heartbeat.subsystemStatus.mag);
+}
