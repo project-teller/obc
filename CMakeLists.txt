@@ -19,6 +19,9 @@ project(
 # Include helper functions for hiding differences between compilers
 include(compilers)
 
+# Include helper functions for generating targets
+include(targets)
+
 # Specify the C++ standard.
 # C++17 required because of nested namespaces and [[nodiscard]].
 # C++20 required because of designated initializers.
@@ -31,30 +34,22 @@ if(CMAKE_TOOLCHAIN_FILE)
 endif()
 set(FETCHCONTENT_QUIET FALSE)
 
-# Find OpenOCD for programming
-find_program(OPENOCD_PROGRAM openocd)
-
-# Enable unit tests
-enable_testing()
-
-# Add support for code coverage
-option(TELLER_ENABLE_CODE_COVERAGE "Enable code coverage calculation" OFF)
-if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND TELLER_ENABLE_CODE_COVERAGE)
-  include(CodeCoverage)
-  append_coverage_compiler_flags()
-  setup_target_for_coverage_gcovr_html(
-    NAME coverage
-    EXECUTABLE "${CMAKE_CTEST_COMMAND}" "--test-dir" "${PROJECT_BINARY_DIR}"
-    DEPENDENCIES teller-obc-test
-    EXCLUDE
-    "/Applications/Xcode*"
-    "/Library/Developer/*"
-    "lib/googletest/*"
-    "test/*"
-  )
+# Check whether we need to build the firmware and the unit tests in the current
+# configuration
+if(TELLER_BOARD STREQUAL "POSIX")
+  set(BUILD_TESTS YES)
+else()
+  set(BUILD_FIRMWARE YES)
 endif()
+
+enable_testing()
 
 # Traverse subdirectories
 add_subdirectory(lib)
 add_subdirectory(src)
-add_subdirectory(test)
+
+# Enable unit tests
+if(BUILD_TESTS)
+  option(TELLER_ENABLE_CODE_COVERAGE "Enable code coverage calculation" OFF)
+  add_subdirectory(test)
+endif()
