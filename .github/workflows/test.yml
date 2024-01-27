@@ -29,4 +29,3 @@ jobs:
       - uses: test-summary/action@v2
         with:
           paths: "build/report.xml"
-          show: "all"
