@@ -3,6 +3,7 @@
 #include "config.h"
 #include "hal/led.h"
 
+using namespace std;
 using namespace teller::hal::led;
 
 static bool led_state[NUM_LEDS];
