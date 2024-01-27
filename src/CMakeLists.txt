@@ -32,12 +32,12 @@ endif()
 configure_file(config.h.in config.h)
 
 # Figure out which components to link to
-if(SKIP_FIRMWARE)
-	set(HAL_COMP_LIST "")
-	set(CMSIS_COMP_LIST "")
-else()
+if(BUILD_FIRMWARE)
 	set(HAL_COMP_LIST RCC GPIO UART CORTEX DMA IWDG)
 	set(CMSIS_COMP_LIST RTOS_V2)
+else()
+	set(HAL_COMP_LIST "")
+	set(CMSIS_COMP_LIST "")
 endif()
 set(FREERTOS_COMP_LIST "")
 
