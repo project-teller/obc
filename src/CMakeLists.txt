@@ -113,6 +113,12 @@ if(BUILD_FIRMWARE)
 		obc-hal
 	)
 
+	# Disable exceptions and RTTI, enable warnings and treat them as errors
+	set_property(TARGET ${TARGET_NAME} PROPERTY CXX_EXCEPTIONS OFF)
+	set_property(TARGET ${TARGET_NAME} PROPERTY CXX_RTTI OFF)
+	set_property(TARGET ${TARGET_NAME} PROPERTY CXX_WARNINGS ON)
+	set_property(TARGET ${TARGET_NAME} PROPERTY CXX_WARNINGS_AS_ERRORS ON)
+
 	stm32_print_size_of_target(${TARGET_NAME})
 	stm32_generate_binary_file(${TARGET_NAME})
 	stm32_generate_hex_file(${TARGET_NAME})

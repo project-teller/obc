@@ -77,7 +77,7 @@ void teller::hal::led::clear(led_t led)
     set(led, false);
 }
 
-void teller::hal::led::get(led_t led, bool value)
+bool teller::hal::led::get(led_t led)
 {
     assert(led >= 0 && led < NUM_LEDS);
 
