@@ -13,7 +13,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          sudo apt-get install gcovr ninja-build
+          sudo apt-get install gcovr ninja-build gcc-arm-none-eabi binutils-arm-none-eabi libnewlib-arm-none-eabi
 
       - uses: actions/cache@v4
         with:
@@ -25,6 +25,11 @@ jobs:
           cmake . --preset test -B build
           cmake --build build
           ctest --test-dir build --output-junit report.xml
+
+      - name: Build firmware
+        run: |
+          cmake . --preset default -B build-stm32
+          cmake --build build-stm32
 
       - uses: test-summary/action@v2
         with:
