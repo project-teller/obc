@@ -7,6 +7,7 @@ if(TARGET_MCU STREQUAL "POSIX")
     # Nothing to do
     list(APPEND HAL_SOURCES
         posix/led.cpp
+        posix/system.cpp
     )
 else()
     list(APPEND HAL_SOURCES

@@ -6,9 +6,6 @@
 #include "core/telem.h"
 #include "core/utils/crc.h"
 
-/** Maximum length of payload allowed in a telemetry message, inclusive */
-static const int MAX_PAYLOAD_LENGTH = 63;
-
 using namespace std;
 using namespace teller::telem;
 

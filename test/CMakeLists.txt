@@ -9,6 +9,7 @@ add_executable(
     core/crc_test.cpp
     core/telem_test.cpp
     hal/posix_led_test.cpp
+    hal/posix_system_test.cpp
     modules/errors_test.cpp
 )
 target_include_directories(

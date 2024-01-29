@@ -4,6 +4,12 @@
 
 namespace teller::telem {
 
+/** Maximum length of payload allowed in a telemetry message, inclusive */
+const int MAX_PAYLOAD_LENGTH = 63;
+
+/** Maximum size of a single telemetry message, inclusive */
+const int MAX_MESSAGE_LENGTH = 71;
+
 /**
  * Enum representing the possible components that can be addressed by a
  * telemetry message.
@@ -120,7 +126,7 @@ namespace frames {
  * @return the minimum size of the buffer; basically the payload length plus the
  *   message framing overhead. Returns zero if the payload is too large.
  */
-uint8_t getMessageSizeForPayloadLength(std::uint8_t payload_length);
+std::uint8_t getMessageSizeForPayloadLength(std::uint8_t payload_length);
 
 /**
  * @brief Serializes a telemetry message into a pre-allocated buffer.
@@ -134,7 +140,7 @@ uint8_t getMessageSizeForPayloadLength(std::uint8_t payload_length);
  *   was an error while serializing the message.
  */
 [[nodiscard]] std::uint8_t serialize(
-    uint8_t* buffer, std::uint8_t buffer_length, envelope_t envelope,
+    std::uint8_t* buffer, std::uint8_t buffer_length, envelope_t envelope,
     const std::uint8_t* payload, std::uint8_t payload_length);
 
 }

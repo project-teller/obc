@@ -52,6 +52,15 @@
   ],
   "buildPresets": [
     {
+      "name": "build",
+      "displayName": "Build firmware (STM32-H743ZI Nucleo-144)",
+      "description": "Build firmware without uploading it",
+      "configurePreset": "default",
+      "targets": [
+        "teller-obc"
+      ]
+    },
+    {
       "name": "upload",
       "displayName": "Upload firmware (STM32-H743ZI Nucleo-144)",
       "description": "Upload built firmware with openocd",
