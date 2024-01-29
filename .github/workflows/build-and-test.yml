@@ -34,3 +34,12 @@ jobs:
       - uses: test-summary/action@v2
         with:
           paths: "build/report.xml"
+
+      - uses: actions/upload@v4
+        with:
+          name: firmware
+          path: |
+            build-stm32/teller-obc.bin
+            build-stm32/teller-obc.elf
+            build-stm32/teller-obc.hex
+          if-no-files-found: error
