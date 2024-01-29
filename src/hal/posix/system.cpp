@@ -43,6 +43,7 @@ std::uint32_t teller::hal::system::getTimeSinceBootMsec(void)
 
 /* ************************************************************************* */
 
+/* GCOVR_EXCL_START */
 static void timespec_diff(
     struct timespec* start, struct timespec* stop,
     struct timespec* result)
@@ -55,3 +56,4 @@ static void timespec_diff(
         result->tv_nsec = stop->tv_nsec - start->tv_nsec;
     }
 }
+/* GCOVR_EXCL_STOP */

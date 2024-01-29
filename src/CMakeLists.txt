@@ -95,6 +95,7 @@ if(BUILD_FIRMWARE)
 		main.cpp
 
 		modules/errors.cpp
+		modules/messages.cpp
 		modules/telem.cpp
 
 		tasks/blinker.cpp
