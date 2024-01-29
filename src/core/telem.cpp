@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cassert>
 #include <cmath>
 #include <cstring>
 #include <limits>
@@ -146,4 +147,29 @@ void teller::telem::frames::decodeHeartbeatFrame(const uint8_t* encoded, heartbe
         (status >> SUBSYSTEM_IMU_BIT_INDEX) & 0x03);
     decoded->subsystemStatus.mag = static_cast<subsystem_status_t>(
         (status >> SUBSYSTEM_MAG_BIT_INDEX) & 0x03);
+}
+
+uint8_t teller::telem::frames::encodeTextMessageFrame(
+    const text_message_data_t* data, uint8_t* encoded)
+{
+    size_t length = strlen(data->message);
+
+    assert(length <= MAX_PAYLOAD_LENGTH - 1);
+
+    encoded[0] = (data->level & 0x07) | (data->module << 3);
+    memcpy(encoded + 1, data->message, length);
+
+    return length + 1;
+}
+
+void teller::telem::frames::decodeTextMessageFrame(
+    const uint8_t* encoded, size_t length, text_message_data_t* decoded)
+{
+    assert(length <= MAX_PAYLOAD_LENGTH);
+
+    decoded->level = static_cast<log_level_t>(encoded[0] & 0x07);
+    decoded->module = static_cast<module_id_t>(encoded[0] >> 3);
+
+    memcpy(decoded->message, encoded + 1, length - 1);
+    decoded->message[length - 1] = 0;
 }

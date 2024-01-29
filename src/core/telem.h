@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdlib>
 
 namespace teller::telem {
 
@@ -45,6 +46,36 @@ typedef enum {
     SUBSYSTEM_STATUS_OK = 3
 } subsystem_status_t;
 
+/**
+ * @brief Enum containing the IDs of the modules used in text messages.
+ */
+typedef enum {
+    MODULE_ID_GENERIC = 0,
+    MODULE_ID_OBC = 1,
+    MODULE_ID_GMM = 2,
+    MODULE_ID_SCM = 3,
+    MODULE_ID_ADS = 4,
+    MODULE_ID_IMU = 5,
+    MODULE_ID_MAG = 6,
+} module_id_t;
+
+/**
+ * @brief Enum containing the log levels used in text messages.
+ *
+ * The log levels are meant to be compatible with the standard UNIX
+ * \c syslog log levels.
+ */
+typedef enum {
+    LOG_LEVEL_EMERGENCY = 0,
+    LOG_LEVEL_ALERT = 1,
+    LOG_LEVEL_CRITICAL = 2,
+    LOG_LEVEL_ERROR = 3,
+    LOG_LEVEL_WARNING = 4,
+    LOG_LEVEL_NOTICE = 5,
+    LOG_LEVEL_INFO = 6,
+    LOG_LEVEL_DEBUG = 7,
+} log_level_t;
+
 namespace frames {
 
     /**
@@ -56,18 +87,18 @@ namespace frames {
         TEXT_MESSAGE = 2,
     } frame_type_t;
 
+    /* Heartbeat frames *******************************************************/
+
     /**
      * @brief Structure containing all the data required to construct a heartbeat frame.
      *
      * This structure is not the same as the wire encoding of the heartbeat
      * frame. It contains the raw values of the fields, in SI units where
      * applicable.
-     *
-     * @see heartbeat_frame_t
      */
     typedef struct {
-        uint32_t timestampInMsec;
-        uint8_t error;
+        std::uint32_t timestampInMsec;
+        std::uint8_t error;
         float voltageInVolts;
         float temperateInCelsius;
         struct {
@@ -91,7 +122,7 @@ namespace frames {
      * @param encoded  the encoded representation of the telemetry frame
      * @return the length of the encoded representation of the telemetry frame
      */
-    uint8_t encodeHeartbeatFrame(const heartbeat_data_t* data, uint8_t* encoded);
+    uint8_t encodeHeartbeatFrame(const heartbeat_data_t* data, std::uint8_t* encoded);
 
     /**
      * @brief Decodes a heartbeat frame from its wire representation.
@@ -99,7 +130,52 @@ namespace frames {
      * @param encoded  the encoded representation of the telemetry frame
      * @param decoded  the decoded representation of the telemetry frame
      */
-    void decodeHeartbeatFrame(const uint8_t* encoded, heartbeat_data_t* decoded);
+    void decodeHeartbeatFrame(const std::uint8_t* encoded, heartbeat_data_t* decoded);
+
+    /* Text message frames ****************************************************/
+
+    /**
+     * @brief Structure containing all the data required to construct a text message frame.
+     *
+     * This structure is not the same as the wire encoding of the text message
+     * frame. It contains the raw values of the fields.
+     */
+    typedef struct {
+        /** The module that sends the log message */
+        module_id_t module;
+
+        /** The severity level of the message */
+        log_level_t level;
+
+        /**
+         * The message itself, null-terminated. Note that the maximum allowed
+         * message length is therefore \c MAX_PAYLOAD_LENGTH - 1 because one
+         * byte is needed to store the module ID and the log level. The buffer
+         * has a length of \c MAX_PAYLOAD_LENGTH to allow for the trailing zero
+         * in the string, but the trailing zero is not transmitted.
+         */
+        char message[MAX_PAYLOAD_LENGTH];
+    } text_message_data_t;
+
+    /**
+     * @brief Encodes a text message into its wire representation.
+     *
+     * @param data  the data to encode in the telemetry frame
+     * @param encoded  the encoded representation of the telemetry frame
+     * @return the length of the encoded representation of the telemetry frame
+     */
+    uint8_t encodeTextMessageFrame(
+        const text_message_data_t* data, std::uint8_t* encoded);
+
+    /**
+     * @brief Decodes a text message frame from its wire representation.
+     *
+     * @param encoded  the encoded representation of the telemetry frame
+     * @param length   the length of the encoded representation
+     * @param decoded  the decoded representation of the telemetry frame
+     */
+    void decodeTextMessageFrame(
+        const std::uint8_t* encoded, std::size_t length, text_message_data_t* decoded);
 }
 
 /**

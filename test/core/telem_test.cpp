@@ -123,3 +123,30 @@ TEST(TelemetryTest, heartbeatFrameEncoding)
     EXPECT_EQ(decoded.subsystemStatus.imu, heartbeat.subsystemStatus.imu);
     EXPECT_EQ(decoded.subsystemStatus.mag, heartbeat.subsystemStatus.mag);
 }
+
+TEST(TelemetryTest, textMessageFrameEncoding)
+{
+    /* clang-format off */
+    frames::text_message_data_t message = {
+        .level = LOG_LEVEL_NOTICE,
+        .module = MODULE_ID_SCM,
+        .message = "One does not simply walk into Mordor"
+    };
+    uint8_t encoded[MAX_MESSAGE_LENGTH];
+    uint8_t expectedBytes[] = {
+        29, 79, 110, 101, 32, 100, 111, 101, 115, 32, 110, 111, 116, 32, 115,
+        105, 109, 112, 108, 121, 32, 119, 97, 108, 107, 32, 105, 110, 116, 111,
+        32, 77, 111, 114, 100, 111, 114
+    };
+    frames::text_message_data_t decoded;
+    /* clang-format on */
+
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeTextMessageFrame(&message, encoded));
+    EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
+
+    frames::decodeTextMessageFrame(encoded, sizeof(expectedBytes), &decoded);
+
+    EXPECT_EQ(decoded.level, message.level);
+    EXPECT_EQ(decoded.module, message.module);
+    EXPECT_STREQ(decoded.message, message.message);
+}
