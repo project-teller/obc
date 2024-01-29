@@ -6,14 +6,13 @@
 
 #define ERROR_BIT(x) (1ULL << (x - 1))
 
-using namespace teller::errors;
 using namespace teller::hal;
 
 /** Bitmask specifying which error codes are currently active */
 static uint64_t errorCodes = 0;
 
 /** A single error code that we return from \ref getError() */
-static error_t singleError = NO_ERROR;
+static teller::errors::error_t singleError = teller::errors::NO_ERROR;
 
 /**
  * Mutex protecting the error flags to make it safe to modify it from multiple
@@ -34,7 +33,7 @@ void teller::errors::destroy()
     clearAllErrors();
 }
 
-void teller::errors::setError(error_t code, bool present)
+void teller::errors::setError(teller::errors::error_t code, bool present)
 {
     uint64_t oldErrorCodes;
     bool notify = false;
@@ -59,7 +58,7 @@ void teller::errors::setError(error_t code, bool present)
     }
 }
 
-void teller::errors::clearError(error_t code)
+void teller::errors::clearError(teller::errors::error_t code)
 {
     setError(code, false);
 }
@@ -75,7 +74,7 @@ void teller::errors::clearAllErrors()
     }
 }
 
-bool teller::errors::hasError(error_t code)
+bool teller::errors::hasError(teller::errors::error_t code)
 {
     return errorCodes & ERROR_BIT(code);
 }
@@ -85,7 +84,7 @@ bool teller::errors::hasAnyErrors()
     return errorCodes != 0;
 }
 
-error_t teller::errors::getError()
+teller::errors::error_t teller::errors::getError()
 {
     return singleError;
 }
@@ -107,8 +106,8 @@ static void updateSingleError()
         codes |= (codes >> 16);
         codes |= (codes >> 32);
 
-        singleError = static_cast<error_t>(std::log2f(codes - (codes >> 1)) + 1);
+        singleError = static_cast<teller::errors::error_t>(std::log2f(codes - (codes >> 1)) + 1);
     } else {
-        singleError = NO_ERROR;
+        singleError = teller::errors::NO_ERROR;
     }
 }
