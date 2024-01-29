@@ -35,11 +35,11 @@ jobs:
         with:
           paths: "build/report.xml"
 
-      - uses: actions/upload@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: firmware
           path: |
-            build-stm32/teller-obc.bin
-            build-stm32/teller-obc.elf
-            build-stm32/teller-obc.hex
+            build-stm32/src/teller-obc.bin
+            build-stm32/src/teller-obc.elf
+            build-stm32/src/teller-obc.hex
           if-no-files-found: error
