@@ -128,8 +128,8 @@ TEST(TelemetryTest, textMessageFrameEncoding)
 {
     /* clang-format off */
     frames::text_message_data_t message = {
-        .level = LOG_LEVEL_NOTICE,
         .module = MODULE_ID_SCM,
+        .level = LOG_LEVEL_NOTICE,
         .message = "One does not simply walk into Mordor"
     };
     uint8_t encoded[MAX_MESSAGE_LENGTH];
