@@ -19,6 +19,27 @@ using namespace teller::telem;
 #define SUBSYSTEM_IMU_BIT_INDEX 6
 #define SUBSYSTEM_MAG_BIT_INDEX 8
 
+namespace teller::telem::frames {
+
+/**
+ * @brief Structure of the payload of a heartbeat frame in the telemetry protocol.
+ *
+ * This structure represents the wire encoding of the heartbeat frame. There
+ * is another structure for the raw values.
+ */
+typedef struct __attribute__((packed)) {
+    uint32_t timestamp;
+    uint8_t error;
+    uint8_t voltage;
+    int8_t temperature;
+    uint8_t rxsmStatusBits;
+    uint16_t subsystemStatus;
+} heartbeat_frame_t;
+
+static_assert(sizeof(heartbeat_frame_t) == 10, "Heartbeat frame size invalid");
+
+}
+
 uint8_t teller::telem::getMessageSizeForPayloadLength(uint8_t payload_length)
 {
     return payload_length <= MAX_PAYLOAD_LENGTH ? payload_length + 8 : 0;
@@ -58,25 +79,27 @@ uint8_t teller::telem::serialize(
     return space_needed;
 }
 
-void teller::telem::frames::encodeHeartbeatFrame(const heartbeat_data_t* data, heartbeat_frame_t* encoded)
+uint8_t teller::telem::frames::encodeHeartbeatFrame(const heartbeat_data_t* data, uint8_t* encoded)
 {
-    encoded->timestamp = data->timestampInMsec;
-    encoded->error = data->error;
+    auto frame = reinterpret_cast<heartbeat_frame_t*>(encoded);
+
+    frame->timestamp = data->timestampInMsec;
+    frame->error = data->error;
 
     /* Board voltage is somewhere between 0 and 5V so we can use a resolution of 0.1V */
-    encoded->voltage = clamp(
+    frame->voltage = clamp(
         static_cast<int>(roundf(clamp(data->voltageInVolts, 0.0f, 25.5f) * 10.0f)),
         0, 255);
 
     /* Temperature measurements shall be made between -30 and 85 degrees
      * according to the requirements, with a resolution of 1 degree, so we are
      * fine with encoding them as signed integers between -128 and 127 degrees Celsius */
-    encoded->temperature = clamp(
+    frame->temperature = clamp(
         static_cast<int>(roundf(clamp(data->temperateInCelsius, -128.0f, 127.0f))),
         -128, 127);
 
     /* clang-format off */
-    encoded->rxsmStatusBits = (
+    frame->rxsmStatusBits = (
         (data->rxsmStatusBits.lo ? (1 << RXSM_LO_BIT_INDEX) : 0) |
         (data->rxsmStatusBits.sods ? (1 << RXSM_SODS_BIT_INDEX) : 0) |
         (data->rxsmStatusBits.soe ? (1 << RXSM_SOE_BIT_INDEX) : 0) |
@@ -85,7 +108,7 @@ void teller::telem::frames::encodeHeartbeatFrame(const heartbeat_data_t* data, h
     /* clang-format on */
 
     /* clang-format off */
-    encoded->subsystemStatus = (
+    frame->subsystemStatus = (
         (data->subsystemStatus.gmm << SUBSYSTEM_GMM_BIT_INDEX) |
         (data->subsystemStatus.scm << SUBSYSTEM_SCM_BIT_INDEX) |
         (data->subsystemStatus.ads << SUBSYSTEM_ADS_BIT_INDEX) |
@@ -94,22 +117,25 @@ void teller::telem::frames::encodeHeartbeatFrame(const heartbeat_data_t* data, h
         0
     );
     /* clang-format on */
+
+    return sizeof(heartbeat_frame_t);
 }
 
-void teller::telem::frames::decodeHeartbeatFrame(const heartbeat_frame_t* encoded, heartbeat_data_t* decoded)
+void teller::telem::frames::decodeHeartbeatFrame(const uint8_t* encoded, heartbeat_data_t* decoded)
 {
+    auto frame = reinterpret_cast<const heartbeat_frame_t*>(encoded);
     uint16_t status;
 
-    decoded->timestampInMsec = encoded->timestamp;
-    decoded->error = encoded->error;
-    decoded->voltageInVolts = encoded->voltage / 10.0f;
-    decoded->temperateInCelsius = encoded->temperature;
+    decoded->timestampInMsec = frame->timestamp;
+    decoded->error = frame->error;
+    decoded->voltageInVolts = frame->voltage / 10.0f;
+    decoded->temperateInCelsius = frame->temperature;
 
-    decoded->rxsmStatusBits.lo = encoded->rxsmStatusBits & (1 << RXSM_LO_BIT_INDEX);
-    decoded->rxsmStatusBits.sods = encoded->rxsmStatusBits & (1 << RXSM_SODS_BIT_INDEX);
-    decoded->rxsmStatusBits.soe = encoded->rxsmStatusBits & (1 << RXSM_SOE_BIT_INDEX);
+    decoded->rxsmStatusBits.lo = frame->rxsmStatusBits & (1 << RXSM_LO_BIT_INDEX);
+    decoded->rxsmStatusBits.sods = frame->rxsmStatusBits & (1 << RXSM_SODS_BIT_INDEX);
+    decoded->rxsmStatusBits.soe = frame->rxsmStatusBits & (1 << RXSM_SOE_BIT_INDEX);
 
-    status = encoded->subsystemStatus;
+    status = frame->subsystemStatus;
     decoded->subsystemStatus.gmm = static_cast<subsystem_status_t>(
         (status >> SUBSYSTEM_GMM_BIT_INDEX) & 0x03);
     decoded->subsystemStatus.scm = static_cast<subsystem_status_t>(

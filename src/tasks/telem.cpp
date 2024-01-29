@@ -20,6 +20,7 @@ const osThreadAttr_t teller::tasks::telemetryTaskAttr = {
 __NO_RETURN void teller::tasks::telemetryTask(void* arg)
 {
     uint8_t payload[MAX_PAYLOAD_LENGTH];
+    uint8_t to_send;
     frames::heartbeat_data_t heartbeat;
 
     memset(&heartbeat, 0, sizeof(heartbeat));
@@ -31,8 +32,8 @@ __NO_RETURN void teller::tasks::telemetryTask(void* arg)
         /* TODO: feed RXSM status bits */
         /* TODO: feed subsystem status */
 
-        encodeHeartbeatFrame(&heartbeat, reinterpret_cast<frames::heartbeat_frame_t*>(payload));
-        send(frames::HEARTBEAT, payload, sizeof(frames::heartbeat_frame_t));
+        to_send = encodeHeartbeatFrame(&heartbeat, payload);
+        send(frames::HEARTBEAT, payload, to_send);
 
         osDelay(500);
     }

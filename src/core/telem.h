@@ -85,29 +85,13 @@ namespace frames {
     } heartbeat_data_t;
 
     /**
-     * @brief Structure of the payload of a heartbeat frame in the telemetry protocol.
-     *
-     * This structure represents the wire encoding of the heartbeat frame. There
-     * is another structure for the raw values.
-     */
-    typedef struct __attribute__((packed)) {
-        uint32_t timestamp;
-        uint8_t error;
-        uint8_t voltage;
-        int8_t temperature;
-        uint8_t rxsmStatusBits;
-        uint16_t subsystemStatus;
-    } heartbeat_frame_t;
-
-    static_assert(sizeof(heartbeat_frame_t) == 10, "Heartbeat frame size invalid");
-
-    /**
      * @brief Encodes a heartbeat frame into its wire representation.
      *
      * @param data  the data to encode in the telemetry frame
      * @param encoded  the encoded representation of the telemetry frame
+     * @return the length of the encoded representation of the telemetry frame
      */
-    void encodeHeartbeatFrame(const heartbeat_data_t* data, heartbeat_frame_t* encoded);
+    uint8_t encodeHeartbeatFrame(const heartbeat_data_t* data, uint8_t* encoded);
 
     /**
      * @brief Decodes a heartbeat frame from its wire representation.
@@ -115,7 +99,7 @@ namespace frames {
      * @param encoded  the encoded representation of the telemetry frame
      * @param decoded  the decoded representation of the telemetry frame
      */
-    void decodeHeartbeatFrame(const heartbeat_frame_t* encoded, heartbeat_data_t* decoded);
+    void decodeHeartbeatFrame(const uint8_t* encoded, heartbeat_data_t* decoded);
 }
 
 /**

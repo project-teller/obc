@@ -100,32 +100,15 @@ TEST(TelemetryTest, heartbeatFrameEncoding)
             .mag = SUBSYSTEM_STATUS_OK
         }
     };
-    frames::heartbeat_frame_t encoded;
-    frames::heartbeat_frame_t expected = {
-        .timestamp = 1234000,
-        .error = 42,
-        .voltage = 42,
-        .temperature = -42,
-        .rxsmStatusBits = 6,
-        .subsystemStatus = 795,
-    };
+    uint8_t encoded[MAX_MESSAGE_LENGTH];
     uint8_t expectedBytes[] = { 80, 212, 18, 0, 42, 42, 214, 6, 27, 3 };
     frames::heartbeat_data_t decoded;
     /* clang-format on */
 
-    frames::encodeHeartbeatFrame(&heartbeat, &encoded);
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeHeartbeatFrame(&heartbeat, encoded));
+    EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
 
-    EXPECT_EQ(expected.timestamp, encoded.timestamp);
-    EXPECT_EQ(expected.error, encoded.error);
-    EXPECT_EQ(expected.voltage, encoded.voltage);
-    EXPECT_EQ(expected.temperature, encoded.temperature);
-    EXPECT_EQ(expected.rxsmStatusBits, encoded.rxsmStatusBits);
-    EXPECT_EQ(expected.subsystemStatus, encoded.subsystemStatus);
-
-    EXPECT_EQ(sizeof(expectedBytes), sizeof(expected));
-    EXPECT_EQ(0, memcmp(&expectedBytes, &expected, sizeof(expectedBytes)));
-
-    frames::decodeHeartbeatFrame(&encoded, &decoded);
+    frames::decodeHeartbeatFrame(encoded, &decoded);
 
     EXPECT_EQ(decoded.timestampInMsec, heartbeat.timestampInMsec);
     EXPECT_EQ(decoded.error, heartbeat.error);
