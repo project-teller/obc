@@ -4,6 +4,7 @@
 #include "core/telem/generic.h"
 #include "core/telem/heartbeat.h"
 #include "core/telem/text_message.h"
+#include "core/telem/timesync.h"
 
 using namespace std;
 using namespace teller::telem;
@@ -151,4 +152,27 @@ TEST(TelemetryTest, textMessageFrameEncoding)
     EXPECT_EQ(decoded.level, message.level);
     EXPECT_EQ(decoded.module, message.module);
     EXPECT_STREQ(decoded.message, message.message);
+}
+
+TEST(TelemetryTest, timesyncFrameEncoding)
+{
+    /* clang-format off */
+    frames::timesync_data_t message = {
+        .timestampInMsec = 1234567,
+        .rtcTimestampInMsec = 1707048820951,
+    };
+    uint8_t encoded[MAX_MESSAGE_LENGTH];
+    uint8_t expectedBytes[] = {
+        135, 214, 18, 0, 215, 224, 9, 116, 141, 1, 0, 0
+    };
+    frames::timesync_data_t decoded;
+    /* clang-format on */
+
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeTimesyncFrame(&message, encoded));
+    EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
+
+    frames::decodeTimesyncFrame(encoded, &decoded);
+
+    EXPECT_EQ(decoded.timestampInMsec, message.timestampInMsec);
+    EXPECT_EQ(decoded.rtcTimestampInMsec, message.rtcTimestampInMsec);
 }

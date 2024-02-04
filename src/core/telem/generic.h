@@ -85,6 +85,7 @@ namespace frames {
         UNKNOWN = 0,
         HEARTBEAT = 1,
         TEXT_MESSAGE = 2,
+        TIMESYNC = 3,
     } frame_type_t;
 
 }
