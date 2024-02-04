@@ -1,11 +1,6 @@
 #include <algorithm>
-#include <cassert>
-#include <cmath>
-#include <cstring>
-#include <limits>
 
-#include "core/telem.h"
-#include "core/utils/crc.h"
+#include "core/telem/heartbeat.h"
 
 using namespace std;
 using namespace teller::telem;
@@ -39,48 +34,7 @@ typedef struct __attribute__((packed)) {
 
 static_assert(sizeof(heartbeat_frame_t) == 10, "Heartbeat frame size invalid");
 
-}
-
-uint8_t teller::telem::getMessageSizeForPayloadLength(uint8_t payload_length)
-{
-    return payload_length <= MAX_PAYLOAD_LENGTH ? payload_length + 8 : 0;
-}
-
-uint8_t teller::telem::serialize(
-    uint8_t* buffer, uint8_t buffer_length,
-    envelope_t envelope, const uint8_t* payload, uint8_t payload_length)
-{
-    uint8_t space_needed = getMessageSizeForPayloadLength(payload_length);
-    uint16_t crc;
-
-    if (space_needed == 0 || space_needed > buffer_length) {
-        return 0;
-    }
-
-    if (envelope.source == UNKNOWN_COMPONENT) {
-        envelope.source = ONBOARD_COMPUTER;
-    }
-
-    if (envelope.target == UNKNOWN_COMPONENT) {
-        envelope.target = GROUND_STATION;
-    }
-
-    buffer[0] = 0xCA;
-    buffer[1] = 0xFE;
-    buffer[2] = envelope.seq_no;
-    buffer[3] = envelope.frame_type;
-    buffer[4] = (((static_cast<int>(envelope.source) & 0x03) << 4) | (static_cast<int>(envelope.target) & 0x03));
-    buffer[5] = payload_length;
-    memcpy(buffer + 6, payload, payload_length);
-
-    crc = crc_ccitt(0, buffer, payload_length + 6);
-    buffer[payload_length + 6] = crc & 0xff;
-    buffer[payload_length + 7] = crc >> 8;
-
-    return space_needed;
-}
-
-uint8_t teller::telem::frames::encodeHeartbeatFrame(const heartbeat_data_t* data, uint8_t* encoded)
+uint8_t encodeHeartbeatFrame(const heartbeat_data_t* data, uint8_t* encoded)
 {
     auto frame = reinterpret_cast<heartbeat_frame_t*>(encoded);
 
@@ -122,7 +76,7 @@ uint8_t teller::telem::frames::encodeHeartbeatFrame(const heartbeat_data_t* data
     return sizeof(heartbeat_frame_t);
 }
 
-void teller::telem::frames::decodeHeartbeatFrame(const uint8_t* encoded, heartbeat_data_t* decoded)
+void decodeHeartbeatFrame(const uint8_t* encoded, heartbeat_data_t* decoded)
 {
     auto frame = reinterpret_cast<const heartbeat_frame_t*>(encoded);
     uint16_t status;
@@ -149,27 +103,4 @@ void teller::telem::frames::decodeHeartbeatFrame(const uint8_t* encoded, heartbe
         (status >> SUBSYSTEM_MAG_BIT_INDEX) & 0x03);
 }
 
-uint8_t teller::telem::frames::encodeTextMessageFrame(
-    const text_message_data_t* data, uint8_t* encoded)
-{
-    size_t length = strlen(data->message);
-
-    assert(length <= MAX_PAYLOAD_LENGTH - 1);
-
-    encoded[0] = (data->level & 0x07) | (data->module << 3);
-    memcpy(encoded + 1, data->message, length);
-
-    return length + 1;
-}
-
-void teller::telem::frames::decodeTextMessageFrame(
-    const uint8_t* encoded, size_t length, text_message_data_t* decoded)
-{
-    assert(length <= MAX_PAYLOAD_LENGTH);
-
-    decoded->level = static_cast<log_level_t>(encoded[0] & 0x07);
-    decoded->module = static_cast<module_id_t>(encoded[0] >> 3);
-
-    memcpy(decoded->message, encoded + 1, length - 1);
-    decoded->message[length - 1] = 0;
 }

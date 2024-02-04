@@ -1,7 +1,11 @@
 # Declare core library that does not contain any hardware-specific elements
 add_library(
     obc-core
-    telem.cpp
+
+    telem/generic.cpp
+    telem/heartbeat.cpp
+    telem/text_message.cpp
+
     utils/crc.c
 )
 target_include_directories(

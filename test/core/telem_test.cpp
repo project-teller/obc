@@ -1,7 +1,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "core/telem.h"
+#include "core/telem/generic.h"
+#include "core/telem/heartbeat.h"
+#include "core/telem/text_message.h"
 
 using namespace std;
 using namespace teller::telem;

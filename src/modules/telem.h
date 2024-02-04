@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/telem.h"
+#include "core/telem/generic.h"
 
 namespace teller::telem {
 

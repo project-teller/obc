@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/telem.h"
+#include "core/telem/heartbeat.h"
 
 namespace teller::telem {
 
