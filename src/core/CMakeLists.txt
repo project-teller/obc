@@ -8,6 +8,7 @@ add_library(
     telem/timesync.cpp
 
     utils/crc.c
+    utils/time.c
 )
 target_include_directories(
 	obc-core PRIVATE

@@ -1,6 +1,7 @@
 #include "hal.h"
 
 #include "led.h"
+#include "rtc.h"
 #include "system.h"
 #include "uart.h"
 #include "watchdog.h"
@@ -15,6 +16,7 @@ bool teller::hal::init()
     led::init();
 
     success &= watchdog::init();
+    success &= rtc::init();
     success &= uart::init();
 
     return success;

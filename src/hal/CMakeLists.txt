@@ -7,11 +7,13 @@ if(TARGET_MCU STREQUAL "POSIX")
     # Nothing to do
     list(APPEND HAL_SOURCES
         posix/led.cpp
+        posix/rtc.cpp
         posix/system.cpp
     )
 else()
     list(APPEND HAL_SOURCES
         stm32/led.cpp
+        stm32/rtc.cpp
         stm32/system.cpp
         stm32/uart.cpp
         stm32/utils.cpp
@@ -30,6 +32,7 @@ else()
         ${HAL_NAMESPACE}::GPIO
         ${HAL_NAMESPACE}::DMA
         ${HAL_NAMESPACE}::IWDG
+        ${HAL_NAMESPACE}::RTC
         ${HAL_NAMESPACE}::UART
         ${HAL_NAMESPACE}::UARTEx
         ${HAL_NAMESPACE}::CORTEX

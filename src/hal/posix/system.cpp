@@ -1,6 +1,7 @@
 #include <cassert>
 #include <ctime>
 
+#include "core/utils/time.h"
 #include "hal/system.h"
 
 using namespace std;
@@ -9,10 +10,6 @@ using namespace teller::hal::system;
 struct timespec lastBootAt;
 
 reset_reason_t reasonOfLastReset = RESET_REASON_UNKNOWN;
-
-static void timespec_diff(
-    struct timespec* start, struct timespec* stop,
-    struct timespec* result);
 
 void teller::hal::system::init()
 {
@@ -36,24 +33,7 @@ std::uint32_t teller::hal::system::getTimeSinceBootMsec(void)
     int retval = clock_gettime(CLOCK_MONOTONIC, &now);
     assert(retval == 0);
 
-    timespec_diff(&lastBootAt, &now, &diff);
+    timespecDiff(&lastBootAt, &now, &diff);
 
     return diff.tv_sec * 1000 + diff.tv_nsec / 1000000;
 }
-
-/* ************************************************************************* */
-
-/* GCOVR_EXCL_START */
-static void timespec_diff(
-    struct timespec* start, struct timespec* stop,
-    struct timespec* result)
-{
-    if ((stop->tv_nsec - start->tv_nsec) < 0) {
-        result->tv_sec = stop->tv_sec - start->tv_sec - 1;
-        result->tv_nsec = stop->tv_nsec - start->tv_nsec + 1000000000;
-    } else {
-        result->tv_sec = stop->tv_sec - start->tv_sec;
-        result->tv_nsec = stop->tv_nsec - start->tv_nsec;
-    }
-}
-/* GCOVR_EXCL_STOP */
