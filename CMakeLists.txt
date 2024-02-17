@@ -42,6 +42,10 @@ else()
   set(BUILD_FIRMWARE YES)
 endif()
 
+# Check for functions and headers that might or might not be present
+include(CheckSymbolExists)
+check_symbol_exists(timegm "time.h" HAVE_TIMEGM)
+
 # Enable testing and code coverage support
 enable_testing()
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND TELLER_ENABLE_CODE_COVERAGE)
