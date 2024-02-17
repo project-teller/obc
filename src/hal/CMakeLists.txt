@@ -40,6 +40,12 @@ else()
         STM32::NoSys
         ${CMSIS_NAMESPACE}::RTOS_V2
     )
+
+    if(TARGET_MCU STREQUAL "STM32H7")
+        list(APPEND HAL_LIBRARIES
+            ${HAL_NAMESPACE}::UARTEx
+        )
+    endif()
 endif()
 
 # Declare the hardware abstraction layer library
