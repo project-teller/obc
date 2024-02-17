@@ -122,7 +122,7 @@ static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t*
     UART_HandleTypeDef* pHandle = &state->handle;
 
     pHandle->Instance = cfg->instance;
-    pHandle->Init.BaudRate = cfg->baud_rate > 0 ? cfg->baud_rate : 115200;
+    pHandle->Init.BaudRate = cfg->baud_rate > 0 ? cfg->baud_rate : 38400;
     pHandle->Init.WordLength = UART_WORDLENGTH_8B;
     pHandle->Init.StopBits = UART_STOPBITS_1;
     pHandle->Init.Parity = UART_PARITY_NONE;
