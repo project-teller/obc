@@ -34,7 +34,6 @@ else()
         ${HAL_NAMESPACE}::IWDG
         ${HAL_NAMESPACE}::RTC
         ${HAL_NAMESPACE}::UART
-        ${HAL_NAMESPACE}::UARTEx
         ${HAL_NAMESPACE}::CORTEX
         CMSIS::${TARGET_MCU_CMSIS_MODULE}
         STM32::NoSys

@@ -129,9 +129,12 @@ static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t*
     pHandle->Init.Mode = UART_MODE_TX_RX;
     pHandle->Init.HwFlowCtl = cfg->hw_flow_control ? UART_HWCONTROL_RTS_CTS : UART_HWCONTROL_NONE;
     pHandle->Init.OverSampling = UART_OVERSAMPLING_16;
+
+#ifdef TELLER_TARGET_MCU_STM32H7
     pHandle->Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
     pHandle->Init.ClockPrescaler = UART_PRESCALER_DIV1;
     pHandle->AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+#endif
 
     if (HAL_UART_Init(pHandle) != HAL_OK) {
         goto cleanup;
@@ -143,6 +146,7 @@ static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t*
         goto cleanup;
     }
 
+#ifdef TELLER_TARGET_MCU_STM32H7
     if (HAL_UARTEx_SetTxFifoThreshold(pHandle, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK) {
         goto cleanup;
     }
@@ -154,6 +158,7 @@ static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t*
     if (HAL_UARTEx_DisableFifoMode(pHandle) != HAL_OK) {
         goto cleanup;
     }
+#endif
 
     state->event = osEventFlagsNew(nullptr);
     if (!state->event) {
