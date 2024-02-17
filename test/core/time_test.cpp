@@ -29,3 +29,11 @@ TEST(TimeTest, timespecToMsec)
     EXPECT_EQ(1234512, timespecToMsec(&spec));
     EXPECT_EQ(-1233488, timespecToMsec(&spec_negative));
 }
+
+TEST(TimeTest, utcTimeToMsec)
+{
+    EXPECT_EQ(15000, utcTimeToMsec(1970, 1, 1, 0, 0, 15, 0));
+    EXPECT_EQ(15250, utcTimeToMsec(1970, 1, 1, 0, 0, 15, 250));
+    EXPECT_EQ(428330096125, utcTimeToMsec(1983, 7, 29, 12, 34, 56, 125));
+    EXPECT_EQ(0, utcTimeToMsec(1900, 1, 1, 0, 0, 0, 0));
+}

@@ -22,6 +22,14 @@ void timespecDiff(const struct timespec* start, const struct timespec* stop, str
  */
 int64_t timespecToMsec(const struct timespec* spec);
 
+/**
+ * @brief Converts a UTC time instant in broken time representation to milliseconds.
+ */
+int64_t utcTimeToMsec(
+    uint16_t year, uint8_t month, uint8_t day,
+    uint8_t hour, uint8_t minute, uint8_t second,
+    uint16_t millisecond);
+
 #ifdef __cplusplus
 }
 #endif
