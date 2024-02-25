@@ -9,8 +9,6 @@ using namespace teller::hal::system;
 
 struct timespec lastBootAt;
 
-reset_reason_t reasonOfLastReset = RESET_REASON_UNKNOWN;
-
 void teller::hal::system::init()
 {
     int retval = clock_gettime(CLOCK_MONOTONIC, &lastBootAt);
@@ -19,11 +17,6 @@ void teller::hal::system::init()
 
 void teller::hal::system::destroy()
 {
-}
-
-reset_reason_t teller::hal::system::getReasonOfLastReset(void)
-{
-    return RESET_REASON_NORMAL;
 }
 
 std::uint32_t teller::hal::system::getTimeSinceBootMsec(void)

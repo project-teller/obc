@@ -7,12 +7,14 @@ if(TARGET_MCU STREQUAL "POSIX")
     # Nothing to do
     list(APPEND HAL_SOURCES
         posix/led.cpp
+        posix/rcc.cpp
         posix/rtc.cpp
         posix/system.cpp
     )
 else()
     list(APPEND HAL_SOURCES
         stm32/led.cpp
+        stm32/rcc.cpp
         stm32/rtc.cpp
         stm32/system.cpp
         stm32/uart.cpp
@@ -63,6 +65,7 @@ target_include_directories(
 )
 target_link_libraries(
     obc-hal PUBLIC
+    obc-core
     ${HAL_LIBRARIES}
 )
 target_compile_definitions(

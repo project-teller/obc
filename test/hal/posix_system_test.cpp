@@ -57,8 +57,3 @@ TEST_F(SystemTest, getTimeSinceBootMsec)
 
     EXPECT_TRUE(timestamps[3] - timestamps[0] < 100);
 }
-
-TEST_F(SystemTest, getReasonOfLastReset)
-{
-    EXPECT_EQ(RESET_REASON_NORMAL, getReasonOfLastReset());
-}
