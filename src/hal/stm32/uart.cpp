@@ -147,8 +147,7 @@ static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t*
     }
 
 #ifdef STM32H7
-    x if (HAL_UARTEx_SetTxFifoThreshold(pHandle, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
-    {
+    if (HAL_UARTEx_SetTxFifoThreshold(pHandle, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK) {
         goto cleanup;
     }
 
