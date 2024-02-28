@@ -146,8 +146,9 @@ static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t*
         goto cleanup;
     }
 
-#ifdef TELLER_TARGET_MCU_STM32H7
-    if (HAL_UARTEx_SetTxFifoThreshold(pHandle, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK) {
+#ifdef STM32H7
+    x if (HAL_UARTEx_SetTxFifoThreshold(pHandle, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
+    {
         goto cleanup;
     }
 
@@ -204,7 +205,6 @@ static uart_phy_state_t* find_uart_phy_state(UART_HandleTypeDef* huart)
 void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 {
     GPIO_InitTypeDef GPIO_InitStruct = { 0 };
-    RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = { 0 };
 
     uart_phy_state_t* state = find_uart_phy_state(huart);
     const uart_phy_config_t* cfg = state ? state->cfg : nullptr;
@@ -213,12 +213,16 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     }
 
     if (huart->Instance == USART3) {
+#ifdef STM32H7
+        RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = { 0 };
+
         /* Initializes the peripherals clock */
         PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART3;
         PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
         if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
             return;
         }
+#endif
 
         /* Peripheral clock enable */
         __HAL_RCC_USART3_CLK_ENABLE();

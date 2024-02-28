@@ -21,7 +21,9 @@ bool init()
     handle.Init.OutPut = RTC_OUTPUT_DISABLE;
     handle.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
     handle.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
+#ifdef STM32H7
     handle.Init.OutPutRemap = RTC_OUTPUT_REMAP_NONE;
+#endif
 
     if (HAL_RTC_Init(&handle) != HAL_OK) {
         goto cleanup;

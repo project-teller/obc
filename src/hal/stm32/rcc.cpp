@@ -13,7 +13,11 @@ bool init()
     RCC_OscInitTypeDef oscInit;
     RCC_ClkInitTypeDef clkInit;
 
-    if (__HAL_RCC_GET_FLAG(RCC_FLAG_IWDG1RST)) {
+#if defined(STM32H7)
+#define RCC_FLAG_IWDGRST RCC_FLAG_IWDG1RST
+#endif
+
+    if (__HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST)) {
         reasonOfLastReset = RESET_REASON_WATCHDOG;
     } else if (__HAL_RCC_GET_FLAG(RCC_FLAG_SFTRST)) {
         reasonOfLastReset = RESET_REASON_SOFTWARE;
