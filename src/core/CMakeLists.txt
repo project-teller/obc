@@ -8,6 +8,7 @@ add_library(
     telem/timesync.cpp
 
     utils/crc.c
+    utils/majority_voter.cpp
     utils/time.c
 )
 target_include_directories(
