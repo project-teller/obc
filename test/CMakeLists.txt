@@ -11,6 +11,7 @@ add_executable(
     core/rxsm_test.cpp
     core/telem_test.cpp
     core/time_test.cpp
+    hal/posix_gpio_test.cpp
     hal/posix_led_test.cpp
     hal/posix_rcc_test.cpp
     hal/posix_rtc_test.cpp

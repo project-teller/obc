@@ -1,5 +1,6 @@
 #include "hal.h"
 
+#include "gpio.h"
 #include "led.h"
 #include "rcc.h"
 #include "rtc.h"
@@ -19,6 +20,7 @@ bool teller::hal::init()
     success &= rcc::init();
     success &= watchdog::init();
     success &= rtc::init();
+    success &= gpio::init();
     success &= uart::init();
 
     return success;

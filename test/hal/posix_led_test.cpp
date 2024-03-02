@@ -1,4 +1,3 @@
-#include <cstring>
 #include <gtest/gtest.h>
 
 #include "hal/led.h"
