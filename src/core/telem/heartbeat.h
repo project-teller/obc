@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/rxsm.h"
 #include "core/telem/generic.h"
 
 namespace teller::telem::frames {
@@ -16,11 +17,7 @@ typedef struct {
     std::uint8_t error;
     float voltageInVolts;
     float temperateInCelsius;
-    struct {
-        bool sods;
-        bool soe;
-        bool lo;
-    } rxsmStatusBits;
+    teller::rxsm::State rxsmStatusBits;
     struct {
         subsystem_status_t gmm;
         subsystem_status_t scm;

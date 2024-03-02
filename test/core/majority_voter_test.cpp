@@ -48,6 +48,7 @@ TEST(MajorityVoterTest, feedAndGet)
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0
     };
+    /* fmt: on */
     constexpr size_t n = sizeof(sequence) / sizeof(sequence[0]);
     static_assert(sizeof(expected) / sizeof(expected[0]) == n);
 

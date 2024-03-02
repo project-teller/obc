@@ -48,7 +48,6 @@ TEST_F(SystemTest, getTimeSinceBootMsec)
             millisleep(2);
         }
         timestamps[i] = getTimeSinceBootMsec();
-        printf("%ld\n", (long int)timestamps[i]);
     }
 
     EXPECT_TRUE(timestamps[1] > timestamps[0]);

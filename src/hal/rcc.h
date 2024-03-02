@@ -22,7 +22,7 @@ typedef enum {
 /**
  * @brief Destructor function for the RCC subsystem.
  *
- * This function is called from tests to reset the LED subsystem to a known
+ * This function is called from tests to reset the RCC subsystem to a known
  * base state.
  */
 void destroy(void);

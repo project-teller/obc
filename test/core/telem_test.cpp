@@ -90,11 +90,6 @@ TEST(TelemetryTest, heartbeatFrameEncoding)
         .error = 42,
         .voltageInVolts = 4.2,
         .temperateInCelsius = -42.42,
-        .rxsmStatusBits = {
-            .sods = false,
-            .soe = true,
-            .lo = true
-        },
         .subsystemStatus = {
             .gmm = SUBSYSTEM_STATUS_OK,
             .scm = SUBSYSTEM_STATUS_WARNING,
@@ -107,6 +102,10 @@ TEST(TelemetryTest, heartbeatFrameEncoding)
     uint8_t expectedBytes[] = { 80, 212, 18, 0, 42, 42, 214, 6, 27, 3 };
     frames::heartbeat_data_t decoded;
     /* clang-format on */
+
+    heartbeat.rxsmStatusBits.sods = false;
+    heartbeat.rxsmStatusBits.soe = true;
+    heartbeat.rxsmStatusBits.lo = true;
 
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeHeartbeatFrame(&heartbeat, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));

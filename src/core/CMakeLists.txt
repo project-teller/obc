@@ -2,6 +2,8 @@
 add_library(
     obc-core
 
+    rxsm.cpp
+
     telem/generic.cpp
     telem/heartbeat.cpp
     telem/text_message.cpp
