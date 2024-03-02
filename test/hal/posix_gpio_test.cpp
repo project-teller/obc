@@ -17,27 +17,11 @@ protected:
     }
 };
 
-TEST_F(GPIOTest, readAndWriteDigital)
+TEST_F(GPIOTest, readAndWrite)
 {
-    EXPECT_FALSE(readDigital(DGPIO_LO));
-    writeDigital(DGPIO_LO, true);
-    EXPECT_TRUE(readDigital(DGPIO_LO));
-    writeDigital(DGPIO_LO, false);
-    EXPECT_FALSE(readDigital(DGPIO_LO));
-}
-
-TEST_F(GPIOTest, readAndWriteAnalog)
-{
-    EXPECT_EQ(0, readAnalog(AGPIO_BOARD_VOLTAGE));
-    writeAnalog(AGPIO_BOARD_VOLTAGE, 3300);
-    EXPECT_EQ(3300, readAnalog(AGPIO_BOARD_VOLTAGE));
-    writeAnalog(AGPIO_BOARD_VOLTAGE, 5000);
-    EXPECT_EQ(5000, readAnalog(AGPIO_BOARD_VOLTAGE));
-}
-
-TEST_F(GPIOTest, readAndWriteAnalogInvalidIndex)
-{
-    EXPECT_EQ(0, readAnalog(AGPIO_COUNT));
-    writeAnalog(AGPIO_COUNT, 3300);
-    EXPECT_EQ(0, readAnalog(AGPIO_BOARD_VOLTAGE));
+    EXPECT_FALSE(read(GPIO_LO));
+    write(GPIO_LO, true);
+    EXPECT_TRUE(read(GPIO_LO));
+    write(GPIO_LO, false);
+    EXPECT_FALSE(read(GPIO_LO));
 }

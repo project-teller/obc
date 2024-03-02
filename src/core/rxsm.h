@@ -24,10 +24,7 @@ namespace signal {
 /**
  * @brief Class representing the states of the signals from the REXUS service module.
  */
-class State {
-public:
-    State() { }
-
+struct State {
     bool sods;
     bool soe;
     bool lo;
