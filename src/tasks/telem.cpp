@@ -1,22 +1,18 @@
 #include <cstring>
 
+#include "hal/system.h"
 #include "modules/messages.h"
 #include "modules/telem.h"
 #include "tasks/serial.h"
 #include "tasks/telem.h"
 
+using namespace teller::hal;
 using namespace teller::telem;
-
-const osThreadAttr_t teller::tasks::telemetryTaskAttr = {
-    .name = "telem",
-    .stack_size = 1024,
-    .priority = osPriorityNormal,
-};
 
 static void sendHeartbeat(uint8_t* payload);
 static void sendTimesync(uint8_t* payload);
 
-__NO_RETURN void teller::tasks::telemetryTask(void* arg)
+[[noreturn]] void teller::tasks::telemetryTask(void* arg)
 {
     uint8_t payload[MAX_PAYLOAD_LENGTH];
     uint8_t loop_counter;
@@ -30,7 +26,7 @@ __NO_RETURN void teller::tasks::telemetryTask(void* arg)
             sendTimesync(payload);
         }
 
-        osDelay(500);
+        system::delayMsec(500);
     }
 }
 

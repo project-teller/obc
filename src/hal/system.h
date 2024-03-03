@@ -24,4 +24,10 @@ void destroy(void);
  */
 std::uint32_t getTimeSinceBootMsec(void);
 
+/**
+ * @brief Delays the execution of the current thread or task with the given
+ * number of milliseconds.
+ */
+void delayMsec(uint32_t delay);
+
 }

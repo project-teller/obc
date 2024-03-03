@@ -1,5 +1,6 @@
 #include "tasks/supervisor.h"
 #include "hal/led.h"
+#include "hal/system.h"
 #include "hal/watchdog.h"
 
 using namespace teller::hal;
@@ -8,19 +9,14 @@ using namespace teller::hal;
 // http://www.ganssle.com/watchdogs.htm
 // section "Watchdog Timers for Multitasking"
 
-const osThreadAttr_t teller::tasks::supervisorTaskAttr = {
-    .name = "supervisor",
-    .priority = osPriorityLow,
-};
-
-__NO_RETURN void teller::tasks::supervisorTask(void* arg)
+[[noreturn]] void teller::tasks::supervisorTask(void* arg)
 {
     watchdog::configure_and_start();
 
     // TODO: implement the guidelines outlined above; this is just a placeholder
     // for the time being
     for (;;) {
-        osDelay(1000);
+        system::delayMsec(1000);
         watchdog::reset();
     }
 }

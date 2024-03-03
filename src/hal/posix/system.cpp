@@ -1,5 +1,7 @@
 #include <cassert>
+#include <chrono>
 #include <ctime>
+#include <thread>
 
 #include "core/utils/time.h"
 #include "hal/system.h"
@@ -29,4 +31,9 @@ std::uint32_t teller::hal::system::getTimeSinceBootMsec(void)
     timespecDiff(&lastBootAt, &now, &diff);
 
     return diff.tv_sec * 1000 + diff.tv_nsec / 1000000;
+}
+
+void teller::hal::system::delayMsec(uint32_t delay)
+{
+    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
 }

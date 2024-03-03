@@ -22,3 +22,8 @@ std::uint32_t teller::hal::system::getTimeSinceBootMsec(void)
 {
     return osKernelGetTickCount();
 }
+
+void teller::hal::system::delayMsec(uint32_t delay)
+{
+    osDelay(delay);
+}

@@ -1,23 +1,18 @@
 #include "core/rxsm.h"
 #include "hal/gpio.h"
 #include "hal/led.h"
+#include "hal/system.h"
 
 #include "tasks/pins.h"
 
 using namespace teller::hal;
 
-const osThreadAttr_t teller::tasks::pinsTaskAttr = {
-    .name = "pins",
-    .priority = osPriorityNormal,
-};
-
 static teller::rxsm::StateManager rxsmStateManager;
 
-__NO_RETURN void teller::tasks::pinsTask(void* arg)
+[[noreturn]] void teller::tasks::pinsTask(void* arg)
 {
     uint8_t values, iter, index, diff;
     teller::rxsm::State states[2];
-    teller::rxsm::State* state;
 
     for (iter = 0;; iter++) {
         values = 0;
@@ -37,6 +32,15 @@ __NO_RETURN void teller::tasks::pinsTask(void* arg)
         rxsmStateManager.update(values);
         rxsmStateManager.getState(states[index]);
 
-        osDelay(20);
+        // diff = states[index].compare(states[1 - index]);
+        diff = 0;
+        if (diff) {
+            /* State changed, inject messages */
+        }
+
+        if (iter & 63 == 0) {
+        }
+
+        system::delayMsec(20);
     }
 }

@@ -11,6 +11,37 @@
 #include "tasks/supervisor.h"
 #include "tasks/telem.h"
 
+namespace teller::tasks {
+
+const osThreadAttr_t blinkTaskAttr = {
+    .name = "blinker",
+    .priority = osPriorityLow,
+};
+
+const osThreadAttr_t pinsTaskAttr = {
+    .name = "pins",
+    .priority = osPriorityNormal,
+};
+
+const osThreadAttr_t serialTaskAttr = {
+    .name = "serial",
+    .stack_size = 1024,
+    .priority = osPriorityHigh,
+};
+
+const osThreadAttr_t supervisorTaskAttr = {
+    .name = "supervisor",
+    .priority = osPriorityLow,
+};
+
+const osThreadAttr_t telemetryTaskAttr = {
+    .name = "telem",
+    .stack_size = 1024,
+    .priority = osPriorityNormal,
+};
+
+}
+
 int main(void)
 {
     bool inited;
