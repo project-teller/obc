@@ -1,8 +1,8 @@
 #include <cassert>
-#include <cmsis_os2.h>
 #include <cstring>
 
 #include "core/utils/crc.h"
+#include "hal/queue.hpp"
 #include "hal/uart.h"
 #include "modules/errors.h"
 #include "modules/telem.h"
@@ -22,20 +22,24 @@ typedef struct {
 /** Sequence number of next message */
 static uint8_t seq_no = 0;
 
-static bool initLowLevel();
-static bool receiveLowLevel(message_t* message);
+/** Number of chunks that can be enqueued in the task without blocking */
+static const int QUEUE_SIZE = 64;
+
+/** Queue in which the enqueued messages are stored */
+static BlockingQueue<message_t> out_queue(QUEUE_SIZE);
+
 static bool sendLowLevel(uint8_t* buf, uint8_t length);
 
 bool teller::telem::init()
 {
-    return initLowLevel();
+    return true;
 }
 
 bool teller::telem::flushNext()
 {
     message_t message;
 
-    if (!receiveLowLevel(&message)) {
+    if (!out_queue.receive(message)) {
         return false;
     }
 
@@ -95,24 +99,6 @@ bool teller::telem::send(
 }
 
 /* ************************************************************************* */
-/* CMSIS-specific implementation of the telemetry module                     */
-/* ************************************************************************* */
-
-static osMessageQueueId_t queue;
-
-/** Number of chunks that can be enqueued in the task without blocking */
-static const int QUEUE_SIZE = 64;
-
-bool initLowLevel()
-{
-    queue = osMessageQueueNew(QUEUE_SIZE, sizeof(message_t), nullptr);
-    return queue != nullptr;
-}
-
-bool receiveLowLevel(message_t* message)
-{
-    return osMessageQueueGet(queue, message, nullptr, osWaitForever) == osOK;
-}
 
 bool sendLowLevel(uint8_t* buf, uint8_t length)
 {
@@ -120,5 +106,5 @@ bool sendLowLevel(uint8_t* buf, uint8_t length)
         .data = buf,
         .length = length
     };
-    return osMessageQueuePut(queue, &message, 0, osWaitForever) == osOK;
+    return out_queue.send(message);
 }

@@ -47,7 +47,7 @@ public:
     }
 
 private:
-    osMutexId_t handle;
+    native_handle_type handle;
 };
 
 /**

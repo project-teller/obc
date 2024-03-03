@@ -138,11 +138,12 @@ if(BUILD_TESTS)
 	set(TARGET_NAME obc-test)
 
 	# List all source files here that are needed for the unit tests but do
-	# not depend on the hardware
+	# not depend on the concrete hardware
 	add_library(
 		${TARGET_NAME}
 
 		modules/errors.cpp
+		modules/telem.cpp
 	)
 	target_include_directories(
 		${TARGET_NAME} PRIVATE

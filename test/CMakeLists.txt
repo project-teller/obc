@@ -15,6 +15,7 @@ add_executable(
     hal/posix_led_test.cpp
     hal/posix_rcc_test.cpp
     hal/posix_rtc_test.cpp
+    hal/posix_queue_test.cpp
     hal/posix_system_test.cpp
     modules/errors_test.cpp
 )
@@ -22,6 +23,7 @@ target_include_directories(
     ${TARGET_NAME}
     PRIVATE
     ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_BINARY_DIR}/src
 )
 target_link_libraries(
     ${TARGET_NAME}
