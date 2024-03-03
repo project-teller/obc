@@ -8,9 +8,9 @@ namespace teller::hal::gpio {
  * @brief Enum containing symbolic constants for the pins in the GPIO abstraction layer.
  */
 typedef enum {
-    GPIO_SODS,
-    GPIO_SOE,
-    GPIO_LO,
+    SODS,
+    SOE,
+    LO,
     GPIO_COUNT,
 } pin_t;
 

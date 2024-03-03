@@ -19,9 +19,9 @@ protected:
 
 TEST_F(GPIOTest, readAndWrite)
 {
-    EXPECT_FALSE(read(GPIO_LO));
-    write(GPIO_LO, true);
-    EXPECT_TRUE(read(GPIO_LO));
-    write(GPIO_LO, false);
-    EXPECT_FALSE(read(GPIO_LO));
+    EXPECT_FALSE(read(LO));
+    write(LO, true);
+    EXPECT_TRUE(read(LO));
+    write(LO, false);
+    EXPECT_FALSE(read(LO));
 }
