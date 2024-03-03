@@ -1,12 +1,16 @@
 #include "hal/gpio.h"
 
+#include "config.h"
 #include "stm32_hal.h"
+#include "utils.h"
 
 using namespace teller::hal::gpio;
+using namespace teller::hal::utils;
 
 typedef struct {
     GPIO_TypeDef* port;
     uint16_t pin;
+    GPIO_InitTypeDef init;
 } gpio_config_t;
 
 #define UNMAPPED   \
@@ -16,7 +20,8 @@ typedef struct {
 
 const gpio_config_t gpio_configs[GPIO_COUNT] = {
 #if defined(TELLER_BOARD_NUCLEO144)
-    UNMAPPED,
+    /* SODS: User button */
+    { GPIOC, GPIO_PIN_13, { .Mode = GPIO_MODE_INPUT, .Pull = GPIO_PULLDOWN, .Speed = GPIO_SPEED_FREQ_HIGH } },
     UNMAPPED,
     UNMAPPED
 #elif defined(STM32F4)
@@ -25,7 +30,7 @@ const gpio_config_t gpio_configs[GPIO_COUNT] = {
     UNMAPPED,
     UNMAPPED
 #else
-    // No UART supported on this hardware
+    // No GPIOs supported on this hardware
     UNMAPPED,
     UNMAPPED,
     UNMAPPED
@@ -38,18 +43,36 @@ namespace teller::hal::gpio {
 
 bool init()
 {
+    GPIO_InitTypeDef init;
+
+    for (size_t i = 0; i < GPIO_COUNT; i++) {
+        const gpio_config_t* cfg = &gpio_configs[i];
+        if (cfg->port) {
+            init = cfg->init;
+            init.Pin = cfg->pin;
+            enableGPIOClocksForPort(cfg->port);
+            HAL_GPIO_Init(cfg->port, &init);
+        }
+    }
+
     return true;
 }
 
 void destroy()
 {
+    for (size_t i = 0; i < GPIO_COUNT; i++) {
+        const gpio_config_t* cfg = &gpio_configs[i];
+        if (cfg->port) {
+            HAL_GPIO_DeInit(cfg->port, cfg->pin);
+        }
+    }
 }
 
 bool read(pin_t index)
 {
     const gpio_config_t* cfg = findPin(index);
     if (cfg) {
-        return HAL_GPIO_ReadPin(cfg->port, cfg->pin) == GPIO_PIN_SET;
+        return HAL_GPIO_ReadPin(cfg->port, cfg->pin) != GPIO_PIN_RESET;
     } else {
         return false;
     }
