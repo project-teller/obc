@@ -88,43 +88,43 @@ endif()
 add_subdirectory(core)
 add_subdirectory(hal)
 
+# Set target name
+set(TARGET_NAME teller-obc)
+
+# Specify source files, include paths and libraries to link to
+add_executable(
+	${TARGET_NAME}
+
+	main.cpp
+
+	modules/errors.cpp
+	modules/messages.cpp
+	modules/telem.cpp
+
+	tasks/blinker.cpp
+	tasks/pins.cpp
+	tasks/serial.cpp
+	tasks/supervisor.cpp
+	tasks/telem.cpp
+)
+target_include_directories(
+	${TARGET_NAME} PRIVATE
+	${CMAKE_CURRENT_BINARY_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(
+	${TARGET_NAME} PRIVATE
+	obc-core
+	obc-hal
+)
+
+# Disable exceptions and RTTI, enable warnings and treat them as errors
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_EXCEPTIONS OFF)
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_RTTI OFF)
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_WARNINGS ON)
+set_property(TARGET ${TARGET_NAME} PROPERTY CXX_WARNINGS_AS_ERRORS ON)
+
 if(BUILD_FIRMWARE)
-	# Set target name
-	set(TARGET_NAME teller-obc)
-
-	# Specify source files, include paths and libraries to link to
-	add_executable(
-		${TARGET_NAME}
-
-		main.cpp
-
-		modules/errors.cpp
-		modules/messages.cpp
-		modules/telem.cpp
-
-		tasks/blinker.cpp
-		tasks/pins.cpp
-		tasks/serial.cpp
-		tasks/supervisor.cpp
-		tasks/telem.cpp
-	)
-	target_include_directories(
-		${TARGET_NAME} PRIVATE
-		${CMAKE_CURRENT_BINARY_DIR}
-		${CMAKE_CURRENT_SOURCE_DIR}
-	)
-	target_link_libraries(
-		${TARGET_NAME} PRIVATE
-		obc-core
-		obc-hal
-	)
-
-	# Disable exceptions and RTTI, enable warnings and treat them as errors
-	set_property(TARGET ${TARGET_NAME} PROPERTY CXX_EXCEPTIONS OFF)
-	set_property(TARGET ${TARGET_NAME} PROPERTY CXX_RTTI OFF)
-	set_property(TARGET ${TARGET_NAME} PROPERTY CXX_WARNINGS ON)
-	set_property(TARGET ${TARGET_NAME} PROPERTY CXX_WARNINGS_AS_ERRORS ON)
-
 	stm32_print_size_of_target(${TARGET_NAME})
 	stm32_generate_binary_file(${TARGET_NAME})
 	stm32_generate_hex_file(${TARGET_NAME})

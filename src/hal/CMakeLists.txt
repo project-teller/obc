@@ -4,13 +4,14 @@ set(HAL_LIBRARIES "")
 
 # Assemble list of source files, include directories and libraries
 if(TARGET_MCU STREQUAL "POSIX")
-    # Nothing to do
     list(APPEND HAL_SOURCES
         posix/gpio.cpp
         posix/led.cpp
         posix/rcc.cpp
         posix/rtc.cpp
         posix/system.cpp
+        posix/uart.cpp
+        posix/watchdog.cpp
     )
 else()
     list(APPEND HAL_SOURCES
