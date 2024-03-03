@@ -20,7 +20,7 @@ public:
     /** Feeds a new bit into the majority voter */
     void feed(bool bit)
     {
-        history = (history << 1) | (bit ? 1 : 0);
+        history = ((history << 1) | (bit ? 1 : 0)) & MASK;
     }
 
     /** Returns the current majority value */
