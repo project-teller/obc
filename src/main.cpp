@@ -6,6 +6,7 @@
 #include "modules/errors.h"
 #include "modules/telem.h"
 #include "tasks/blinker.h"
+#include "tasks/pins.h"
 #include "tasks/serial.h"
 #include "tasks/supervisor.h"
 #include "tasks/telem.h"
@@ -27,6 +28,7 @@ int main(void)
     /* The remaining tasks are started only if the HAL initialization was successful */
     if (inited) {
         osThreadNew(teller::tasks::blinkTask, nullptr, &teller::tasks::blinkTaskAttr);
+        osThreadNew(teller::tasks::pinsTask, nullptr, &teller::tasks::pinsTaskAttr);
         osThreadNew(teller::tasks::serialTask, nullptr, &teller::tasks::serialTaskAttr);
         osThreadNew(teller::tasks::supervisorTask, nullptr, &teller::tasks::supervisorTaskAttr);
         osThreadNew(teller::tasks::telemetryTask, nullptr, &teller::tasks::telemetryTaskAttr);

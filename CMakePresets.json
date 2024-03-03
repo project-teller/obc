@@ -29,6 +29,28 @@
       }
     },
     {
+      "name": "simulate",
+      "displayName": "Build (STM32-F405RG)",
+      "description": "Build the firmware for STM32-F405RG",
+      "generator": "Ninja",
+      "toolchainFile": "etc/cmake/stm32_gcc.cmake",
+      "binaryDir": "${sourceDir}/build/simulate",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": {
+          "type": "string",
+          "value": "Debug"
+        },
+        "TELLER_BOARD": {
+          "type": "string",
+          "value": "STM32F4"
+        },
+        "STM32_TARGET_TRIPLET": {
+          "type": "string",
+          "value": "arm-none-eabi"
+        }
+      }
+    },
+    {
       "name": "test",
       "displayName": "Test (host machine)",
       "description": "Run unit tests on the host machine",
@@ -56,6 +78,15 @@
       "displayName": "Build firmware (STM32-H743ZI Nucleo-144)",
       "description": "Build firmware without uploading it",
       "configurePreset": "default",
+      "targets": [
+        "teller-obc"
+      ]
+    },
+    {
+      "name": "simulate",
+      "displayName": "Simulate firmware (STM32-F405RG)",
+      "description": "Simulate firmware in QEMU",
+      "configurePreset": "simulate",
       "targets": [
         "teller-obc"
       ]

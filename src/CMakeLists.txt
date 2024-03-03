@@ -103,6 +103,7 @@ if(BUILD_FIRMWARE)
 		modules/telem.cpp
 
 		tasks/blinker.cpp
+		tasks/pins.cpp
 		tasks/serial.cpp
 		tasks/supervisor.cpp
 		tasks/telem.cpp
