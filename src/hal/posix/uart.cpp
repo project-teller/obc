@@ -18,7 +18,9 @@ static std::ostream& uartToStream(uart_t index);
 
 bool teller::hal::uart::init()
 {
-    std::cout.setf(std::ios::unitbuf | std::ios::binary);
+    // This won't work on Windows yet as Windows is doing the dreaded
+    // CRLF translation behind the scenes.
+    std::cout.setf(std::ios::unitbuf);
     return true;
 }
 
