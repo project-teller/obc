@@ -20,42 +20,49 @@ typedef struct {
 const led_config_t led_config[NUM_LEDS] = {
     { GPIOC, GPIO_PIN_2, /* inverted = */ true }, /* Heartbeat LED */
     { 0 }, /* Error LED */
+    { 0 }, /* Debug LED */
 };
 #elif defined TELLER_BOARD_NUCLEO144
 // STM32H743ZI Nucleo-144 dev board, for testing purposes
 const led_config_t led_config[NUM_LEDS] = {
     { GPIOE, GPIO_PIN_1 }, /* Heartbeat LED */
     { GPIOB, GPIO_PIN_14 }, /* Error LED */
+    { GPIOB, GPIO_PIN_0 }, /* Debug LED */
 };
 #elif defined STM32F1
 // STM32VL-Discovery green led - PC9
 const led_config_t led_config[NUM_LEDS] = {
     { GPIOC, GPIO_PIN_9 }, /* Heartbeat LED */
     { 0 }, /* Error LED */
+    { 0 }, /* Debug LED */
 };
 #elif defined STM32H7
 // STM32H743ZI blue LED
 const led_config_t led_config[NUM_LEDS] = {
     { GPIOB, GPIO_PIN_7 }, /* Heartbeat LED */
     { GPIOB, GPIO_PIN_14 }, /* Error LED */
+    { 0 }, /* Debug LED */
 };
 #elif defined STM32F4
 // STM32F4-Discovery green led - PD12
 const led_config_t led_config[NUM_LEDS] = {
     { GPIOD, GPIO_PIN_12 }, /* Heartbeat LED */
     { 0 }, /* Error LED */
+    { 0 }, /* Debug LED */
 };
 #elif defined STM32L5
 // NUCLEO-L552ZE-Q blue led - PB7
 const led_config_t led_config[NUM_LEDS] = {
     { GPIOB, GPIO_PIN_7 }, /* Heartbeat LED */
     { 0 }, /* Error LED */
+    { 0 }, /* Debug LED */
 };
 #else
 // No LEDs supported on this hardware
 const led_config_t led_config[NUM_LEDS] = {
     { 0 }, /* Heartbeat LED */
     { 0 }, /* Error LED */
+    { 0 }, /* Debug LED */
 };
 #endif
 

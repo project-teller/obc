@@ -5,6 +5,7 @@ namespace teller::hal::led {
 typedef enum {
     HEARTBEAT,
     ERROR,
+    DEBUG,
     NUM_LEDS /* sentinel element */
 } led_t;
 
