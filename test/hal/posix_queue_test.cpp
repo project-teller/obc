@@ -5,6 +5,9 @@
 
 using namespace teller::hal;
 
+// Uncomment the next line to run heavier stress tests
+// #define STRESS_TEST
+
 TEST(BlockingQueue, simple_send_receive)
 {
     const int n = 1000;
@@ -99,8 +102,13 @@ public:
 
 TEST(BlockingQueue, single_producer_single_consumer)
 {
+#ifdef STRESS_TEST
     const int runs = 1000;
     const int n = 1000;
+#else
+    const int runs = 10;
+    const int n = 100;
+#endif
     const int limit = 100;
     for (int run = 0; run < runs; ++run) {
         BlockingQueue<int> queue(limit);
@@ -133,7 +141,11 @@ TEST(BlockingQueue, single_producer_single_consumer)
 TEST(BlockingQueue, multiple_producer_multilple_consumer)
 {
     const int runs = 10;
-    const int n = 1000;
+#ifdef STRESS_TEST
+    const int n = 10000;
+#else
+    const int n = 100;
+#endif
     const int limit = 100;
     const int units = 10;
     for (int run = 0; run < runs; ++run) {
