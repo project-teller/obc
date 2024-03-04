@@ -82,6 +82,37 @@ bool teller::hal::uart::init()
     return true;
 }
 
+bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_t* bytes_read)
+{
+    if (size == 0) {
+        if (bytes_read) {
+            *bytes_read = 0;
+        }
+        return true;
+    }
+
+    uart_phy_state_t* pState = find_phy_for_uart(index);
+    if (pState) {
+        UART_HandleTypeDef* pHandle = &pState->handle;
+
+        if (HAL_UART_Receive_IT(pHandle, data, size) != HAL_OK) {
+            return false;
+        }
+
+        osEventFlagsWait(pState->event, EVT_READ, osFlagsWaitAny, osWaitForever);
+
+        if (bytes_read) {
+            *bytes_read = size;
+        }
+    } else {
+        if (bytes_read) {
+            *bytes_read = 0;
+        }
+    }
+
+    return true;
+}
+
 bool teller::hal::uart::write(uart_t index, uint8_t* data, uint16_t size)
 {
     uart_phy_state_t* pState = find_phy_for_uart(index);
@@ -92,7 +123,7 @@ bool teller::hal::uart::write(uart_t index, uint8_t* data, uint16_t size)
             return false;
         }
 
-        osEventFlagsWait(pState->event, EVT_WRITTEN, osFlagsWaitAny, osWaitForever);
+        osEventFlagsWait(pState->event, EVT_READ, osFlagsWaitAny, osWaitForever);
     }
 
     return true;
@@ -317,7 +348,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef* uart)
 int __io_putchar(int ch)
 {
     uint8_t to_write = ch;
-    write(DEBUG, &to_write, 1);
+    teller::hal::uart::write(DEBUG, &to_write, 1);
     return ch;
 }
 }
