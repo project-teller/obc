@@ -22,7 +22,7 @@ jobs:
 
       - name: Build and run tests
         run: |
-          cmake . --preset test -B build
+          cmake . --preset host -B build
           cmake --build build
           ctest --test-dir build --output-junit report.xml
 
