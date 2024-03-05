@@ -51,11 +51,11 @@
       }
     },
     {
-      "name": "test",
-      "displayName": "Test (host machine)",
-      "description": "Run unit tests on the host machine",
+      "name": "host",
+      "displayName": "Build (host machine)",
+      "description": "Build a firmware simulator for the host machine",
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build/test",
+      "binaryDir": "${sourceDir}/build/host",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": {
           "type": "string",
@@ -106,7 +106,7 @@
       "name": "test",
       "displayName": "Run unit tests (host machine)",
       "description": "Run unit tests on the host machine",
-      "configurePreset": "test",
+      "configurePreset": "host",
       "output": {
         "outputOnFailure": true
       },
