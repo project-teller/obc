@@ -82,6 +82,11 @@ bool teller::hal::uart::init()
     return true;
 }
 
+void teller::hal::uart::destroy()
+{
+    /* Not needed; we never call the destructor in STM32 */
+}
+
 bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_t* bytes_read)
 {
     if (size == 0) {

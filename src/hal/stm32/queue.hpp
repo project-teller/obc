@@ -28,6 +28,11 @@ public:
     BlockingQueue(const BlockingQueue&) = delete;
     BlockingQueue& operator=(const BlockingQueue&) = delete;
 
+    bool clear()
+    {
+        return osMessageQueueReset(handle) == osOK;
+    }
+
     bool close()
     {
         if (is_closed) {

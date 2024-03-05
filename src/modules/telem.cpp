@@ -37,6 +37,7 @@ bool teller::telem::init()
 
 void teller::telem::destroy()
 {
+    out_queue.clear();
 }
 
 bool teller::telem::flushNext()

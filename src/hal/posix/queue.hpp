@@ -33,6 +33,18 @@ public:
     BlockingQueue(const BlockingQueue&) = delete;
     BlockingQueue& operator=(const BlockingQueue&) = delete;
 
+    bool clear()
+    {
+        std::unique_lock lock(queue_mutex);
+
+        while (!items.empty()) {
+            items.pop();
+            item_removed_event.notify_one();
+        }
+
+        return true;
+    }
+
     bool close()
     {
         if (!is_closed) {

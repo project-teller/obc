@@ -8,6 +8,7 @@ namespace teller::hal::uart {
 typedef enum {
     TELEMETRY,
     DEBUG,
+    SINK,
     NUM_UARTS,
 } uart_t;
 
@@ -20,6 +21,14 @@ typedef enum {
  * @return whether the initialization was successful
  */
 [[nodiscard]] bool init(void);
+
+/**
+ * @brief Destructor function for the UART subsystem.
+ *
+ * This function is called from tests to reset the UART subsystem to a known
+ * base state.
+ */
+void destroy(void);
 
 /**
  * @brief Reads exactly a given number of raw bytes from a UART.

@@ -49,6 +49,22 @@ TEST(BlockingQueue, send_and_close)
     ASSERT_FALSE(queue.receive(res));
 }
 
+TEST(BlockingQueue, send_and_clear)
+{
+    int res;
+    BlockingQueue<int> queue(64);
+
+    ASSERT_TRUE(queue.empty());
+
+    ASSERT_TRUE(queue.send(239));
+    ASSERT_TRUE(queue.send(42));
+    ASSERT_TRUE(queue.send(27));
+    ASSERT_FALSE(queue.empty());
+
+    ASSERT_TRUE(queue.clear());
+    ASSERT_TRUE(queue.empty());
+}
+
 class QueuePopWorker {
 
     BlockingQueue<int>& queue;

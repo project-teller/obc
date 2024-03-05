@@ -26,6 +26,19 @@ bool teller::hal::init()
     return success;
 }
 
+void teller::hal::destroy()
+{
+    /* Reverse order compared to ::init() */
+    uart::destroy();
+    gpio::destroy();
+    rtc::destroy();
+    watchdog::destroy();
+    rcc::destroy();
+
+    led::destroy();
+    system::destroy();
+}
+
 void teller::hal::notifyFatalError()
 {
     led::set(led::ERROR, true);
