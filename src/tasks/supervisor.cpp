@@ -11,7 +11,7 @@ using namespace teller::hal;
 
 [[noreturn]] void teller::tasks::supervisorTask(void* arg)
 {
-    watchdog::configure_and_start();
+    watchdog::configureAndStart();
 
     // TODO: implement the guidelines outlined above; this is just a placeholder
     // for the time being

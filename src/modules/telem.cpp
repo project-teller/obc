@@ -35,6 +35,10 @@ bool teller::telem::init()
     return true;
 }
 
+void teller::telem::destroy()
+{
+}
+
 bool teller::telem::flushNext()
 {
     message_t message;

@@ -9,7 +9,12 @@ namespace teller::telem {
  *
  * @return whether the initialization was successful
  */
-bool init(void);
+[[nodiscard]] bool init(void);
+
+/**
+ * Destroys the data structures required by the telemetry module.
+ */
+void destroy(void);
 
 /**
  * @brief Flushes the next message waiting in the telemetry subsystem to the

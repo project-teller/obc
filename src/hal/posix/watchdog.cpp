@@ -1,14 +1,22 @@
 #include "hal/watchdog.h"
 
-bool teller::hal::watchdog::init()
+namespace teller::hal::watchdog {
+
+bool init()
 {
     return true;
 }
 
-void teller::hal::watchdog::configure_and_start()
+void configureAndStart()
 {
 }
 
-void teller::hal::watchdog::reset()
+void reset()
 {
+}
+
+void destroy()
+{
+}
+
 }

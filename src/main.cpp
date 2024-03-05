@@ -1,6 +1,7 @@
 #include "config.h"
 #include "hal/hal.h"
 #include "modules/errors.h"
+#include "modules/rxsm.h"
 #include "modules/telem.h"
 #include "tasks/blinker.h"
 #include "tasks/pins.h"
@@ -67,6 +68,7 @@ int main(void)
 
     /* The remaining modules are initialized only if the HAL initialization
      * was successful */
+    inited &= teller::rxsm::init();
     inited &= teller::telem::init();
 
     /* The remaining tasks are started only if the HAL and the module

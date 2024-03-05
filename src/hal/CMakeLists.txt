@@ -58,8 +58,11 @@ add_library(
     ${HAL_SOURCES}
 )
 target_include_directories(
-	obc-hal PRIVATE
+	obc-hal PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/..
+)
+target_include_directories(
+	obc-hal PRIVATE
     ${CMAKE_CURRENT_BINARY_DIR}/..
 )
 target_include_directories(

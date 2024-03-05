@@ -87,6 +87,7 @@ endif()
 # Create libraries
 add_subdirectory(core)
 add_subdirectory(hal)
+add_subdirectory(modules)
 
 # Set target name
 set(TARGET_NAME teller-obc)
@@ -96,10 +97,6 @@ add_executable(
 	${TARGET_NAME}
 
 	main.cpp
-
-	modules/errors.cpp
-	modules/messages.cpp
-	modules/telem.cpp
 
 	tasks/blinker.cpp
 	tasks/pins.cpp
@@ -114,8 +111,7 @@ target_include_directories(
 )
 target_link_libraries(
 	${TARGET_NAME} PRIVATE
-	obc-core
-	obc-hal
+	obc-modules
 )
 
 # Disable exceptions and RTTI, enable warnings and treat them as errors
@@ -131,31 +127,4 @@ if(BUILD_FIRMWARE)
 
 	add_programming_target(TARGET ${TARGET_NAME} BOARD ${OPENOCD_BOARD})
 	add_simulator_target(TARGET ${TARGET_NAME})
-endif()
-
-if(BUILD_TESTS)
-	# Set target name
-	set(TARGET_NAME obc-test)
-
-	# List all source files here that are needed for the unit tests but do
-	# not depend on the concrete hardware
-	add_library(
-		${TARGET_NAME}
-
-		modules/errors.cpp
-		modules/telem.cpp
-	)
-	target_include_directories(
-		${TARGET_NAME} PRIVATE
-		${CMAKE_CURRENT_BINARY_DIR}
-		${CMAKE_CURRENT_SOURCE_DIR}
-	)
-	target_link_libraries(
-		${TARGET_NAME} PRIVATE
-		obc-hal
-	)
-	target_link_libraries(
-		${TARGET_NAME} PUBLIC
-		obc-core
-	)
 endif()

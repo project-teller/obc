@@ -5,26 +5,6 @@
 
 using namespace teller::hal::system;
 
-int millisleep(long msec)
-{
-    struct timespec ts;
-    int res;
-
-    if (msec < 0) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    ts.tv_sec = msec / 1000;
-    ts.tv_nsec = (msec % 1000) * 1000000;
-
-    do {
-        res = nanosleep(&ts, &ts);
-    } while (res && errno == EINTR);
-
-    return res;
-}
-
 class SystemTest : public testing::Test {
 protected:
     void SetUp() override
@@ -45,7 +25,7 @@ TEST_F(SystemTest, getTimeSinceBootMsec)
 
     for (i = 0; i < 4; i++) {
         if (i != 0) {
-            millisleep(2);
+            delayMsec(2);
         }
         timestamps[i] = getTimeSinceBootMsec();
     }

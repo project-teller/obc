@@ -2,8 +2,6 @@
 add_library(
     obc-core
 
-    rxsm.cpp
-
     telem/generic.cpp
     telem/heartbeat.cpp
     telem/text_message.cpp
@@ -14,9 +12,12 @@ add_library(
     utils/time.c
 )
 target_include_directories(
-	obc-core PRIVATE
+	obc-core PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}/..
-	${CMAKE_CURRENT_BINARY_DIR}/..
+)
+target_include_directories(
+    obc-core PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR}/..
 )
 
 # We need to make sure we are using the right compiler flags when compiling
