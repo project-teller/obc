@@ -128,7 +128,7 @@ bool teller::hal::uart::write(uart_t index, uint8_t* data, uint16_t size)
             return false;
         }
 
-        osEventFlagsWait(pState->event, EVT_READ, osFlagsWaitAny, osWaitForever);
+        osEventFlagsWait(pState->event, EVT_WRITTEN, osFlagsWaitAny, osWaitForever);
     }
 
     return true;
