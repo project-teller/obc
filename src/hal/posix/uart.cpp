@@ -135,7 +135,7 @@ string UARTOutputRedirector::getAndClear()
 
     auto it = uartOutputOverrides.find(_index);
     if (it != uartOutputOverrides.end()) {
-        it->second.clear();
+        it->second.str("");
     }
 
     return result;

@@ -62,8 +62,10 @@ error_t getError(void);
 #define TELLER_CHECK_OOM(ptr)                                            \
     {                                                                    \
         if (ptr == nullptr) {                                            \
+            /* GCOVR_EXCL_START */                                       \
             teller::errors::setError(teller::errors::NOT_ENOUGH_MEMORY); \
             return false;                                                \
+            /* GCOVR_EXCL_STOP */                                        \
         }                                                                \
     }
 

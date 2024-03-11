@@ -32,12 +32,14 @@ static bool sendLowLevel(uint8_t* buf, uint8_t length);
 
 bool teller::telem::init()
 {
+    seq_no = 0;
     return true;
 }
 
 void teller::telem::destroy()
 {
     out_queue.clear();
+    seq_no = 0;
 }
 
 bool teller::telem::flushNext()
@@ -58,6 +60,10 @@ bool teller::telem::flushNext()
 
 bool teller::telem::send(const uint8_t* data, uint8_t length)
 {
+    if (data == nullptr) {
+        return true;
+    }
+
     uint8_t* buf = static_cast<uint8_t*>(malloc(length));
     TELLER_CHECK_OOM(buf);
 
@@ -74,10 +80,15 @@ bool teller::telem::send(
     envelope_t envelope, const uint8_t* payload, uint8_t length)
 {
     uint8_t* buf;
-    uint8_t buf_length = getMessageSizeForPayloadLength(length);
+    uint8_t buf_length;
 
+    if (payload == nullptr) {
+        length = 0;
+    }
+
+    buf_length = getMessageSizeForPayloadLength(length);
     if (buf_length == 0) {
-        return false;
+        return false; /* LCOV_EXCL_LINE */
     }
 
     buf = static_cast<uint8_t*>(malloc(buf_length));
@@ -86,7 +97,7 @@ bool teller::telem::send(
     envelope.seq_no = seq_no++;
 
     if (!serialize(buf, buf_length, envelope, payload, length)) {
-        return false;
+        return false; /* LCOV_EXCL_LINE */
     }
 
     return sendLowLevel(buf, length + 8);
