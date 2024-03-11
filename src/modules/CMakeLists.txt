@@ -2,6 +2,7 @@
 add_library(
     obc-modules
     errors.cpp
+    log.cpp
     messages.cpp
     rxsm.cpp
     telem.cpp

@@ -4,6 +4,9 @@
 
 namespace teller::telem::frames {
 
+/** Maximum length of a text message allowed in a telemetry message, inclusive */
+const int MAX_TEXT_MESSAGE_LENGTH = MAX_PAYLOAD_LENGTH - 1;
+
 /**
  * @brief Structure containing all the data required to construct a text message frame.
  *

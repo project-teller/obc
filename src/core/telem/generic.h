@@ -57,6 +57,7 @@ typedef enum {
     MODULE_ID_ADS = 4,
     MODULE_ID_IMU = 5,
     MODULE_ID_MAG = 6,
+    MODULE_COUNT,
 } module_id_t;
 
 /**
