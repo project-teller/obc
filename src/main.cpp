@@ -5,6 +5,7 @@
 #include "modules/rxsm.h"
 #include "modules/telem.h"
 #include "tasks/blinker.h"
+#include "tasks/cmd.h"
 #include "tasks/pins.h"
 #include "tasks/serial.h"
 #include "tasks/supervisor.h"
@@ -48,6 +49,7 @@ static const task_definition_t tasks[] = {
     { .func = serialTask, .name = "serial", .priority = HIGH, .stack_size = 1024 },
     { .func = supervisorTask, .name = "supervisor", .priority = LOW },
     { .func = telemetryTask, .name = "telem", .priority = NORMAL, .stack_size = 1024 },
+    { .func = commandTask, .name = "cmd", .priority = LOW, .stack_size = 1024 },
     NO_MORE_TASKS
 };
 

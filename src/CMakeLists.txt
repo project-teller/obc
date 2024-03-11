@@ -99,6 +99,7 @@ add_executable(
 	main.cpp
 
 	tasks/blinker.cpp
+	tasks/cmd.cpp
 	tasks/pins.cpp
 	tasks/serial.cpp
 	tasks/supervisor.cpp
