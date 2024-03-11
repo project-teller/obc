@@ -3,6 +3,7 @@
 
 #include "core/telem/generic.h"
 #include "core/telem/heartbeat.h"
+#include "core/telem/parser.h"
 #include "core/telem/text_message.h"
 #include "core/telem/timesync.h"
 
@@ -175,4 +176,72 @@ TEST(TelemetryTest, timesyncFrameEncoding)
 
     EXPECT_EQ(decoded.timestampInMsec, message.timestampInMsec);
     EXPECT_EQ(decoded.rtcTimestampInMsec, message.rtcTimestampInMsec);
+}
+
+const uint8_t timesyncMessage[] = {
+    0xca, 0xfe, 0xd7, 0x03, 0x21, 0x0c, 0x37, 0xa4, 0x4b, 0x00, 0x00, 0x00,
+    0x00, 0x88, 0x64, 0x37, 0x00, 0x00, 0x97, 0xa3
+};
+
+TEST(TelemetryTest, parsingValidMessage)
+{
+    Parser parser;
+    size_t i, n = sizeof(timesyncMessage);
+    envelope_t envelope;
+    const uint8_t junk[] = { 0xde, 0xad, 0xbe, 0xef, 0xca, 0xca, 0xca, 0xca, 0x0b, 0xad };
+
+    for (i = 0; i < n; i++) {
+        ASSERT_EQ(i == n - 1, parser.feed(timesyncMessage[i]));
+    }
+
+    envelope = parser.getEnvelope();
+    EXPECT_EQ(0xd7, envelope.seq_no);
+    EXPECT_EQ(frames::TIMESYNC, envelope.frame_type);
+    EXPECT_EQ(ONBOARD_COMPUTER, envelope.source);
+    EXPECT_EQ(GROUND_STATION, envelope.target);
+
+    /* Add some junk bytes and then parse again */
+    for (i = 0; i < sizeof(junk); i++) {
+        ASSERT_FALSE(parser.feed(junk[i]));
+    }
+    for (i = 0; i < n; i++) {
+        ASSERT_EQ(i == n - 1, parser.feed(timesyncMessage[i]));
+    }
+
+    envelope = parser.getEnvelope();
+    EXPECT_EQ(0xd7, envelope.seq_no);
+    EXPECT_EQ(frames::TIMESYNC, envelope.frame_type);
+    EXPECT_EQ(ONBOARD_COMPUTER, envelope.source);
+    EXPECT_EQ(GROUND_STATION, envelope.target);
+
+    for (i = teller::telem::HEADER_LENGTH; i < n - 2; i++) {
+        EXPECT_EQ(timesyncMessage[i], parser.getPayload()[i - teller::telem::HEADER_LENGTH]);
+    }
+}
+
+TEST(TelemetryTest, parsingTooLongPayload)
+{
+    Parser parser;
+    size_t i;
+
+    for (i = 0; i < 5; i++) {
+        ASSERT_FALSE(parser.feed(timesyncMessage[i]));
+    }
+    ASSERT_FALSE(parser.feed(MAX_PAYLOAD_LENGTH + 1));
+    ASSERT_EQ(teller::telem::ParserState::WAITING_SYNC_BYTE_1, parser.getState());
+}
+
+TEST(TelemetryTest, parsingInvalidCRC)
+{
+    Parser parser;
+    size_t i, n = sizeof(timesyncMessage);
+
+    for (i = 0; i < n - 2; i++) {
+        ASSERT_FALSE(parser.feed(timesyncMessage[i]));
+    }
+    ASSERT_EQ(teller::telem::ParserState::READING_CHECKSUM, parser.getState());
+    ASSERT_FALSE(parser.feed(0xff));
+    ASSERT_EQ(teller::telem::ParserState::READING_CHECKSUM, parser.getState());
+    ASSERT_FALSE(parser.feed(0xff));
+    ASSERT_EQ(teller::telem::ParserState::WAITING_SYNC_BYTE_1, parser.getState());
 }

@@ -4,6 +4,7 @@ add_library(
 
     telem/generic.cpp
     telem/heartbeat.cpp
+    telem/parser.cpp
     telem/text_message.cpp
     telem/timesync.cpp
 

@@ -5,11 +5,14 @@
 
 namespace teller::telem {
 
+/** Length of the header of a telemetry message */
+const int HEADER_LENGTH = 6;
+
 /** Maximum length of payload allowed in a telemetry message, inclusive */
 const int MAX_PAYLOAD_LENGTH = 63;
 
 /** Maximum size of a single telemetry message, inclusive */
-const int MAX_MESSAGE_LENGTH = 71;
+const int MAX_MESSAGE_LENGTH = MAX_PAYLOAD_LENGTH + HEADER_LENGTH + 2;
 
 /**
  * Enum representing the possible components that can be addressed by a
