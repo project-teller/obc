@@ -3,7 +3,6 @@
 #include "hal/system.h"
 #include "modules/messages.h"
 #include "modules/telem.h"
-#include "tasks/serial.h"
 #include "tasks/telem.h"
 
 using namespace teller::hal;
