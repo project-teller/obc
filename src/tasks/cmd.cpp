@@ -8,6 +8,7 @@
 #include "tasks/cmd.h"
 
 using namespace teller::hal;
+using namespace teller::log;
 using namespace teller::telem;
 
 static void processPacket(const envelope_t& envelope, const uint8_t* payload);
@@ -39,6 +40,7 @@ void processPacket(const envelope_t& envelope, const uint8_t* payload)
     switch (envelope.frame_type) {
     default:
         /* We are not interested in this packet */
+        getLogger(MODULE_ID_OBC).warning("Unhandled packet type: %d", envelope.frame_type);
         break;
     }
 }
