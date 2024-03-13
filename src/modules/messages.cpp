@@ -23,7 +23,7 @@ void teller::telem::updateHeartbeatData(frames::heartbeat_data_t* data)
     data->rxsmStatusBits.soe = state.soe;
 }
 
-void teller::telem::updateTimesyncData(frames::timesync_data_t* data)
+void teller::telem::updateClockStatusData(frames::clock_status_data_t* data)
 {
     data->timestampInMsec = system::getTimeSinceBootMsec();
     data->rtcTimestampInMsec = rtc::getTimeMsec();

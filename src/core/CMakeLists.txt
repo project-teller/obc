@@ -2,11 +2,11 @@
 add_library(
     obc-core
 
+    telem/clock_status.cpp
     telem/generic.cpp
     telem/heartbeat.cpp
     telem/parser.cpp
     telem/text_message.cpp
-    telem/timesync.cpp
 
     utils/crc.c
     utils/majority_voter.cpp

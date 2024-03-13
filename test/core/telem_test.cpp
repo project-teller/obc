@@ -1,11 +1,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "core/telem/clock_status.h"
 #include "core/telem/generic.h"
 #include "core/telem/heartbeat.h"
 #include "core/telem/parser.h"
 #include "core/telem/text_message.h"
-#include "core/telem/timesync.h"
 
 using namespace std;
 using namespace teller::telem;
@@ -155,10 +155,10 @@ TEST(TelemetryTest, textMessageFrameEncoding)
     EXPECT_STREQ(decoded.message, message.message);
 }
 
-TEST(TelemetryTest, timesyncFrameEncoding)
+TEST(TelemetryTest, clockStatusFrameEncoding)
 {
     /* clang-format off */
-    frames::timesync_data_t message = {
+    frames::clock_status_data_t message = {
         .timestampInMsec = 1234567,
         .rtcTimestampInMsec = 1707048820951,
     };
@@ -166,19 +166,19 @@ TEST(TelemetryTest, timesyncFrameEncoding)
     uint8_t expectedBytes[] = {
         135, 214, 18, 0, 215, 224, 9, 116, 141, 1, 0, 0
     };
-    frames::timesync_data_t decoded;
+    frames::clock_status_data_t decoded;
     /* clang-format on */
 
-    EXPECT_EQ(sizeof(expectedBytes), frames::encodeTimesyncFrame(&message, encoded));
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeClockStatusFrame(&message, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
 
-    frames::decodeTimesyncFrame(encoded, &decoded);
+    frames::decodeClockStatusFrame(encoded, &decoded);
 
     EXPECT_EQ(decoded.timestampInMsec, message.timestampInMsec);
     EXPECT_EQ(decoded.rtcTimestampInMsec, message.rtcTimestampInMsec);
 }
 
-const uint8_t timesyncMessage[] = {
+const uint8_t clockStatusMessage[] = {
     0xca, 0xfe, 0xd7, 0x03, 0x21, 0x0c, 0x37, 0xa4, 0x4b, 0x00, 0x00, 0x00,
     0x00, 0x88, 0x64, 0x37, 0x00, 0x00, 0x97, 0xa3
 };
@@ -186,17 +186,17 @@ const uint8_t timesyncMessage[] = {
 TEST(TelemetryTest, parsingValidMessage)
 {
     Parser parser;
-    size_t i, n = sizeof(timesyncMessage);
+    size_t i, n = sizeof(clockStatusMessage);
     envelope_t envelope;
     const uint8_t junk[] = { 0xde, 0xad, 0xbe, 0xef, 0xca, 0xca, 0xca, 0xca, 0x0b, 0xad };
 
     for (i = 0; i < n; i++) {
-        ASSERT_EQ(i == n - 1, parser.feed(timesyncMessage[i]));
+        ASSERT_EQ(i == n - 1, parser.feed(clockStatusMessage[i]));
     }
 
     envelope = parser.getEnvelope();
     EXPECT_EQ(0xd7, envelope.seq_no);
-    EXPECT_EQ(frames::TIMESYNC, envelope.frame_type);
+    EXPECT_EQ(frames::CLOCK_STATUS, envelope.frame_type);
     EXPECT_EQ(ONBOARD_COMPUTER, envelope.source);
     EXPECT_EQ(GROUND_STATION, envelope.target);
 
@@ -205,17 +205,17 @@ TEST(TelemetryTest, parsingValidMessage)
         ASSERT_FALSE(parser.feed(junk[i]));
     }
     for (i = 0; i < n; i++) {
-        ASSERT_EQ(i == n - 1, parser.feed(timesyncMessage[i]));
+        ASSERT_EQ(i == n - 1, parser.feed(clockStatusMessage[i]));
     }
 
     envelope = parser.getEnvelope();
     EXPECT_EQ(0xd7, envelope.seq_no);
-    EXPECT_EQ(frames::TIMESYNC, envelope.frame_type);
+    EXPECT_EQ(frames::CLOCK_STATUS, envelope.frame_type);
     EXPECT_EQ(ONBOARD_COMPUTER, envelope.source);
     EXPECT_EQ(GROUND_STATION, envelope.target);
 
     for (i = teller::telem::HEADER_LENGTH; i < n - 2; i++) {
-        EXPECT_EQ(timesyncMessage[i], parser.getPayload()[i - teller::telem::HEADER_LENGTH]);
+        EXPECT_EQ(clockStatusMessage[i], parser.getPayload()[i - teller::telem::HEADER_LENGTH]);
     }
 }
 
@@ -225,7 +225,7 @@ TEST(TelemetryTest, parsingTooLongPayload)
     size_t i;
 
     for (i = 0; i < 5; i++) {
-        ASSERT_FALSE(parser.feed(timesyncMessage[i]));
+        ASSERT_FALSE(parser.feed(clockStatusMessage[i]));
     }
     ASSERT_FALSE(parser.feed(MAX_PAYLOAD_LENGTH + 1));
     ASSERT_EQ(teller::telem::ParserState::WAITING_SYNC_BYTE_1, parser.getState());
@@ -234,10 +234,10 @@ TEST(TelemetryTest, parsingTooLongPayload)
 TEST(TelemetryTest, parsingInvalidCRC)
 {
     Parser parser;
-    size_t i, n = sizeof(timesyncMessage);
+    size_t i, n = sizeof(clockStatusMessage);
 
     for (i = 0; i < n - 2; i++) {
-        ASSERT_FALSE(parser.feed(timesyncMessage[i]));
+        ASSERT_FALSE(parser.feed(clockStatusMessage[i]));
     }
     ASSERT_EQ(teller::telem::ParserState::READING_CHECKSUM, parser.getState());
     ASSERT_FALSE(parser.feed(0xff));

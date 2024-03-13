@@ -1,7 +1,7 @@
 #pragma once
 
+#include "core/telem/clock_status.h"
 #include "core/telem/heartbeat.h"
-#include "core/telem/timesync.h"
 
 namespace teller::telem {
 
@@ -11,8 +11,8 @@ namespace teller::telem {
 void updateHeartbeatData(frames::heartbeat_data_t* data);
 
 /**
- * @brief Updates a timesync data object from the current system and RTC time.
+ * @brief Updates a clock status data object from the current system and RTC time.
  */
-void updateTimesyncData(frames::timesync_data_t* data);
+void updateClockStatusData(frames::clock_status_data_t* data);
 
 }

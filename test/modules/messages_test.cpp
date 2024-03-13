@@ -21,15 +21,15 @@ protected:
     }
 };
 
-TEST_F(MessagesTest, updateTimesyncData)
+TEST_F(MessagesTest, updateClockStatusData)
 {
-    frames::timesync_data_t first;
-    frames::timesync_data_t second;
+    frames::clock_status_data_t first;
+    frames::clock_status_data_t second;
     int64_t diff;
 
-    updateTimesyncData(&first);
+    updateClockStatusData(&first);
     delayMsec(5);
-    updateTimesyncData(&second);
+    updateClockStatusData(&second);
 
     EXPECT_TRUE(second.timestampInMsec > first.timestampInMsec);
 

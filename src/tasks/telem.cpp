@@ -8,8 +8,8 @@
 using namespace teller::hal;
 using namespace teller::telem;
 
+static void sendClockStatus(uint8_t* payload);
 static void sendHeartbeat(uint8_t* payload);
-static void sendTimesync(uint8_t* payload);
 
 [[noreturn]] void teller::tasks::telemetryTask(void* arg)
 {
@@ -20,9 +20,9 @@ static void sendTimesync(uint8_t* payload);
         /* Heartbeat is sent in every iteration, i.e. twice per second */
         sendHeartbeat(payload);
 
-        /* Timesync packet is sent once every 8 iterations, i.e. at 4 Hz */
+        /* Clock status packet is sent once every 8 iterations, i.e. at 4 Hz */
         if (loop_counter % 8 == 0) {
-            sendTimesync(payload);
+            sendClockStatus(payload);
         }
 
         system::delayMsec(500);
@@ -38,10 +38,10 @@ static void sendHeartbeat(uint8_t* payload)
     send(frames::HEARTBEAT, payload, encodeHeartbeatFrame(&heartbeat, payload));
 }
 
-static void sendTimesync(uint8_t* payload)
+static void sendClockStatus(uint8_t* payload)
 {
-    frames::timesync_data_t timesync;
+    frames::clock_status_data_t clock_status;
 
-    updateTimesyncData(&timesync);
-    send(frames::TIMESYNC, payload, encodeTimesyncFrame(&timesync, payload));
+    updateClockStatusData(&clock_status);
+    send(frames::CLOCK_STATUS, payload, encodeClockStatusFrame(&clock_status, payload));
 }
