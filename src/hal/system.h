@@ -30,4 +30,9 @@ std::uint32_t getTimeSinceBootMsec(void);
  */
 void delayMsec(uint32_t delay);
 
+/**
+ * @brief Requests a system reset.
+ */
+void requestReset(void);
+
 }

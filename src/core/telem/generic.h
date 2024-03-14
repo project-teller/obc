@@ -91,6 +91,7 @@ namespace frames {
         TEXT_MESSAGE = 2,
         CLOCK_STATUS = 3,
         ACK = 4,
+        RESET = 5,
     } frame_type_t;
 
 }

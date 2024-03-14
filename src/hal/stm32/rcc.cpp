@@ -68,14 +68,4 @@ reset_reason_t getReasonOfLastReset(void)
     return reasonOfLastReset;
 }
 
-void requestReset(void)
-{
-    HAL_NVIC_SystemReset();
-}
-
-bool wasResetRequested()
-{
-    return false;
-}
-
 }

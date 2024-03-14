@@ -1,3 +1,6 @@
+#include <signal.h>
+#include <unistd.h>
+
 #include <cassert>
 #include <chrono>
 #include <ctime>
@@ -11,17 +14,19 @@ using namespace teller::hal::system;
 
 static struct timespec lastBootAt;
 
-void teller::hal::system::init()
+namespace teller::hal::system {
+
+void init()
 {
     int retval = clock_gettime(CLOCK_MONOTONIC, &lastBootAt);
     assert(retval == 0);
 }
 
-void teller::hal::system::destroy()
+void destroy()
 {
 }
 
-std::uint32_t teller::hal::system::getTimeSinceBootMsec(void)
+std::uint32_t getTimeSinceBootMsec(void)
 {
     struct timespec now, diff;
 
@@ -33,7 +38,16 @@ std::uint32_t teller::hal::system::getTimeSinceBootMsec(void)
     return diff.tv_sec * 1000 + diff.tv_nsec / 1000000;
 }
 
-void teller::hal::system::delayMsec(uint32_t delay)
+void delayMsec(uint32_t delay)
 {
     std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+}
+
+/* LCOV_EXCL_START */
+void requestReset()
+{
+    kill(getpid(), SIGUSR1);
+}
+/* LCOV_EXCL_STOP */
+
 }

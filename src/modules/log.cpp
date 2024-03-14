@@ -25,9 +25,9 @@ void destroy()
 {
 }
 
-Logger& getLogger(teller::telem::module_id_t module)
+Logger* getLogger(teller::telem::module_id_t module)
 {
-    return loggers[module];
+    return &loggers[module];
 }
 
 bool send(

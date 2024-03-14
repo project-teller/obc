@@ -7,23 +7,32 @@
 
 using namespace teller::hal::system;
 
-void teller::hal::system::init()
+namespace teller::hal::system {
+
+void init()
 {
     SystemInit();
 
     assert(osKernelGetTickFreq() == 1000);
 }
 
-void teller::hal::system::destroy()
+void destroy()
 {
 }
 
-std::uint32_t teller::hal::system::getTimeSinceBootMsec(void)
+std::uint32_t getTimeSinceBootMsec(void)
 {
     return osKernelGetTickCount();
 }
 
-void teller::hal::system::delayMsec(uint32_t delay)
+void delayMsec(uint32_t delay)
 {
     osDelay(delay);
+}
+
+void requestReset(void)
+{
+    HAL_NVIC_SystemReset();
+}
+
 }

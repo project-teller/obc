@@ -2,6 +2,7 @@
 #include "hal/hal.h"
 #include "hal/rcc.h"
 #include "hal/system.h"
+#include "modules/cmd.h"
 #include "modules/errors.h"
 #include "modules/log.h"
 #include "modules/rxsm.h"
@@ -76,6 +77,7 @@ void bootSystem(void)
     inited &= teller::log::init();
     inited &= teller::rxsm::init();
     inited &= teller::telem::init();
+    inited &= teller::cmd::init();
 
     /* The remaining tasks are started only if the HAL and the module
      * initialization was successful */

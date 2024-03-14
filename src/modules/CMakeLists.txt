@@ -1,6 +1,7 @@
 # Declare the generic module library
 add_library(
     obc-modules
+    cmd.cpp
     errors.cpp
     log.cpp
     messages.cpp

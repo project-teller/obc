@@ -22,7 +22,7 @@ void destroy(void);
 /**
  * @brief Returns a logger object corresponding to the given module.
  */
-Logger& getLogger(teller::telem::module_id_t module);
+Logger* getLogger(teller::telem::module_id_t module);
 
 /**
  * @brief Sends a log message with the given severity level and module ID.

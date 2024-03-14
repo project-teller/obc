@@ -1,6 +1,3 @@
-#include <signal.h>
-#include <unistd.h>
-
 #include "hal/rcc.h"
 
 namespace teller::hal::rcc {
@@ -23,12 +20,5 @@ reset_reason_t getReasonOfLastReset(void)
 {
     return reasonOfLastReset;
 }
-
-/* LCOV_EXCL_START */
-void requestReset()
-{
-    kill(getpid(), SIGUSR1);
-}
-/* LCOV_EXCL_STOP */
 
 }

@@ -32,9 +32,4 @@ void destroy(void);
  */
 reset_reason_t getReasonOfLastReset(void);
 
-/**
- * @brief Requests a system reset.
- */
-void requestReset(void);
-
 }

@@ -44,7 +44,7 @@ TEST_F(LogTest, getLogger)
 {
     hal::uart::UARTOutputRedirector redirect(hal::uart::TELEMETRY);
 
-    ASSERT_TRUE(log::getLogger(telem::MODULE_ID_GMM).warning("dummy message"));
+    ASSERT_TRUE(log::getLogger(telem::MODULE_ID_GMM)->warning("dummy message"));
     ASSERT_TRUE(telem::flushNext());
 
     EXPECT_EQ(
