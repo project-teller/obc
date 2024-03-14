@@ -1,5 +1,7 @@
 #include "config.h"
 #include "hal/hal.h"
+#include "hal/rcc.h"
+#include "hal/system.h"
 #include "modules/errors.h"
 #include "modules/log.h"
 #include "modules/rxsm.h"
@@ -57,7 +59,7 @@ static void initialize(void);
 static bool startTasks(void);
 static void runScheduler(void);
 
-int main(void)
+void bootSystem(void)
 {
     bool inited;
 
@@ -85,14 +87,50 @@ int main(void)
     }
 
     runScheduler();
-
-    return 0;
 }
 
 #ifdef TELLER_BOARD_POSIX
 
+#include <unistd.h>
+
 #include <iostream>
 #include <thread>
+
+int main(void)
+{
+    pid_t pid;
+    int result = 0;
+    bool shouldBoot = true;
+
+    while (shouldBoot) {
+        pid = fork();
+
+        switch (pid) {
+        case -1:
+            /* fork failed */
+            perror("fork");
+            return EXIT_FAILURE;
+
+        case 0:
+            /* Child process */
+            bootSystem();
+            return EXIT_SUCCESS;
+
+        default:
+            /* Parent process. Wait for the child and decide based on the
+             * return code. */
+            if (waitpid(pid, &result, 0) < 0) {
+                perror("waitpid");
+                return EXIT_FAILURE;
+            }
+
+            /* Restart if the child received a SIGUSR1, otherwise stop */
+            shouldBoot = WIFSIGNALED(result) && WTERMSIG(result) == SIGUSR1;
+        }
+    }
+
+    return WIFEXITED(result) ? WEXITSTATUS(result) : 0;
+}
 
 static void initialize()
 {
@@ -102,8 +140,9 @@ static void initialize()
 static void runScheduler()
 {
     std::cerr << " done." << std::endl;
-    for (;;)
-        ;
+    for (;;) {
+        teller::hal::system::delayMsec(60000);
+    }
 }
 
 static bool startTasks()
@@ -126,6 +165,12 @@ static bool startTasks()
 
 static osPriority_t convertPriorityToFreeRTOS(task_priority_t prio);
 static bool startTask(const task_definition_t* task);
+
+int main(void)
+{
+    bootSystem();
+    return 0;
+}
 
 static void initialize()
 {

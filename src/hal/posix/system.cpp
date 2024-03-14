@@ -9,7 +9,7 @@
 using namespace std;
 using namespace teller::hal::system;
 
-struct timespec lastBootAt;
+static struct timespec lastBootAt;
 
 void teller::hal::system::init()
 {
