@@ -90,6 +90,7 @@ namespace frames {
         HEARTBEAT = 1,
         TEXT_MESSAGE = 2,
         CLOCK_STATUS = 3,
+        ACK = 4,
     } frame_type_t;
 
 }

@@ -61,6 +61,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND TELLER_ENABLE_CODE_COVERAGE)
         "/Library/Developer/*"
         "lib/googletest/*"
         "src/tasks/*"
+        "src/main.cpp"
         "test/*"
     )
 endif()

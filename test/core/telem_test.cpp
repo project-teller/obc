@@ -1,6 +1,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "core/telem/ack.h"
 #include "core/telem/clock_status.h"
 #include "core/telem/generic.h"
 #include "core/telem/heartbeat.h"
@@ -176,6 +177,41 @@ TEST(TelemetryTest, clockStatusFrameEncoding)
 
     EXPECT_EQ(decoded.timestampInMsec, message.timestampInMsec);
     EXPECT_EQ(decoded.rtcTimestampInMsec, message.rtcTimestampInMsec);
+}
+
+TEST(TelemetryTest, ackFrameEncoding)
+{
+    frames::ack_data_t message = {
+        .frame_type = frames::CLOCK_STATUS,
+        .seq_no = 64,
+        .result = frames::NAK_FAILED,
+        .error = 42
+    };
+    uint8_t encoded[MAX_MESSAGE_LENGTH];
+    uint8_t expectedBytes[] = { 3, 64, 2, 42, 0 };
+    frames::ack_data_t decoded;
+
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeAckFrame(&message, encoded));
+    EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
+
+    frames::decodeAckFrame(encoded, &decoded);
+
+    EXPECT_EQ(decoded.frame_type, message.frame_type);
+    EXPECT_EQ(decoded.seq_no, message.seq_no);
+    EXPECT_EQ(decoded.result, message.result);
+    EXPECT_EQ(decoded.error, message.error);
+
+    message.result = static_cast<frames::ack_result_t>(123);
+    expectedBytes[2] = frames::NAK_INVALID;
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeAckFrame(&message, encoded));
+    EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
+
+    encoded[2] = 123;
+    frames::decodeAckFrame(encoded, &decoded);
+    EXPECT_EQ(decoded.frame_type, message.frame_type);
+    EXPECT_EQ(decoded.seq_no, message.seq_no);
+    EXPECT_EQ(decoded.result, frames::NAK_INVALID);
+    EXPECT_EQ(decoded.error, message.error);
 }
 
 const uint8_t clockStatusMessage[] = {

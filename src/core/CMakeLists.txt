@@ -2,6 +2,7 @@
 add_library(
     obc-core
 
+    telem/ack.cpp
     telem/clock_status.cpp
     telem/generic.cpp
     telem/heartbeat.cpp

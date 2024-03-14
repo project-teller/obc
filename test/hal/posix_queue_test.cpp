@@ -65,6 +65,24 @@ TEST(BlockingQueue, send_and_clear)
     ASSERT_TRUE(queue.empty());
 }
 
+TEST(BlockingQueue, zero_length)
+{
+    ASSERT_THROW({
+        BlockingQueue<int> queue(0);
+    },
+        std::runtime_error);
+}
+
+TEST(BlockingQueue, send_to_closed_queue)
+{
+    int res;
+    BlockingQueue<int> queue(64);
+
+    ASSERT_TRUE(queue.send(239));
+    ASSERT_TRUE(queue.close());
+    ASSERT_FALSE(queue.send(42));
+}
+
 class QueuePopWorker {
 
     BlockingQueue<int>& queue;

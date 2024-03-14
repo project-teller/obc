@@ -21,7 +21,7 @@ public:
         , is_closed(false)
     {
         if (size == 0) {
-            throw new std::runtime_error("zero-length queues are not allowed");
+            throw std::runtime_error("zero-length queues are not allowed");
         }
     }
 
