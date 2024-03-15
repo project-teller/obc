@@ -4,6 +4,6 @@
 [[noreturn]] void teller::tasks::commandTask(void* arg)
 {
     while (true) {
-        teller::cmd::handleNext();
+        teller::cmd::handleCommands();
     }
 }

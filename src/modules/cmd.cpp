@@ -30,7 +30,7 @@ void destroy()
     logger = nullptr;
 }
 
-bool handleNext()
+bool handleCommands()
 {
     uint8_t ch;
     uint16_t read;

@@ -15,12 +15,12 @@ namespace teller::cmd {
 void destroy(void);
 
 /**
- * @brief Handles a single command from the appropriate UART.
+ * @brief Handles pending incoming command bytes from the appropriate UART.
  *
- * Blocks indefinitely if there are no incoming commands.
+ * Blocks indefinitely if there is nothing to read from the UART.
  *
  * @return Whether an incoming packet was decoded and handled successfully.
  */
-bool handleNext(void);
+bool handleCommands(void);
 
 }
