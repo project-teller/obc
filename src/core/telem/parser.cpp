@@ -54,8 +54,13 @@ ParserState Parser::_feed(std::uint8_t ch)
         *(_message_write_ptr++) = ch;
         if (_message_write_ptr == _end) {
             if (ch <= MAX_PAYLOAD_LENGTH) {
-                _end += ch;
-                return READING_PAYLOAD;
+                if (ch == 0) {
+                    _end += 2;
+                    return READING_CHECKSUM;
+                } else {
+                    _end += ch;
+                    return READING_PAYLOAD;
+                }
             } else {
                 reset();
                 return WAITING_SYNC_BYTE_1;

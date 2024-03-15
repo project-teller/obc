@@ -255,6 +255,24 @@ TEST(TelemetryTest, parsingValidMessage)
     }
 }
 
+TEST(TelemetryTest, parsingZeroLengthPayload)
+{
+    Parser parser;
+    const uint8_t message[] = { 0xca, 0xfe, 0x00, 0x05, 0x12, 0x00, 0xff, 0x4f };
+    size_t i, n = sizeof(message);
+    envelope_t envelope;
+
+    for (i = 0; i < n; i++) {
+        ASSERT_EQ(i == n - 1, parser.feed(message[i]));
+    }
+
+    envelope = parser.getEnvelope();
+    EXPECT_EQ(0x00, envelope.seq_no);
+    EXPECT_EQ(frames::RESET, envelope.frame_type);
+    EXPECT_EQ(GROUND_STATION, envelope.source);
+    EXPECT_EQ(ONBOARD_COMPUTER, envelope.target);
+}
+
 TEST(TelemetryTest, parsingTooLongPayload)
 {
     Parser parser;
