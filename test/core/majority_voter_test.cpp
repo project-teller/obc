@@ -37,7 +37,7 @@ TEST(MajorityVoterTest, initialization)
 TEST(MajorityVoterTest, feedAndGet)
 {
     MajorityVoter voter;
-    /* fmt: off */
+    /* clang-format off */
     /* This is a (2, 5) de Bruijn sequence. It contains all possible 5-bit
      * substrings while being minimal in length */
     int sequence[] = {
@@ -48,7 +48,7 @@ TEST(MajorityVoterTest, feedAndGet)
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1,
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0
     };
-    /* fmt: on */
+    /* clang-format on */
     constexpr size_t n = sizeof(sequence) / sizeof(sequence[0]);
     static_assert(sizeof(expected) / sizeof(expected[0]) == n);
 
