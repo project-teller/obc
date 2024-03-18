@@ -22,6 +22,9 @@ include(compilers)
 # Include helper functions for generating targets
 include(targets)
 
+# Include helper functions for enabling code sanitizers
+include(sanitizers)
+
 # Specify the C++ standard.
 # C++17 required because of nested namespaces and [[nodiscard]].
 # C++20 required because of designated initializers.

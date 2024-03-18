@@ -68,6 +68,10 @@
         "TELLER_ENABLE_CODE_COVERAGE": {
           "type": "BOOL",
           "value": "ON"
+        },
+        "USE_SANITIZER": {
+          "type": "string",
+          "value": "Address;Undefined"
         }
       }
     }
