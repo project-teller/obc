@@ -27,6 +27,7 @@ typedef struct {
         subsystem_status_t ads;
         subsystem_status_t imu;
         subsystem_status_t mag;
+        subsystem_status_t sto;
     } subsystemStatus;
 } heartbeat_data_t;
 
