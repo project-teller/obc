@@ -6,6 +6,7 @@
 #include "modules/errors.h"
 #include "modules/log.h"
 #include "modules/rxsm.h"
+#include "modules/storage.h"
 #include "modules/telem.h"
 #include "tasks/blinker.h"
 #include "tasks/cmd.h"
@@ -76,6 +77,7 @@ void bootSystem(void)
      * was successful */
     inited &= teller::log::init();
     inited &= teller::rxsm::init();
+    inited &= teller::storage::init();
     inited &= teller::telem::init();
     inited &= teller::cmd::init();
 

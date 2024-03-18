@@ -4,6 +4,7 @@
 #include "led.h"
 #include "rcc.h"
 #include "rtc.h"
+#include "storage.h"
 #include "system.h"
 #include "uart.h"
 #include "watchdog.h"
@@ -22,6 +23,7 @@ bool teller::hal::init()
     success &= rtc::init();
     success &= gpio::init();
     success &= uart::init();
+    success &= storage::init();
 
     return success;
 }
@@ -29,6 +31,7 @@ bool teller::hal::init()
 void teller::hal::destroy()
 {
     /* Reverse order compared to ::init() */
+    storage::destroy();
     uart::destroy();
     gpio::destroy();
     rtc::destroy();

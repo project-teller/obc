@@ -4,6 +4,7 @@
 #include "modules/errors.h"
 #include "modules/messages.h"
 #include "modules/rxsm.h"
+#include "modules/storage.h"
 
 using namespace teller::errors;
 using namespace teller::hal;
@@ -21,6 +22,8 @@ void teller::telem::updateHeartbeatData(frames::heartbeat_data_t* data)
     data->rxsmStatusBits.lo = state.lo;
     data->rxsmStatusBits.sods = state.sods;
     data->rxsmStatusBits.soe = state.soe;
+
+    data->subsystemStatus.sto = teller::storage::getSubsystemStatus();
 }
 
 void teller::telem::updateClockStatusData(frames::clock_status_data_t* data)

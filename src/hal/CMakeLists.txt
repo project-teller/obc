@@ -1,6 +1,6 @@
 set(HAL_SOURCES hal.cpp)
 set(HAL_INCLUDE_DIRS "")
-set(HAL_LIBRARIES "")
+set(HAL_LIBRARIES lfs)
 
 # Assemble list of source files, include directories and libraries
 if(TARGET_MCU STREQUAL "POSIX")
@@ -9,16 +9,19 @@ if(TARGET_MCU STREQUAL "POSIX")
         posix/led.cpp
         posix/rcc.cpp
         posix/rtc.cpp
+        posix/storage.cpp
         posix/system.cpp
         posix/uart.cpp
         posix/watchdog.cpp
     )
+    list(APPEND HAL_LIBRARIES lfsbd)
 else()
     list(APPEND HAL_SOURCES
         stm32/gpio.cpp
         stm32/led.cpp
         stm32/rcc.cpp
         stm32/rtc.cpp
+        stm32/storage.cpp
         stm32/system.cpp
         stm32/uart.cpp
         stm32/utils.cpp
