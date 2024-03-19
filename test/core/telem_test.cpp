@@ -135,7 +135,13 @@ TEST(TelemetryTest, textMessageFrameEncoding)
     frames::text_message_data_t textMessage = {
         .module = MODULE_ID_SCM,
         .level = LOG_LEVEL_NOTICE,
-        .message = "One does not simply walk into Mordor"
+        /* This weird initializer is needed to make things with with GCC 10,
+         * see: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=55227 */
+        .message = {
+            'O', 'n', 'e', ' ', 'd', 'o', 'e', 's', ' ', 'n', 'o', 't', ' ',
+            's', 'i', 'm', 'p', 'l', 'y', ' ', 'w', 'a', 'l', 'k', ' ',
+            'i', 'n', 't', 'o', ' ', 'M', 'o', 'r', 'd', 'o', 'r', 0
+        }
     };
     uint8_t encoded[MAX_MESSAGE_LENGTH];
     uint8_t expectedBytes[] = {
