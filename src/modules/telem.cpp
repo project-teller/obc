@@ -97,9 +97,10 @@ bool teller::telem::send(
     envelope.seq_no = seq_no++;
 
     if (!serialize(buf, buf_length, envelope, payload, length)) {
+        /* LCOV_EXCL_START */
         free(buf);
-        buf = 0;
-        return false; /* LCOV_EXCL_LINE */
+        return false;
+        /* LCOV_EXCL_STOP */
     }
 
     return sendLowLevel(buf, length + 8);

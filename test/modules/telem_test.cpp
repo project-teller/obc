@@ -51,6 +51,7 @@ TEST_F(TelemetryModuleTest, sendWithEnvelope)
                                        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     std::string expected("\xCA\xFE\0\x2!\xEspam ham bacon\xB8\xE3", 22);
+    std::string expected_empty("\xCA\xFE\x01\x2!\x00\x8b\x43", 8);
 
     ASSERT_TRUE(
         telem::send(
@@ -60,8 +61,11 @@ TEST_F(TelemetryModuleTest, sendWithEnvelope)
     ASSERT_TRUE(telem::flushNext());
     EXPECT_EQ(expected, redirect.getAndClear());
 
-    /* Sending null payload -- we should not crash */
+    /* Sending null payload -- we should not crash but send a message with
+     * an empty payload instead */
     ASSERT_TRUE(telem::send(telem::frames::TEXT_MESSAGE, nullptr, 12));
+    ASSERT_TRUE(telem::flushNext());
+    EXPECT_EQ(expected_empty, redirect.getAndClear());
 
     /* Sending too large payload */
     ASSERT_FALSE(

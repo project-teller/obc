@@ -39,7 +39,7 @@ uint8_t serialize(
     buffer[4] = (((static_cast<int>(envelope.source) & 0x03) << 4) | (static_cast<int>(envelope.target) & 0x03));
     buffer[5] = payload_length;
 
-    if (payload_length > 0) {
+    if (payload && payload_length > 0) {
         memcpy(buffer + 6, payload, payload_length);
     }
 
