@@ -132,7 +132,7 @@ TEST(TelemetryTest, heartbeatFrameEncoding)
 TEST(TelemetryTest, textMessageFrameEncoding)
 {
     /* clang-format off */
-    frames::text_message_data_t message = {
+    frames::text_message_data_t textMessage = {
         .module = MODULE_ID_SCM,
         .level = LOG_LEVEL_NOTICE,
         .message = "One does not simply walk into Mordor"
@@ -146,14 +146,14 @@ TEST(TelemetryTest, textMessageFrameEncoding)
     frames::text_message_data_t decoded;
     /* clang-format on */
 
-    EXPECT_EQ(sizeof(expectedBytes), frames::encodeTextMessageFrame(&message, encoded));
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeTextMessageFrame(&textMessage, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
 
     frames::decodeTextMessageFrame(encoded, sizeof(expectedBytes), &decoded);
 
-    EXPECT_EQ(decoded.level, message.level);
-    EXPECT_EQ(decoded.module, message.module);
-    EXPECT_STREQ(decoded.message, message.message);
+    EXPECT_EQ(decoded.level, textMessage.level);
+    EXPECT_EQ(decoded.module, textMessage.module);
+    EXPECT_STREQ(decoded.message, textMessage.message);
 }
 
 TEST(TelemetryTest, clockStatusFrameEncoding)
