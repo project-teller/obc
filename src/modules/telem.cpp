@@ -97,6 +97,8 @@ bool teller::telem::send(
     envelope.seq_no = seq_no++;
 
     if (!serialize(buf, buf_length, envelope, payload, length)) {
+        free(buf);
+        buf = 0;
         return false; /* LCOV_EXCL_LINE */
     }
 
