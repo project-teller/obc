@@ -87,6 +87,7 @@ endif()
 # Create libraries
 add_subdirectory(core)
 add_subdirectory(hal)
+add_subdirectory(lib)
 add_subdirectory(modules)
 
 # Set target name

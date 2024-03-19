@@ -2,5 +2,5 @@
 	path = lib/googletest
 	url = https://github.com/google/googletest
 [submodule "lib/littlefs"]
-	path = lib/littlefs
+	path = src/lib/littlefs
 	url = https://github.com/littlefs-project/littlefs
