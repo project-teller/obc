@@ -403,9 +403,6 @@ static int convertLittleFSErrorCode(std::optional<littlefs::Error> code)
     case littlefs::Error::NOENT:
         return ENOENT;
 
-    case littlefs::Error::NOATTR:
-        return ENOATTR;
-
     case littlefs::Error::NOMEM:
         return ENOMEM;
 
