@@ -1,16 +1,9 @@
 #pragma once
 
+#include "core/telem/generic.h"
 #include "littlefs-cpp.h"
 
 namespace teller::hal::storage {
-
-namespace area {
-    typedef enum {
-        FLASH_MEMORY,
-        SD_CARD,
-        NUMBER_OF_AREAS
-    } area_t;
-}
 
 /**
  * @brief Initialization function for the storage subsystem.
@@ -31,6 +24,6 @@ void destroy(void);
 /**
  * @brief Returns the LittleFS filesystem configuration of a storage area.
  */
-littlefs::FilesystemConfig* getFilesystemConfig(area::area_t area);
+littlefs::FilesystemConfig* getFilesystemConfig(teller::telem::storage_area_t area);
 
 }

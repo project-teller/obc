@@ -13,6 +13,9 @@
 using namespace teller;
 
 class CmdTest : public testing::Test {
+private:
+    uint8_t responseBuffer[teller::telem::MAX_PAYLOAD_LENGTH];
+
 protected:
     void SetUp() override
     {
@@ -28,6 +31,11 @@ protected:
         log::destroy();
         telem::destroy();
         hal::uart::destroy();
+    }
+
+    bool handleCommands()
+    {
+        return cmd::handleCommands(responseBuffer);
     }
 };
 
@@ -48,17 +56,17 @@ TEST_F(CmdTest, readUnhandledPacket)
     size_t i;
 
     /* Feed a heartbeat message into the task */
-    ASSERT_FALSE(cmd::handleCommands());
+    ASSERT_FALSE(handleCommands());
     msg = reinterpret_cast<char*>(heartbeatMessage);
     inputRedirector.feed(std::string(msg, 6));
     for (i = 0; i < 6; i++) {
-        ASSERT_FALSE(cmd::handleCommands());
+        ASSERT_FALSE(handleCommands());
     }
     inputRedirector.feed(std::string(msg + 6, sizeof(heartbeatMessage) - 6));
     for (i = 0; i < sizeof(heartbeatMessage) - 7; i++) {
-        ASSERT_FALSE(cmd::handleCommands());
+        ASSERT_FALSE(handleCommands());
     }
-    ASSERT_TRUE(cmd::handleCommands());
+    ASSERT_TRUE(handleCommands());
 
     /* We expect to receive a warning message in response */
     telem::flushNext();
@@ -79,13 +87,13 @@ TEST_F(CmdTest, readPacketForOtherComponent)
     size_t i;
 
     /* Feed a dummy log message into the task that was meant for another component */
-    ASSERT_FALSE(cmd::handleCommands());
+    ASSERT_FALSE(handleCommands());
     msg = reinterpret_cast<char*>(dummyLogMessage);
     inputRedirector.feed(std::string(msg, sizeof(dummyLogMessage)));
     for (i = 0; i < sizeof(dummyLogMessage) - 1; i++) {
-        ASSERT_FALSE(cmd::handleCommands());
+        ASSERT_FALSE(handleCommands());
     }
-    ASSERT_TRUE(cmd::handleCommands());
+    ASSERT_TRUE(handleCommands());
 }
 
 TEST_F(CmdTest, readResetPacket)
@@ -100,13 +108,13 @@ TEST_F(CmdTest, readResetPacket)
     hal::system::preventNextReset();
 
     /* Feed a reset message into the task */
-    ASSERT_FALSE(cmd::handleCommands());
+    ASSERT_FALSE(handleCommands());
     msg = reinterpret_cast<char*>(resetMessage);
     inputRedirector.feed(std::string(msg, sizeof(resetMessage)));
     for (i = 0; i < sizeof(resetMessage) - 1; i++) {
-        ASSERT_FALSE(cmd::handleCommands());
+        ASSERT_FALSE(handleCommands());
     }
-    ASSERT_TRUE(cmd::handleCommands());
+    ASSERT_TRUE(handleCommands());
 
     /* Reset should have been performed if we hadn't prevented it earlier */
     ASSERT_EQ(1, hal::system::countPreventedResetAttempts());
@@ -132,13 +140,13 @@ TEST_F(CmdTest, readResetPacketFromForbiddenComponent)
     hal::system::preventNextReset();
 
     /* Feed a reset message from a forbidden component into the task */
-    ASSERT_FALSE(cmd::handleCommands());
+    ASSERT_FALSE(handleCommands());
     msg = reinterpret_cast<char*>(resetMessage);
     inputRedirector.feed(std::string(msg, sizeof(resetMessage)));
     for (i = 0; i < sizeof(resetMessage) - 1; i++) {
-        ASSERT_FALSE(cmd::handleCommands());
+        ASSERT_FALSE(handleCommands());
     }
-    ASSERT_TRUE(cmd::handleCommands());
+    ASSERT_TRUE(handleCommands());
 
     /* No reset should have been prevented */
     ASSERT_EQ(0, hal::system::countPreventedResetAttempts());

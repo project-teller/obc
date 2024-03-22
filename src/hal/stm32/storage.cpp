@@ -3,6 +3,7 @@
 #include "stm32_hal.h"
 
 using namespace teller::hal::storage;
+using namespace teller::telem;
 
 namespace teller::hal::storage {
 
@@ -16,7 +17,7 @@ void destroy()
 {
 }
 
-littlefs::FilesystemConfig* getFilesystemConfig(area::area_t area)
+littlefs::FilesystemConfig* getFilesystemConfig(storage_area_t area)
 {
     return nullptr;
 }

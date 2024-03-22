@@ -6,6 +6,7 @@
 #include "core/telem/generic.h"
 #include "core/telem/heartbeat.h"
 #include "core/telem/parser.h"
+#include "core/telem/storage.h"
 #include "core/telem/text_message.h"
 
 using namespace std;
@@ -218,6 +219,30 @@ TEST(TelemetryTest, ackFrameEncoding)
     EXPECT_EQ(decoded.seq_no, message.seq_no);
     EXPECT_EQ(decoded.result, frames::NAK_INVALID);
     EXPECT_EQ(decoded.error, message.error);
+}
+
+TEST(TelemetryTest, storageCommandFrameEncoding)
+{
+    frames::storage_command_data_t message = {
+        .area = STORAGE_AREA_SD_CARD,
+        .command = frames::STORAGE_COMMAND_ERASE
+    };
+    uint8_t encoded[MAX_MESSAGE_LENGTH];
+    uint8_t expectedBytes[] = { 0x23 };
+    frames::storage_command_data_t decoded;
+
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeStorageCommandFrame(&message, encoded));
+    EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
+
+    frames::decodeStorageCommandFrame(encoded, &decoded);
+
+    EXPECT_EQ(decoded.area, message.area);
+    EXPECT_EQ(decoded.command, message.command);
+
+    encoded[0] = 0xff;
+    frames::decodeStorageCommandFrame(encoded, &decoded);
+    EXPECT_EQ(decoded.area, STORAGE_AREA_UNKNOWN);
+    EXPECT_EQ(decoded.command, frames::STORAGE_COMMAND_NOP);
 }
 
 const uint8_t clockStatusMessage[] = {

@@ -7,6 +7,7 @@ add_library(
     telem/generic.cpp
     telem/heartbeat.cpp
     telem/parser.cpp
+    telem/storage.cpp
     telem/text_message.cpp
 
     utils/crc.c

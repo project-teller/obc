@@ -19,8 +19,10 @@ void destroy(void);
  *
  * Blocks indefinitely if there is nothing to read from the UART.
  *
+ * @param buf  a pre-allocated buffer where the response to the command can
+ *        be composed if needed
  * @return Whether an incoming packet was decoded and handled successfully.
  */
-bool handleCommands(void);
+bool handleCommands(uint8_t* buf);
 
 }

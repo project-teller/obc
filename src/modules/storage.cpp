@@ -1,3 +1,4 @@
+#include <cerrno>
 #include <iostream>
 #include <memory>
 
@@ -8,7 +9,7 @@
 using namespace teller::hal::storage;
 using namespace teller::telem;
 
-static const size_t NUM_AREAS = area::NUMBER_OF_AREAS;
+static int convertLittleFSErrorCode(std::optional<littlefs::Error> code);
 
 /**
  * @brief Tracks the state of a single filesystem in the storage module.
@@ -76,6 +77,11 @@ public:
         }
     }
 
+    std::optional<littlefs::Error> format()
+    {
+        return _fs.format();
+    }
+
     /**
      * @brief Marks the filesystem as having encountered an error.
      *
@@ -125,8 +131,8 @@ public:
 
     bool init()
     {
-        for (size_t i = 0; i < NUM_AREAS; i++) {
-            area::area_t area = static_cast<area::area_t>(i);
+        for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
+            storage_area_t area = static_cast<storage_area_t>(i);
             auto cfg = getFilesystemConfig(area);
             if (cfg) {
                 _filesystems[i] = std::make_shared<FilesystemState>(*cfg);
@@ -140,7 +146,7 @@ public:
 
     void destroy()
     {
-        for (size_t i = 0; i < NUM_AREAS; i++) {
+        for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
             _filesystems[i].reset();
         }
     }
@@ -151,7 +157,7 @@ public:
      */
     bool allMounted() const
     {
-        for (size_t i = 0; i < NUM_AREAS; i++) {
+        for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
             if (_filesystems[i] && (!_filesystems[i]->isMounted() || _filesystems[i]->isErrored())) {
                 return false;
             }
@@ -164,7 +170,7 @@ public:
      */
     bool anyErrored() const
     {
-        for (size_t i = 0; i < NUM_AREAS; i++) {
+        for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
             if (_filesystems[i] && _filesystems[i]->isErrored()) {
                 return true;
             }
@@ -178,7 +184,7 @@ public:
      */
     bool anyMounted() const
     {
-        for (size_t i = 0; i < NUM_AREAS; i++) {
+        for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
             if (_filesystems[i] && _filesystems[i]->isMounted() && !_filesystems[i]->isErrored()) {
                 return true;
             }
@@ -191,7 +197,7 @@ public:
      */
     void clearErrors()
     {
-        for (size_t i = 0; i < NUM_AREAS; i++) {
+        for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
             if (_filesystems[i]) {
                 _filesystems[i]->clearErrors();
             }
@@ -199,14 +205,15 @@ public:
     }
 
     /**
-     * @brief Returns a pointer to the filesystem of the given storage area.
+     * @brief Returns a pointer to the state of the filesystem of the given storage area.
      *
      * @param area  the identifier of the storage area
      * @param ensureMounted  whether to ensure that the filesystem is mounted
-     * @return  the pointer to the filesystem. Returns null if the area has no
-     *          registered filesystem or when an error happened while mounting
+     * @return  the pointer to the state of the filesystem. Returns null if the
+     *          area has no registered filesystem or when an error happened while
+     *          mounting
      */
-    littlefs::Filesystem* get(area::area_t area, bool ensureMounted = true)
+    std::shared_ptr<FilesystemState> getState(storage_area_t area, bool ensureMounted = true)
     {
         auto state = _filesystems[area];
         if (state) {
@@ -215,10 +222,29 @@ public:
                     return nullptr;
                 }
             }
-            return &state->_fs;
+            return state;
         } else {
             return nullptr;
         }
+    }
+
+    /**
+     * @brief Attempts to format all filesystems, unmounting them as needed.
+     */
+    bool formatAll()
+    {
+        bool success = true;
+
+        for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
+            auto fs = _filesystems[i];
+            if (fs) {
+                if (!fs->ensureUnmounted() || fs->_fs.format()) {
+                    success = false;
+                }
+            }
+        }
+
+        return success;
     }
 
     /**
@@ -228,7 +254,7 @@ public:
     {
         bool success = true;
 
-        for (size_t i = 0; i < NUM_AREAS; i++) {
+        for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
             if (_filesystems[i]) {
                 if (!_filesystems[i]->ensureMounted()) {
                     success = false;
@@ -239,25 +265,30 @@ public:
         return success;
     }
 
-    littlefs::Filesystem* operator[](area::area_t area)
+    littlefs::Filesystem* operator[](storage_area_t area)
     {
-        return get(area, /* ensureMounted = */ false);
+        auto state = getState(area, /* ensureMounted = */ false);
+        return state ? &state->_fs : nullptr;
     }
 
 private:
-    std::shared_ptr<FilesystemState> _filesystems[NUM_AREAS];
+    std::shared_ptr<FilesystemState> _filesystems[NUM_STORAGE_AREAS];
 };
 
 Filesystems fs;
 
 namespace teller::storage {
 
-bool init()
+bool init(bool format)
 {
     std::optional<littlefs::Error> err;
 
     if (!fs.init()) {
         return false;
+    }
+
+    if (format) {
+        fs.formatAll();
     }
 
     fs.mountAll();
@@ -287,4 +318,107 @@ subsystem_status_t getSubsystemStatus()
     }
 }
 
+int eraseStorage(storage_area_t area)
+{
+    auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
+    if (!_filesystem) {
+        return EINVAL;
+    }
+
+    if (_filesystem->isMounted()) {
+        return EIO;
+    }
+
+    auto error_code = _filesystem->format();
+    if (error_code) {
+        _filesystem->markErrored();
+        return convertLittleFSErrorCode(error_code);
+    } else {
+        return 0;
+    }
+}
+
+int mountStorage(storage_area_t area)
+{
+    auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
+    if (!_filesystem) {
+        return EINVAL;
+    }
+
+    if (!_filesystem->ensureMounted()) {
+        _filesystem->markErrored();
+        return EIO;
+    }
+
+    return 0;
+}
+
+int unmountStorage(storage_area_t area)
+{
+    auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
+    if (!_filesystem) {
+        return EINVAL;
+    }
+
+    if (!_filesystem->ensureUnmounted()) {
+        _filesystem->markErrored();
+        return EIO;
+    }
+
+    return 0;
+}
+
+}
+
+static int convertLittleFSErrorCode(std::optional<littlefs::Error> code)
+{
+    if (!code) {
+        return 0;
+    }
+
+    switch (*code) {
+    case littlefs::Error::BADF:
+        return EBADF;
+
+    case littlefs::Error::EXIST:
+        return EEXIST;
+
+    case littlefs::Error::FBIG:
+        return EFBIG;
+
+    case littlefs::Error::INVAL:
+        return EINVAL;
+
+    case littlefs::Error::IO:
+        return EIO;
+
+    case littlefs::Error::ISDIR:
+        return EISDIR;
+
+    case littlefs::Error::NAMETOOLONG:
+        return ENAMETOOLONG;
+
+    case littlefs::Error::NO_DD_ENTRY:
+    case littlefs::Error::NO_FD_ENTRY:
+    case littlefs::Error::NOENT:
+        return ENOENT;
+
+    case littlefs::Error::NOATTR:
+        return ENOATTR;
+
+    case littlefs::Error::NOMEM:
+        return ENOMEM;
+
+    case littlefs::Error::NOSPC:
+        return ENOSPC;
+
+    case littlefs::Error::NOTDIR:
+        return ENOTDIR;
+
+    case littlefs::Error::NOTEMPTY:
+        return ENOTEMPTY;
+
+    default:
+        return EIO;
+    }
 }

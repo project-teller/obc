@@ -24,6 +24,7 @@ add_executable(
     modules/log_test.cpp
     modules/messages_test.cpp
     modules/rxsm_test.cpp
+    modules/storage_test.cpp
     modules/telem_test.cpp
 )
 target_include_directories(

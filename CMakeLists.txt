@@ -63,6 +63,7 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND TELLER_ENABLE_CODE_COVERAGE)
         "/Applications/Xcode*"
         "/Library/Developer/*"
         "lib/googletest/*"
+        "src/lib/*"
         "src/tasks/*"
         "src/main.cpp"
         "test/*"

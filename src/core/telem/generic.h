@@ -40,6 +40,16 @@ typedef struct {
 } envelope_t;
 
 /**
+ * @brief Enum representing the storage areas of the system.
+ */
+typedef enum {
+    STORAGE_AREA_UNKNOWN = 0,
+    STORAGE_AREA_FLASH_MEMORY = 1,
+    STORAGE_AREA_SD_CARD = 2,
+    NUM_STORAGE_AREAS,
+} storage_area_t;
+
+/**
  * @brief Enum representing the possible status codes of subsystems.
  */
 typedef enum {
@@ -92,6 +102,7 @@ namespace frames {
         CLOCK_STATUS = 3,
         ACK = 4,
         RESET = 5,
+        STORAGE = 6,
     } frame_type_t;
 
 }

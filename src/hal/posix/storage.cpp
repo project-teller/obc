@@ -1,10 +1,12 @@
+#include <cstdio>
+#include <fstream>
+
 #include "hal/storage.h"
 #include "lfs_filebd.h"
 
 using namespace littlefs;
 using namespace teller::hal::storage;
-
-static const size_t NUM_AREAS = area::NUMBER_OF_AREAS;
+using namespace teller::telem;
 
 /**
  * @brief Block size of the simulated flash memory device
@@ -29,7 +31,8 @@ static const size_t NUM_AREAS = area::NUMBER_OF_AREAS;
 /**
  * @brief Block device configurations for the simulated storage devices.
  */
-static struct lfs_filebd_config filebd_configs[NUM_AREAS] = {
+static struct lfs_filebd_config filebd_configs[NUM_STORAGE_AREAS] = {
+    {},
     { .read_size = FLASH_MEMORY_BLOCK_SIZE,
         .prog_size = FLASH_MEMORY_BLOCK_SIZE,
         .erase_size = 4 * FLASH_MEMORY_BLOCK_SIZE,
@@ -43,23 +46,24 @@ static struct lfs_filebd_config filebd_configs[NUM_AREAS] = {
 /**
  * @brief Block devices for the simulated storage devices.
  */
-static lfs_filebd_t filebds[NUM_AREAS];
+static lfs_filebd_t filebds[NUM_STORAGE_AREAS];
 
 /**
  * @brief Filesystem configuration objects for the simulated storage devices.
  */
-static std::shared_ptr<FilesystemConfig> cfg[NUM_AREAS];
+static std::shared_ptr<FilesystemConfig> cfg[NUM_STORAGE_AREAS];
 
 /**
  * @brief Filenames of the simulated storage devices.
  */
-static const char* filenames[NUM_AREAS] = {
+static const char* filenames[NUM_STORAGE_AREAS] = {
+    nullptr,
     "flash.bin",
     "sdcard.bin"
 };
 
-static bool initArea(area::area_t area_to_init);
-static void destroyArea(area::area_t area_to_destroy);
+static bool initArea(storage_area_t area_to_init);
+static void destroyArea(storage_area_t area_to_destroy);
 
 namespace teller::hal::storage {
 
@@ -67,8 +71,8 @@ bool init()
 {
     bool ok = true;
 
-    ok &= initArea(area::FLASH_MEMORY);
-    ok &= initArea(area::SD_CARD);
+    ok &= initArea(STORAGE_AREA_FLASH_MEMORY);
+    ok &= initArea(STORAGE_AREA_SD_CARD);
 
     if (!ok) {
         destroy();
@@ -79,15 +83,15 @@ bool init()
 
 void destroy()
 {
-    destroyArea(area::SD_CARD);
-    destroyArea(area::FLASH_MEMORY);
+    destroyArea(STORAGE_AREA_SD_CARD);
+    destroyArea(STORAGE_AREA_FLASH_MEMORY);
 }
 
-FilesystemConfig* getFilesystemConfig(area::area_t area)
+FilesystemConfig* getFilesystemConfig(storage_area_t area)
 {
     switch (area) {
-    case area::FLASH_MEMORY:
-    case area::SD_CARD:
+    case STORAGE_AREA_FLASH_MEMORY:
+    case STORAGE_AREA_SD_CARD:
         return cfg[area].get();
 
     default:
@@ -95,9 +99,18 @@ FilesystemConfig* getFilesystemConfig(area::area_t area)
     }
 }
 
+void removeAllFiles(void)
+{
+    for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
+        if (filenames[i] && std::ifstream(filenames[i]).good()) {
+            std::remove(filenames[i]);
+        }
+    }
 }
 
-bool initArea(area::area_t area_to_init)
+}
+
+bool initArea(storage_area_t area_to_init)
 {
     bool result;
 
@@ -125,14 +138,16 @@ bool initArea(area::area_t area_to_init)
         if (result) {
             cfg[area_to_init] = new_config;
         }
+        /* LCOV_EXCL_START */
     } catch (std::bad_alloc&) {
         result = false;
     }
+    /* LCOV_EXCL_STOP */
 
     return result;
 }
 
-void destroyArea(area::area_t area_to_destroy)
+void destroyArea(storage_area_t area_to_destroy)
 {
     if (cfg[area_to_destroy]) {
         lfs_filebd_destroy(&cfg[area_to_destroy]->raw_cfg());
