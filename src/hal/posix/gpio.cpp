@@ -4,18 +4,25 @@
 
 using namespace teller::hal::gpio;
 
-/** State of simulated GPIO pins */
-static uint8_t digitalPins = 0;
-
 #define BIT(x) (1 << (x))
 
-static_assert(GPIO_COUNT <= 8);
+/** State of simulated GPIO pins */
+static uint32_t digitalPins = 0;
+
+static const uint32_t digitalPinInitialValues = (
+    /* Reset pins start in logical high, they must be pulled low to reset */
+    BIT(RST_GMM_LCL) | BIT(RST_SCM_LCL) | BIT(RST_SUC_LCL1) | BIT(RST_SUC_LCL2) | BIT(RST_SUC_LCL3) | BIT(RST_HVPSU_LCL) |
+
+    /* LCL status pins start in logical high */
+    BIT(STATUS_GMM_LCL) | BIT(STATUS_SCM_LCL) | BIT(STATUS_SUC_LCL1) | BIT(STATUS_SUC_LCL2) | BIT(STATUS_SUC_LCL3) | BIT(STATUS_HVPSU_LCL));
+
+static_assert(GPIO_COUNT <= 32);
 
 namespace teller::hal::gpio {
 
 bool init()
 {
-    digitalPins = 0;
+    digitalPins = digitalPinInitialValues;
     return true;
 }
 

@@ -8,9 +8,27 @@ namespace teller::hal::gpio {
  * @brief Enum containing symbolic constants for the pins in the GPIO abstraction layer.
  */
 typedef enum {
+    /* RXSM signals */
     SODS,
     SOE,
     LO,
+
+    /* Latching current limiter status */
+    STATUS_GMM_LCL,
+    STATUS_SCM_LCL,
+    STATUS_SUC_LCL1,
+    STATUS_SUC_LCL2,
+    STATUS_SUC_LCL3,
+    STATUS_HVPSU_LCL,
+
+    /* Latching current limiter reset */
+    RST_GMM_LCL,
+    RST_SCM_LCL,
+    RST_SUC_LCL1,
+    RST_SUC_LCL2,
+    RST_SUC_LCL3,
+    RST_HVPSU_LCL,
+
     GPIO_COUNT,
 } pin_t;
 

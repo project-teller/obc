@@ -20,20 +20,74 @@ typedef struct {
 
 const gpio_config_t gpio_configs[GPIO_COUNT] = {
 #if defined(TELLER_BOARD_NUCLEO144)
+    /* RXSM signals */
     /* SODS: User button */
     { GPIOC, GPIO_PIN_13, { .Mode = GPIO_MODE_INPUT, .Pull = GPIO_PULLDOWN, .Speed = GPIO_SPEED_FREQ_HIGH } },
     UNMAPPED,
-    UNMAPPED
+    UNMAPPED,
+
+    /* LCL signals */
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+
+    /* LCL reset */
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+
 #elif defined(STM32F4)
     // STM32F4-Discovery
+
+    /* RXSM signals */
     UNMAPPED,
     UNMAPPED,
-    UNMAPPED
+    UNMAPPED,
+
+    /* LCL signals */
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+
+    /* LCL reset */
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
 #else
     // No GPIOs supported on this hardware
+
+    /* RXSM signals */
     UNMAPPED,
     UNMAPPED,
-    UNMAPPED
+    UNMAPPED,
+
+    /* LCL signals */
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+
+    /* LCL reset */
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
+    UNMAPPED,
 #endif
 };
 

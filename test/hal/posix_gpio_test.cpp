@@ -25,3 +25,13 @@ TEST_F(GPIOTest, readAndWrite)
     write(LO, false);
     EXPECT_FALSE(read(LO));
 }
+
+TEST_F(GPIOTest, initialLCLStatus)
+{
+    EXPECT_TRUE(read(STATUS_GMM_LCL));
+    EXPECT_TRUE(read(STATUS_SCM_LCL));
+    EXPECT_TRUE(read(STATUS_SUC_LCL1));
+    EXPECT_TRUE(read(STATUS_SUC_LCL2));
+    EXPECT_TRUE(read(STATUS_SUC_LCL3));
+    EXPECT_TRUE(read(STATUS_HVPSU_LCL));
+}
