@@ -3,13 +3,10 @@
 #include <memory>
 
 #include "hal/storage.h"
-#include "littlefs-cpp.h"
 #include "modules/storage.h"
 
 using namespace teller::hal::storage;
 using namespace teller::telem;
-
-static int convertLittleFSErrorCode(std::optional<littlefs::Error> code);
 
 /**
  * @brief Tracks the state of a single filesystem in the storage module.
@@ -215,7 +212,7 @@ public:
      */
     std::shared_ptr<FilesystemState> getState(storage_area_t area, bool ensureMounted = true)
     {
-        auto state = _filesystems[area];
+        auto state = area >= 0 && area < NUM_STORAGE_AREAS ? _filesystems[area] : nullptr;
         if (state) {
             if (ensureMounted) {
                 if (!state->ensureMounted()) {
@@ -338,6 +335,20 @@ int eraseStorage(storage_area_t area)
     }
 }
 
+bool isStorageMounted(storage_area_t area)
+{
+    auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
+    return _filesystem && _filesystem->isMounted();
+}
+
+void markStorageAsErrored(teller::telem::storage_area_t area)
+{
+    auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
+    if (_filesystem) {
+        _filesystem->markErrored();
+    }
+}
+
 int mountStorage(storage_area_t area)
 {
     auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
@@ -368,9 +379,7 @@ int unmountStorage(storage_area_t area)
     return 0;
 }
 
-}
-
-static int convertLittleFSErrorCode(std::optional<littlefs::Error> code)
+int convertLittleFSErrorCode(std::optional<littlefs::Error> code)
 {
     if (!code) {
         return 0;
@@ -418,4 +427,6 @@ static int convertLittleFSErrorCode(std::optional<littlefs::Error> code)
     default:
         return EIO;
     }
+}
+
 }

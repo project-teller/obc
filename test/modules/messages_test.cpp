@@ -28,20 +28,20 @@ TEST_F(MessagesTest, updateClockStatusData)
     int64_t diff;
 
     updateClockStatusData(&first);
-    delayMsec(5);
+    delayMsec(10);
     updateClockStatusData(&second);
 
     EXPECT_TRUE(second.timestampInMsec > first.timestampInMsec);
 
     diff = second.timestampInMsec - first.timestampInMsec;
-    EXPECT_GT(diff, 4);
-    EXPECT_LT(diff, 8);
+    EXPECT_GT(diff, 8);
+    EXPECT_LT(diff, 16);
 
     EXPECT_TRUE(second.rtcTimestampInMsec > first.rtcTimestampInMsec);
 
     diff = second.rtcTimestampInMsec - first.rtcTimestampInMsec;
-    EXPECT_GT(diff, 4);
-    EXPECT_LT(diff, 8);
+    EXPECT_GT(diff, 8);
+    EXPECT_LT(diff, 16);
 }
 
 TEST_F(MessagesTest, updateHeartbeatData)

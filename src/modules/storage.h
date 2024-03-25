@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/telem/generic.h"
+#include "littlefs-cpp.h"
 
 namespace teller::storage {
 
@@ -28,6 +29,16 @@ teller::telem::subsystem_status_t getSubsystemStatus(void);
 [[nodiscard]] int eraseStorage(teller::telem::storage_area_t area);
 
 /**
+ * @brief Returns whether a storage area is mounted in the storage subsystem.
+ */
+bool isStorageMounted(teller::telem::storage_area_t area);
+
+/**
+ * @brief Marks a storage area as having an error.
+ */
+void markStorageAsErrored(teller::telem::storage_area_t area);
+
+/**
  * @brief Mounts a storage area in the storage subsystem.
  * @return POSIX error code; zero if the operation was successful
  * or if the storage area was already mounted.
@@ -40,5 +51,11 @@ teller::telem::subsystem_status_t getSubsystemStatus(void);
  * or if the storage area was already unmounted.
  */
 [[nodiscard]] int unmountStorage(teller::telem::storage_area_t area);
+
+/**
+ * @brief Helper function to convert a LittleFS error code to a corresponding
+ *        POSIX error code.
+ */
+int convertLittleFSErrorCode(std::optional<littlefs::Error> code);
 
 }
