@@ -94,8 +94,8 @@ protected:
         uint8_t buffer[64];
         size_t payload_length = telem::frames::encodeAckFrame(data, payload);
         telem::envelope_t envelope = {
-            .frame_type = telem::frames::ACK,
             .seq_no = seq_no,
+            .frame_type = telem::frames::ACK,
             .source = telem::ONBOARD_COMPUTER,
             .target = telem::GROUND_STATION
         };
