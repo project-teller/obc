@@ -25,6 +25,8 @@ typedef enum {
     /** Invalid response; used only when deserializing a frame with an unknown
      * response code. */
     NAK_INVALID,
+
+    NUM_ACK_RESULT_CODES,
 } ack_result_t;
 
 /**

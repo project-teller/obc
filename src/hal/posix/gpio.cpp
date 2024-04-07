@@ -58,7 +58,7 @@ void write(pin_t index, bool value)
 
     i = value ? 1 : 0;
     ts = &edgeTimestamps[2 * index];
-    ts[i] = teller::hal::system::getTimeSinceBootMsec();
+    ts[i] = teller::hal::system::getTimeSinceBootMsec() + 1;
 
     /* For LCL pins, process the pulses */
     if (value && ts[0] > 0 && ts[1] > 0) {

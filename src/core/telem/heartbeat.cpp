@@ -17,6 +17,13 @@ using namespace teller::telem;
 #define SUBSYSTEM_MAG_BIT_INDEX 8
 #define SUBSYSTEM_STO_BIT_INDEX 10
 
+#define LCL_STATUS_GMM_BIT_INDEX 0
+#define LCL_STATUS_SCM_BIT_INDEX 1
+#define LCL_STATUS_SUC1_BIT_INDEX 2
+#define LCL_STATUS_SUC2_BIT_INDEX 3
+#define LCL_STATUS_SUC3_BIT_INDEX 4
+#define LCL_STATUS_HVPSU_BIT_INDEX 5
+
 namespace teller::telem::frames {
 
 /**
@@ -32,9 +39,10 @@ typedef struct __attribute__((packed)) {
     int8_t temperature;
     uint8_t rxsmStatusBits;
     uint16_t subsystemStatus;
+    uint8_t lclStatusBits;
 } heartbeat_frame_t;
 
-static_assert(sizeof(heartbeat_frame_t) == 10, "Heartbeat frame size invalid");
+static_assert(sizeof(heartbeat_frame_t) == 11, "Heartbeat frame size invalid");
 
 uint8_t encodeHeartbeatFrame(const heartbeat_data_t* data, uint8_t* encoded)
 {
@@ -76,6 +84,18 @@ uint8_t encodeHeartbeatFrame(const heartbeat_data_t* data, uint8_t* encoded)
     );
     /* clang-format on */
 
+    /* clang-format off */
+    frame->lclStatusBits = (
+        (data->lclStatusBits.gmm << LCL_STATUS_GMM_BIT_INDEX) |
+        (data->lclStatusBits.scm << LCL_STATUS_SCM_BIT_INDEX) |
+        (data->lclStatusBits.suc1 << LCL_STATUS_SUC1_BIT_INDEX) |
+        (data->lclStatusBits.suc2 << LCL_STATUS_SUC2_BIT_INDEX) |
+        (data->lclStatusBits.suc3 << LCL_STATUS_SUC3_BIT_INDEX) |
+        (data->lclStatusBits.hvpsu << LCL_STATUS_HVPSU_BIT_INDEX) |
+        0
+    );
+    /* clang-format on */
+
     return sizeof(heartbeat_frame_t);
 }
 
@@ -106,6 +126,13 @@ void decodeHeartbeatFrame(const uint8_t* encoded, heartbeat_data_t* decoded)
         (status >> SUBSYSTEM_MAG_BIT_INDEX) & 0x03);
     decoded->subsystemStatus.sto = static_cast<subsystem_status_t>(
         (status >> SUBSYSTEM_STO_BIT_INDEX) & 0x03);
+
+    decoded->lclStatusBits.gmm = frame->lclStatusBits & (1 << LCL_STATUS_GMM_BIT_INDEX);
+    decoded->lclStatusBits.scm = frame->lclStatusBits & (1 << LCL_STATUS_SCM_BIT_INDEX);
+    decoded->lclStatusBits.suc1 = frame->lclStatusBits & (1 << LCL_STATUS_SUC1_BIT_INDEX);
+    decoded->lclStatusBits.suc2 = frame->lclStatusBits & (1 << LCL_STATUS_SUC2_BIT_INDEX);
+    decoded->lclStatusBits.suc3 = frame->lclStatusBits & (1 << LCL_STATUS_SUC3_BIT_INDEX);
+    decoded->lclStatusBits.hvpsu = frame->lclStatusBits & (1 << LCL_STATUS_HVPSU_BIT_INDEX);
 }
 
 }

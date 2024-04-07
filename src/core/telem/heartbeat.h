@@ -29,6 +29,14 @@ typedef struct {
         subsystem_status_t mag;
         subsystem_status_t sto;
     } subsystemStatus;
+    struct {
+        bool gmm;
+        bool scm;
+        bool suc1;
+        bool suc2;
+        bool suc3;
+        bool hvpsu;
+    } lclStatusBits;
 } heartbeat_data_t;
 
 /**

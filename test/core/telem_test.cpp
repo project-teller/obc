@@ -104,10 +104,18 @@ TEST(TelemetryTest, heartbeatFrameEncoding)
             .ads = SUBSYSTEM_STATUS_ERROR,
             .imu = SUBSYSTEM_STATUS_CRITICAL,
             .mag = SUBSYSTEM_STATUS_OK
+        },
+        .lclStatusBits = {
+            .gmm = true,
+            .scm = false,
+            .suc1 = true,
+            .suc2 = true,
+            .suc3 = false,
+            .hvpsu = false
         }
     };
     uint8_t encoded[MAX_MESSAGE_LENGTH];
-    uint8_t expectedBytes[] = { 80, 212, 18, 0, 42, 42, 214, 6, 27, 3 };
+    uint8_t expectedBytes[] = { 80, 212, 18, 0, 42, 42, 214, 6, 27, 3, 13 };
     frames::heartbeat_data_t decoded;
     /* clang-format on */
 
@@ -208,7 +216,7 @@ TEST(TelemetryTest, ackFrameEncoding)
     EXPECT_EQ(decoded.result, message.result);
     EXPECT_EQ(decoded.error, message.error);
 
-    message.result = static_cast<frames::ack_result_t>(123);
+    message.result = frames::NUM_ACK_RESULT_CODES;
     expectedBytes[2] = frames::NAK_INVALID;
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeAckFrame(&message, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
