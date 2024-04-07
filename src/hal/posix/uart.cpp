@@ -119,6 +119,14 @@ UARTOutputRedirector::~UARTOutputRedirector()
     uartOutputOverrides.erase(_index);
 }
 
+void UARTOutputRedirector::clear()
+{
+    auto it = uartOutputOverrides.find(_index);
+    if (it != uartOutputOverrides.end()) {
+        it->second.str("");
+    }
+}
+
 string UARTOutputRedirector::get() const
 {
     auto it = uartOutputOverrides.find(_index);
@@ -132,12 +140,7 @@ string UARTOutputRedirector::get() const
 string UARTOutputRedirector::getAndClear()
 {
     string result = get();
-
-    auto it = uartOutputOverrides.find(_index);
-    if (it != uartOutputOverrides.end()) {
-        it->second.str("");
-    }
-
+    clear();
     return result;
 }
 

@@ -16,11 +16,16 @@ namespace teller::hal::uart {
 class UARTOutputRedirector {
 
 public:
-    UARTOutputRedirector(uart_t index);
+    explicit UARTOutputRedirector(uart_t index);
     ~UARTOutputRedirector();
 
     UARTOutputRedirector(const UARTOutputRedirector&) = delete;
     UARTOutputRedirector& operator=(const UARTOutputRedirector&) = delete;
+
+    /**
+     * @brief Clears the contents of the internal buffer of the redirector.
+     */
+    void clear();
 
     /**
      * @brief Returns the contents of the internal buffer of the redirector.
@@ -46,7 +51,7 @@ private:
 class UARTInputRedirector {
 
 public:
-    UARTInputRedirector(uart_t index);
+    explicit UARTInputRedirector(uart_t index);
     ~UARTInputRedirector();
 
     UARTInputRedirector(const UARTInputRedirector&) = delete;
