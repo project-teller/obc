@@ -21,6 +21,7 @@ add_executable(
     hal/posix_watchdog_test.cpp
     modules/cmd_test.cpp
     modules/errors_test.cpp
+    modules/lcl_test.cpp
     modules/log_test.cpp
     modules/messages_test.cpp
     modules/rxsm_test.cpp

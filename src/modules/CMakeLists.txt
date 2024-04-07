@@ -3,6 +3,7 @@ add_library(
     obc-modules
     cmd.cpp
     errors.cpp
+    lcl.cpp
     log.cpp
     messages.cpp
     rxsm.cpp

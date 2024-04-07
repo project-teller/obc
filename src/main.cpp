@@ -4,6 +4,7 @@
 #include "hal/system.h"
 #include "modules/cmd.h"
 #include "modules/errors.h"
+#include "modules/lcl.h"
 #include "modules/log.h"
 #include "modules/rxsm.h"
 #include "modules/storage.h"
@@ -76,6 +77,7 @@ void bootSystem(void)
     /* The remaining modules are initialized only if the HAL initialization
      * was successful */
     inited &= teller::log::init();
+    inited &= teller::lcl::init();
     inited &= teller::rxsm::init();
     inited &= teller::storage::init();
     inited &= teller::telem::init();

@@ -1,6 +1,7 @@
 #include <cassert>
 
 #include "hal/gpio.h"
+#include "hal/system.h"
 
 using namespace teller::hal::gpio;
 
@@ -8,6 +9,9 @@ using namespace teller::hal::gpio;
 
 /** State of simulated GPIO pins */
 static uint32_t digitalPins = 0;
+
+/** Timestamps when GPIO pins were last set to 0 or 1 */
+static uint32_t edgeTimestamps[NUM_GPIO_PINS * 2];
 
 static const uint32_t digitalPinInitialValues = (
     /* Reset pins start in logical high, they must be pulled low to reset */
@@ -38,10 +42,29 @@ bool read(pin_t index)
 
 void write(pin_t index, bool value)
 {
+    bool oldValue = read(index);
+    uint8_t i;
+    uint32_t* ts;
+
+    if (value == oldValue) {
+        return;
+    }
+
     if (value) {
         digitalPins |= BIT(index);
     } else {
         digitalPins &= ~BIT(index);
+    }
+
+    i = value ? 1 : 0;
+    ts = &edgeTimestamps[2 * index];
+    ts[i] = teller::hal::system::getTimeSinceBootMsec();
+
+    /* For LCL pins, process the pulses */
+    if (value && ts[0] > 0 && ts[1] > 0) {
+        if (index >= RST_GMM_LCL && index <= RST_HVPSU_LCL) {
+            write(static_cast<pin_t>(index - (RST_GMM_LCL - STATUS_GMM_LCL)), 0);
+        }
     }
 }
 
