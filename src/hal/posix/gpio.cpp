@@ -16,7 +16,7 @@ static const uint32_t digitalPinInitialValues = (
     /* LCL status pins start in logical high */
     BIT(STATUS_GMM_LCL) | BIT(STATUS_SCM_LCL) | BIT(STATUS_SUC_LCL1) | BIT(STATUS_SUC_LCL2) | BIT(STATUS_SUC_LCL3) | BIT(STATUS_HVPSU_LCL));
 
-static_assert(GPIO_COUNT <= 32);
+static_assert(NUM_GPIO_PINS <= 32);
 
 namespace teller::hal::gpio {
 

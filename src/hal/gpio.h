@@ -29,7 +29,7 @@ typedef enum {
     RST_SUC_LCL3,
     RST_HVPSU_LCL,
 
-    GPIO_COUNT,
+    NUM_GPIO_PINS,
 } pin_t;
 
 /**

@@ -9,7 +9,7 @@ using namespace teller::telem;
 namespace teller::log {
 
 static uint8_t payload[MAX_PAYLOAD_LENGTH];
-static Logger loggers[MODULE_COUNT];
+static Logger loggers[NUM_MODULES];
 
 bool init()
 {

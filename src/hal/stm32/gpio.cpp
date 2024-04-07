@@ -18,7 +18,7 @@ typedef struct {
         nullptr, 0 \
     }
 
-const gpio_config_t gpio_configs[GPIO_COUNT] = {
+const gpio_config_t gpio_configs[NUM_GPIO_PINS] = {
 #if defined(TELLER_BOARD_NUCLEO144)
     /* RXSM signals */
     /* SODS: User button */
@@ -99,7 +99,7 @@ bool init()
 {
     GPIO_InitTypeDef init;
 
-    for (size_t i = 0; i < GPIO_COUNT; i++) {
+    for (size_t i = 0; i < NUM_GPIO_PINS; i++) {
         const gpio_config_t* cfg = &gpio_configs[i];
         if (cfg->port) {
             init = cfg->init;
@@ -114,7 +114,7 @@ bool init()
 
 void destroy()
 {
-    for (size_t i = 0; i < GPIO_COUNT; i++) {
+    for (size_t i = 0; i < NUM_GPIO_PINS; i++) {
         const gpio_config_t* cfg = &gpio_configs[i];
         if (cfg->port) {
             HAL_GPIO_DeInit(cfg->port, cfg->pin);
@@ -146,7 +146,7 @@ static const gpio_config_t* findPin(pin_t index)
 {
     const gpio_config_t* result = nullptr;
 
-    if (index >= 0 && index < GPIO_COUNT) {
+    if (index >= 0 && index < NUM_GPIO_PINS) {
         result = &gpio_configs[index];
     }
 
