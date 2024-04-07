@@ -35,6 +35,7 @@ void init()
 void destroy()
 {
     shouldPreventNextReset = false;
+    numResetsPrevented = 0;
 }
 
 std::uint32_t getTimeSinceBootMsec(void)

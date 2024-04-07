@@ -33,6 +33,8 @@ protected:
 
     void SetUp() override
     {
+        hal::system::init();
+
         ASSERT_TRUE(hal::uart::init());
         ASSERT_TRUE(telem::init());
         ASSERT_TRUE(log::init());
@@ -51,6 +53,7 @@ protected:
         log::destroy();
         telem::destroy();
         hal::uart::destroy();
+        hal::system::destroy();
     }
 
     bool handleCommands()
