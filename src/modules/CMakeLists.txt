@@ -20,4 +20,5 @@ target_link_libraries(
     obc-core
     obc-hal
     lfs
+    sdlog
 )
