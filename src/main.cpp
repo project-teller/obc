@@ -3,6 +3,7 @@
 #include "hal/rcc.h"
 #include "hal/system.h"
 #include "modules/cmd.h"
+#include "modules/edr.h"
 #include "modules/errors.h"
 #include "modules/lcl.h"
 #include "modules/log.h"
@@ -82,6 +83,7 @@ void bootSystem(void)
     inited &= teller::storage::init();
     inited &= teller::telem::init();
     inited &= teller::cmd::init();
+    inited &= teller::edr::init();
 
     /* The remaining tasks are started only if the HAL and the module
      * initialization was successful */

@@ -2,6 +2,7 @@
 add_library(
     obc-modules
     cmd.cpp
+    edr.cpp
     errors.cpp
     lcl.cpp
     log.cpp
