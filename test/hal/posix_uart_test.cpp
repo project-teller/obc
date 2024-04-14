@@ -87,13 +87,7 @@ TEST_F(UARTTest, redirectorDoubleOverride)
     UARTInputRedirector redirectIn(DEBUG);
     UARTOutputRedirector redirectOut(DEBUG);
 
-    EXPECT_THROW({
-        UARTInputRedirector dummy(DEBUG);
-    },
-        std::runtime_error);
+    EXPECT_THROW({ UARTInputRedirector dummy(DEBUG); }, std::runtime_error);
 
-    EXPECT_THROW({
-        UARTOutputRedirector dummy(DEBUG);
-    },
-        std::runtime_error);
+    EXPECT_THROW({ UARTOutputRedirector dummy(DEBUG); }, std::runtime_error);
 }
