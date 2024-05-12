@@ -23,6 +23,17 @@ public:
         history = ((history << 1) | (bit ? 1 : 0)) & MASK;
     }
 
+    /**
+     * Feeds a new bit into the majority voter and returns whether the vote
+     * changed due to the new bit.
+     */
+    bool feedAndCheck(bool bit)
+    {
+        bool old = get();
+        feed(bit);
+        return old != get();
+    }
+
     /** Returns the current majority value */
     bool get() const
     {
