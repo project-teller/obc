@@ -199,9 +199,10 @@ std::optional<Error> Filesystem::close(FileHandle const fd)
     if (iter == _file_desc_map.end())
         return Error::NO_FD_ENTRY;
 
+    auto lfs_file = iter->second;
     _file_desc_map.erase(fd);
 
-    if (auto const err = lfs_file_close(&_lfs, iter->second.get()); err != LFS_ERR_OK)
+    if (auto const err = lfs_file_close(&_lfs, lfs_file.get()); err != LFS_ERR_OK)
         return static_cast<Error>(err);
 
     return std::nullopt;
@@ -244,9 +245,10 @@ std::optional<Error> Filesystem::dir_close(DirHandle const dd)
     if (iter == _dir_desc_map.end())
         return Error::NO_DD_ENTRY;
 
+    auto lfs_dir = iter->second;
     _dir_desc_map.erase(dd);
 
-    if (auto const err = lfs_dir_close(&_lfs, iter->second.get()); err != LFS_ERR_OK)
+    if (auto const err = lfs_dir_close(&_lfs, lfs_dir.get()); err != LFS_ERR_OK)
         return static_cast<Error>(err);
 
     return std::nullopt;
