@@ -58,11 +58,19 @@ void markStorageAsErrored(teller::telem::storage_area_t area);
 [[nodiscard]] int mountStorage(teller::telem::storage_area_t area);
 
 /**
- * @brief Unounts a storage area in the storage subsystem.
+ * @brief Unmounts a storage area in the storage subsystem.
  * @return POSIX error code; zero if the operation was successful
  * or if the storage area was already unmounted.
  */
 [[nodiscard]] int unmountStorage(teller::telem::storage_area_t area);
+
+/**
+ * @brief Blocks the calling task until the given storage area becomes mounted.
+ * Blocks indefinitely if the given storage area does not exist.
+ *
+ * @return Pointer to the mounter filesystem object.
+ */
+littlefs::Filesystem* waitUntilMounted(teller::telem::storage_area_t area);
 
 /**
  * @brief Helper function to convert a LittleFS error code to a corresponding

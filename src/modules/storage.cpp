@@ -2,17 +2,24 @@
 #include <iostream>
 #include <memory>
 
+#include "hal/event_flags.hpp"
 #include "hal/storage.h"
 #include "hal/system.h"
 #include "modules/storage.h"
 
 using namespace teller::hal::storage;
+using namespace teller::hal::system;
 using namespace teller::telem;
 
 /**
  * @brief Tracks the state of a single filesystem in the storage module.
  */
 class FilesystemState {
+
+    enum Events {
+        EVT_MOUNTED = 1,
+        EVT_UNMOUNTED = 2,
+    };
 
     enum Flags {
         NO_FLAGS = 0,
@@ -100,6 +107,19 @@ public:
     }
 
     /**
+     * @brief Waits until the filesystem becomes mounted.
+     *
+     * Returns immediately if the filesystem is already mounted.
+     */
+    littlefs::Filesystem* waitUntilMounted()
+    {
+        while (!isMounted()) {
+            _events.waitAny(EVT_MOUNTED);
+        }
+        return &_fs;
+    }
+
+    /**
      * @brief Conversion operator to allow the state object to be used directly
      * in LittleFS functions.
      */
@@ -111,6 +131,7 @@ public:
 private:
     littlefs::Filesystem _fs;
     uint8_t _flags;
+    teller::hal::EventFlags _events;
 
     friend class Filesystems;
 };
@@ -389,6 +410,17 @@ int unmountStorage(storage_area_t area)
     }
 
     return 0;
+}
+
+littlefs::Filesystem* waitUntilMounted(storage_area_t area)
+{
+    auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
+    if (!_filesystem) {
+        sleepForever();
+        return nullptr;
+    } else {
+        return _filesystem->waitUntilMounted();
+    }
 }
 
 int convertLittleFSErrorCode(std::optional<littlefs::Error> code)
