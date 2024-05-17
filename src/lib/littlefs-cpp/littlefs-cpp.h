@@ -31,6 +31,8 @@
 
 namespace littlefs {
 
+using Info = struct lfs_info;
+
 /**************************************************************************************
  * TYPEDEF
  **************************************************************************************/
@@ -172,6 +174,8 @@ public:
 #ifndef LFS_READONLY
     [[nodiscard]] std::optional<Error> mkdir(std::string const& path);
 #endif
+
+    [[nodiscard]] std::optional<Error> stat(std::string const& path, struct lfs_info* info);
 
     [[nodiscard]] std::variant<Error, DirHandle> dir_open(std::string const& path);
     [[nodiscard]] std::optional<Error> dir_close(DirHandle const dd);

@@ -217,6 +217,14 @@ std::optional<Error> Filesystem::mkdir(std::string const& path)
 }
 #endif
 
+std::optional<Error> Filesystem::stat(std::string const& path, struct lfs_info* info)
+{
+    if (auto const err = lfs_stat(&_lfs, path.c_str(), info); err != LFS_ERR_OK)
+        return static_cast<Error>(err);
+
+    return std::nullopt;
+}
+
 std::variant<Error, DirHandle> Filesystem::dir_open(std::string const& path)
 {
     auto dir_hdl = std::make_shared<lfs_dir_t>();
