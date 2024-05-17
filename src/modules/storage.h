@@ -5,12 +5,24 @@
 
 namespace teller::storage {
 
+typedef enum {
+    INIT_MODE_NORMAL = 0,
+    INIT_MODE_FORMAT_IF_NEEDED = 1,
+    INIT_MODE_FORMAT = 2
+} InitMode;
+
+#ifdef TELLER_BOARD_POSIX
+#define INIT_MODE_DEFAULT INIT_MODE_FORMAT_IF_NEEDED
+#else
+#define INIT_MODE_DEFAULT INIT_MODE_NORMAL
+#endif
+
 /**
  * @brief Initializes the storage subsystem.
  *
- * @param format  whether to format all storage areas before mounting them
+ * @param mode  whether to format all storage areas before mounting them
  */
-[[nodiscard]] bool init(bool format = false);
+[[nodiscard]] bool init(InitMode mode = INIT_MODE_DEFAULT);
 
 /**
  * @brief Destroys the storage subsystem.

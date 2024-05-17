@@ -13,7 +13,7 @@ protected:
     {
         hal::storage::removeAllFiles();
         ASSERT_TRUE(hal::storage::init());
-        ASSERT_TRUE(storage::init(/* format = */ true));
+        ASSERT_TRUE(storage::init(/* format = */ storage::INIT_MODE_FORMAT));
     }
 
     void TearDown() override

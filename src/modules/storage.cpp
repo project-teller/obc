@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "hal/storage.h"
+#include "hal/system.h"
 #include "modules/storage.h"
 
 using namespace teller::hal::storage;
@@ -276,19 +277,30 @@ Filesystems fs;
 
 namespace teller::storage {
 
-bool init(bool format)
+bool init(InitMode mode)
 {
     std::optional<littlefs::Error> err;
+    bool success;
 
     if (!fs.init()) {
         return false;
     }
 
-    if (format) {
-        fs.formatAll();
+    if (mode == INIT_MODE_FORMAT) {
+        if (!fs.formatAll()) {
+            return false;
+        }
     }
 
-    fs.mountAll();
+    success = fs.mountAll();
+
+    if (!success && mode == INIT_MODE_FORMAT_IF_NEEDED) {
+        fs.formatAll();
+        fs.mountAll();
+    }
+
+    /* Formatting and mounting is on a best-effort basis so we return true
+     * even if there were errors while formatting or mounting */
 
     return true;
 }
