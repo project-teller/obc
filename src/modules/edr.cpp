@@ -219,8 +219,7 @@ void ExperimentDataRecorder::updateLastLogIndex(size_t index)
     /* Open LASTLOG.TXT */
     SmartFileHandle fd(this->_fs, this->_fs->open(LASTLOG_FILE, littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC));
     char buf[32];
-    int num_printed = snprintf(buf, sizeof(buf), "%lu", index);
-    assert(num_printed < sizeof(buf));
+    int num_printed = snprintf(buf, sizeof(buf), "%lu", static_cast<long unsigned int>(index));
     THROW_IF_FAILED(fd.write(buf, num_printed));
 }
 

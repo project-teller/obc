@@ -67,6 +67,6 @@ private:
         is_disposed = true;
         return osEventFlagsDelete(handle) == osOK;
     }
-}
+};
 
 }
