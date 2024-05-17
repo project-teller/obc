@@ -12,6 +12,7 @@
 #include "modules/telem.h"
 #include "tasks/blinker.h"
 #include "tasks/cmd.h"
+#include "tasks/flashmem.h"
 #include "tasks/pins.h"
 #include "tasks/serial.h"
 #include "tasks/supervisor.h"
@@ -56,6 +57,7 @@ static const task_definition_t tasks[] = {
     { .func = supervisorTask, .name = "supervisor", .priority = LOW },
     { .func = telemetryTask, .name = "telem", .priority = NORMAL, .stack_size = 1024 },
     { .func = commandTask, .name = "cmd", .priority = LOW, .stack_size = 1024 },
+    { .func = flashMemoryTask, .name = "flashmem", .priority = HIGH, .stack_size = 1024 },
     NO_MORE_TASKS
 };
 

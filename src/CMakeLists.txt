@@ -101,6 +101,7 @@ add_executable(
 
 	tasks/blinker.cpp
 	tasks/cmd.cpp
+	tasks/flashmem.cpp
 	tasks/pins.cpp
 	tasks/serial.cpp
 	tasks/supervisor.cpp

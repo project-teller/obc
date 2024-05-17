@@ -22,6 +22,7 @@ target_include_directories(
 target_link_libraries(
     lfsbd PRIVATE lfs
 )
+# add_compile_definitions(lfsbd LFS_YES_TRACE=1 LFS_FILEBD_YES_TRACE=1)
 
 #############################################################################
 
