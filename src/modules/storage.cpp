@@ -120,6 +120,19 @@ public:
     }
 
     /**
+     * @brief Waits until the filesystem becomes unmounted.
+     *
+     * Returns immediately if the filesystem is not mounted.
+     */
+    littlefs::Filesystem* waitUntilUnmounted()
+    {
+        while (isMounted()) {
+            _events.waitAny(EVT_UNMOUNTED);
+        }
+        return &_fs;
+    }
+
+    /**
      * @brief Conversion operator to allow the state object to be used directly
      * in LittleFS functions.
      */
@@ -420,6 +433,17 @@ littlefs::Filesystem* waitUntilMounted(storage_area_t area)
         return nullptr;
     } else {
         return _filesystem->waitUntilMounted();
+    }
+}
+
+littlefs::Filesystem* waitUntilUnmounted(storage_area_t area)
+{
+    auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
+    if (!_filesystem) {
+        sleepForever();
+        return nullptr;
+    } else {
+        return _filesystem->waitUntilUnmounted();
     }
 }
 

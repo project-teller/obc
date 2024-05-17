@@ -68,9 +68,17 @@ void markStorageAsErrored(teller::telem::storage_area_t area);
  * @brief Blocks the calling task until the given storage area becomes mounted.
  * Blocks indefinitely if the given storage area does not exist.
  *
- * @return Pointer to the mounter filesystem object.
+ * @return Pointer to the mounted filesystem object.
  */
 littlefs::Filesystem* waitUntilMounted(teller::telem::storage_area_t area);
+
+/**
+ * @brief Blocks the calling task until the given storage area becomes unmounted.
+ * Blocks indefinitely if the given storage area does not exist.
+ *
+ * @return Pointer to the unmounted filesystem object.
+ */
+littlefs::Filesystem* waitUntilUnmounted(teller::telem::storage_area_t area);
 
 /**
  * @brief Helper function to convert a LittleFS error code to a corresponding

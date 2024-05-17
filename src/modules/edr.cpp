@@ -161,8 +161,15 @@ const std::string LASTLOG_FILE("LASTLOG.TXT");
 void ExperimentDataRecorder::run()
 {
     ssize_t logIndex = getLastLogIndex();
+    char fname[32];
+
     logIndex = logIndex < 0 ? 0 : (logIndex + 1);
     updateLastLogIndex(logIndex);
+
+    snprintf(fname, sizeof(fname), "%08ld.BIN", static_cast<long int>(logIndex));
+    SmartFileHandle fd(this->_fs, this->_fs->open(fname, littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC));
+
+    /* TODO: write log entries into the file */
 
     teller::hal::system::sleepForever();
 }

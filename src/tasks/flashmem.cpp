@@ -20,6 +20,7 @@ using namespace teller::telem;
 
     for (;;) {
         littlefs::Filesystem* fs;
+        int retval;
 
         fs = storage::waitUntilMounted(STORAGE_AREA_FLASH_MEMORY);
         log->info("flashfs mounted");
@@ -30,7 +31,12 @@ using namespace teller::telem;
             /* pass */
         }
 
-        storage::unmountStorage(STORAGE_AREA_FLASH_MEMORY);
+        retval = storage::unmountStorage(STORAGE_AREA_FLASH_MEMORY);
+        if (retval) {
+            log->error("flashfs unmount failed, code = %d", retval);
+            storage::waitUntilUnmounted(STORAGE_AREA_FLASH_MEMORY);
+        }
+
         log->warning("flashfs unmounted, waiting for remount");
     }
 }
