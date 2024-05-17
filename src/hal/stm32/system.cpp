@@ -35,4 +35,11 @@ void requestReset(void)
     HAL_NVIC_SystemReset();
 }
 
+void sleepForever()
+{
+    while (true) {
+        osDelay(osWaitForever);
+    }
+}
+
 }

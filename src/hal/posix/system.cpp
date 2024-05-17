@@ -72,6 +72,13 @@ void preventNextReset()
     shouldPreventNextReset = true;
 }
 
+void sleepForever()
+{
+    while (true) {
+        delayMsec(std::numeric_limits<uint32_t>::max());
+    }
+}
+
 size_t countPreventedResetAttempts(void)
 {
     return numResetsPrevented;

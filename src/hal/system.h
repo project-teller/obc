@@ -35,4 +35,9 @@ void delayMsec(uint32_t delay);
  */
 void requestReset(void);
 
+/**
+ * @brief Suspends the execution of the current thread or task forever.
+ */
+void sleepForever(void);
+
 }
