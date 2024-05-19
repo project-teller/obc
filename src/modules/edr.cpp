@@ -338,7 +338,7 @@ void ExperimentDataRecorder::updateLastLogIndex(size_t index)
     SmartFileHandle fd(this->_fs, this->_fs->open(LASTLOG_FILE, littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC));
     char buf[32];
     int num_printed = snprintf(buf, sizeof(buf), "%lu", static_cast<long unsigned int>(index));
-    if (fd.write(buf, num_printed) != num_printed) {
+    if (num_printed < 0 || fd.write(buf, num_printed) != static_cast<size_t>(num_printed)) {
         throw littlefs::Error::IO;
     }
 }
