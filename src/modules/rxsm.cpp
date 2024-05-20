@@ -25,8 +25,11 @@ public:
 
     /**
      * @brief Updates the state of all signals at once.
+     *
+     * @return Whether the state of at least one signal changed conclusively,
+     *         after taking into account the majority votes.
      */
-    void update(bool sods_, bool soe_, bool lo_);
+    bool update(bool sods_, bool soe_, bool lo_);
 
 private:
     /** Majority voter for the SODS signal */
@@ -53,11 +56,15 @@ void StateManager::reset()
     soe.reset();
 }
 
-void StateManager::update(bool sods_, bool soe_, bool lo_)
+bool StateManager::update(bool sods_, bool soe_, bool lo_)
 {
-    lo.feed(lo_);
-    sods.feed(sods_);
-    soe.feed(soe_);
+    bool changed = false;
+
+    changed |= lo.feedAndCheck(lo_);
+    changed |= sods.feedAndCheck(sods_);
+    changed |= soe.feedAndCheck(soe_);
+
+    return changed;
 }
 
 static StateManager rxsmStateManager;
@@ -78,9 +85,9 @@ void getState(State& state)
     rxsmStateManager.getState(state);
 }
 
-void update(bool sods, bool soe, bool lo)
+bool update(bool sods, bool soe, bool lo)
 {
-    rxsmStateManager.update(sods, soe, lo);
+    return rxsmStateManager.update(sods, soe, lo);
 }
 
 }
