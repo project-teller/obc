@@ -12,7 +12,11 @@ add_library(
 
     utils/crc.c
     utils/majority_voter.cpp
+    utils/smart_file_handle.cpp
     utils/time.c
+)
+target_link_libraries(
+    obc-core PUBLIC lfs
 )
 target_include_directories(
 	obc-core PUBLIC
