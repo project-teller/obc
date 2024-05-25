@@ -10,6 +10,7 @@ public:
     explicit SmartFileHandle(littlefs::Filesystem* fs, littlefs::FileHandle fd);
     explicit SmartFileHandle(littlefs::Filesystem* fs, std::variant<littlefs::Error, littlefs::FileHandle> fd);
 
+    SmartFileHandle(SmartFileHandle&& that);
     ~SmartFileHandle();
 
     SmartFileHandle(const SmartFileHandle&) = delete;

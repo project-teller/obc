@@ -53,6 +53,14 @@ SmartFileHandle::~SmartFileHandle()
     close();
 }
 
+SmartFileHandle::SmartFileHandle(SmartFileHandle&& that)
+{
+    _fs = that._fs;
+    _fd = that._fd;
+    _inited = that._inited;
+    _closed = that._closed;
+}
+
 std::optional<Error> SmartFileHandle::close()
 {
     if (!_closed) {
