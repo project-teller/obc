@@ -4,6 +4,7 @@
 #include <cstdio>
 
 #include "core/telem/generic.h"
+#include "hal/mutex.hpp"
 
 namespace teller::log {
 
@@ -52,6 +53,7 @@ public:
 
     bool vsend(teller::telem::log_level_t level, const char* format, std::va_list args)
     {
+        std::lock_guard<std::mutex> lock(_mutex);
         std::vsnprintf(_buf, sizeof(_buf), format, args);
         return send(level, _buf);
     }
@@ -87,6 +89,9 @@ public:
 
     /** Internal buffer that the logger will use to format messages */
     char _buf[teller::telem::MAX_PAYLOAD_LENGTH];
+
+    /** Mutex to control access to the internal buffer */
+    teller::hal::mutex _mutex;
 };
 
 }
