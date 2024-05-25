@@ -1,8 +1,13 @@
 #include "modules/rxsm.h"
+#include "core/telem/generic.h"
+#include "modules/edr.hpp"
 
 using namespace teller::rxsm;
+using teller::telem::storage_area_t;
 
 namespace teller::rxsm {
+
+edr::FormattedLogRecord<bool, bool, bool> log(1, "RXSM", "sods,soe,lo", "BBB", "---");
 
 /**
  * @brief State updater mechanism for the signals of the REXUS service module.
@@ -69,8 +74,23 @@ bool StateManager::update(bool sods_, bool soe_, bool lo_)
 
 static StateManager rxsmStateManager;
 
+/**
+ * @brief Posts a log message into the storage areas that contains the current
+ * state of the REXUS service module signals.
+ */
+static void logCurrentState(void);
+
+/**
+ * @brief Handler that is called when a new log is opened.
+ */
+static void onLogOpened(storage_area_t area);
+
 bool init()
 {
+    if (!edr::registerCallback(edr::EVENT_LOG_OPENED, &onLogOpened)) {
+        return false;
+    }
+
     rxsmStateManager.reset();
     return true;
 }
@@ -78,6 +98,7 @@ bool init()
 void destroy()
 {
     rxsmStateManager.reset();
+    edr::unregisterCallback(edr::EVENT_LOG_OPENED, &onLogOpened);
 }
 
 void getState(State& state)
@@ -85,9 +106,24 @@ void getState(State& state)
     rxsmStateManager.getState(state);
 }
 
-bool update(bool sods, bool soe, bool lo)
+void update(bool sods, bool soe, bool lo)
 {
-    return rxsmStateManager.update(sods, soe, lo);
+    if (rxsmStateManager.update(sods, soe, lo)) {
+        logCurrentState();
+    }
+}
+
+static void logCurrentState()
+{
+    State state;
+
+    rxsmStateManager.getState(state);
+    log(state.sods, state.soe, state.lo);
+}
+
+static void onLogOpened(storage_area_t area)
+{
+    logCurrentState();
 }
 
 }

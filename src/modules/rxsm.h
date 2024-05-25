@@ -51,10 +51,7 @@ void getState(State& state);
  * @param sods  the current value of the SODS signal
  * @param soe   the current value of the SOE signal
  * @param lo    the current value of the LO signal
- *
- * @return whether the state of at least one signal from the service module has
- *         changed conclusively.
  */
-bool update(bool sods, bool soe, bool lo);
+void update(bool sods, bool soe, bool lo);
 
 };

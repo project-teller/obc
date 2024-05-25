@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "modules/edr.h"
+#include "modules/edr.hpp"
 #include "modules/storage.h"
 
 using namespace teller;

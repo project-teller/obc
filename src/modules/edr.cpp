@@ -1,20 +1,24 @@
 #include <cassert>
 #include <cstdarg>
+#include <functional>
+#include <list>
 #include <optional>
-
-#include <sdlog/sdlog.h>
 
 #include "core/utils/smart_file_handle.h"
 
 #include "hal/storage.h"
-#include "hal/system.h"
 
 #include "modules/log.h"
 #include "modules/storage.h"
 
-#include "modules/edr.h"
+#include "modules/edr.hpp"
 
+using namespace std;
+
+using teller::hal::BlockingQueue;
 using teller::utils::SmartFileHandle;
+
+using namespace teller::telem;
 
 namespace teller::edr {
 
@@ -25,6 +29,73 @@ bool init()
 
 void destroy()
 {
+}
+
+/**
+ * @brief Static array holding the experiment recorder instances, one for each
+ * storage area.
+ */
+ExperimentDataRecorder recorders[NUM_STORAGE_AREAS];
+
+/**
+ * @brief List of callbacks to be called when a log is opened.
+ */
+std::list<event_callback_t*> callbacks;
+
+[[noreturn]] void manage(const char* name, storage_area_t area)
+{
+    teller::log::Logger* log = teller::log::getLogger(MODULE_ID_EDR);
+
+    for (;;) {
+        littlefs::Filesystem* fs;
+        int retval;
+
+        fs = storage::waitUntilMounted(area);
+        log->info("%s mounted", name);
+
+        try {
+            recorders[area].run(fs, area);
+        } catch (...) {
+            /* pass */
+        }
+
+        retval = storage::unmountStorage(area);
+        if (retval) {
+            log->error("%s unmount failed, code = %d", name, retval);
+            storage::waitUntilUnmounted(area);
+        }
+
+        log->warning("%s unmounted, waiting for remount", name);
+    }
+}
+
+bool registerCallback(event_t event, event_callback_t* callback)
+{
+    if (event == EVENT_LOG_OPENED) {
+        callbacks.push_back(callback);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void sendRequest(const LogRequest& request)
+{
+    recorders[STORAGE_AREA_FLASH_MEMORY].record(request);
+    recorders[STORAGE_AREA_SD_CARD].record(request);
+}
+
+void sendRequest(const LogRequest& request, storage_area_t area)
+{
+    assert(area > STORAGE_AREA_UNKNOWN && area < NUM_STORAGE_AREAS);
+    recorders[area].record(request);
+}
+
+void unregisterCallback(event_t event, event_callback_t* callback)
+{
+    if (event == EVENT_LOG_OPENED) {
+        callbacks.remove(callback);
+    }
 }
 
 /* ************************************************************************* */
@@ -49,7 +120,7 @@ public:
     LogWriter& operator=(const LogWriter&) = delete;
 
     void flush();
-    void write(const sdlog_message_format_t* fmt, ...);
+    void write(const LogRequest& request);
 
     void _flush_raw();
     size_t _write_raw(const uint8_t* data, size_t length);
@@ -66,12 +137,12 @@ LogWriter::LogWriter(SmartFileHandle& handle)
     , _init_state(0)
 {
     if (sdlog_ostream_init(&_stream, &log_writer_spec, this)) {
-        throw std::bad_alloc();
+        throw bad_alloc();
     }
     _init_state++;
 
     if (sdlog_writer_init(&_writer, &_stream)) {
-        throw std::bad_alloc();
+        throw bad_alloc();
     }
     _init_state++;
 }
@@ -95,15 +166,21 @@ void LogWriter::flush()
     }
 }
 
-void LogWriter::write(const sdlog_message_format_t* fmt, ...)
+void LogWriter::write(const LogRequest& request)
 {
     sdlog_error_t err;
-    va_list args;
 
-    va_start(args, fmt);
-    err = sdlog_writer_write_va(&_writer, fmt, args);
-    va_end(args);
+    err = sdlog_writer_write_encoded(
+        &_writer, request.format, request.message, request.length);
+    if (err != SDLOG_SUCCESS) {
+        throw littlefs::Error::IO;
+    }
 
+    /* TODO(ntamas): we are currently flushing after every request. Check
+     * whether this is necessary. Maybe we should count the total length since
+     * the last flush and flush after every 4K bytes or so? */
+
+    err = sdlog_writer_flush(&_writer);
     if (err != SDLOG_SUCCESS) {
         throw littlefs::Error::IO;
     }
@@ -138,23 +215,29 @@ static sdlog_error_t log_writer_flush(sdlog_ostream_t* self)
 /* ExperimentDataRecorder implementation                                     */
 /* ************************************************************************* */
 
-const std::string LASTLOG_FILE("LASTLOG.TXT");
+const string LASTLOG_FILE("LASTLOG.TXT");
 
-void ExperimentDataRecorder::run()
+ExperimentDataRecorder::~ExperimentDataRecorder()
 {
-    ssize_t logIndex = getLastLogIndex();
-    char fname[32];
+    stop();
+}
 
-    logIndex = logIndex < 0 ? 0 : (logIndex + 1);
-    updateLastLogIndex(logIndex);
+void ExperimentDataRecorder::run(littlefs::Filesystem* fs, storage_area_t area)
+{
+    assert(!running() && !_queue.closed());
 
-    snprintf(fname, sizeof(fname), "%08ld.BIN", static_cast<long int>(logIndex));
-    SmartFileHandle fd(this->_fs, this->_fs->open(fname, littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC));
-    LogWriter writer(fd);
+    this->_fs = fs;
+    try {
+        _run(area);
+    } catch (const exception& e) {
+        this->_fs = nullptr;
+        throw;
+    }
+}
 
-    /* TODO: write log entries into the file */
-
-    teller::hal::system::sleepForever();
+void ExperimentDataRecorder::stop()
+{
+    _queue.close();
 }
 
 /**
@@ -162,7 +245,7 @@ void ExperimentDataRecorder::run()
  *
  * @return the index of the last log file; zero if no log file was created yet
  */
-size_t ExperimentDataRecorder::getLastLogIndex()
+size_t ExperimentDataRecorder::_getLastLogIndex()
 {
     /* Find and read LASTLOG.TXT, increase the counter by 1 */
     char buf[32];
@@ -193,11 +276,42 @@ size_t ExperimentDataRecorder::getLastLogIndex()
     return index < 0 ? 0 : index;
 }
 
+void ExperimentDataRecorder::_run(storage_area_t area)
+{
+    ssize_t logIndex = _getLastLogIndex();
+    char fname[32];
+    LogRequest request;
+
+    logIndex = logIndex < 0 ? 0 : (logIndex + 1);
+    _updateLastLogIndex(logIndex);
+
+    snprintf(fname, sizeof(fname), "%08ld.BIN", static_cast<long int>(logIndex));
+
+    SmartFileHandle fd(
+        this->_fs,
+        this->_fs->open(
+            fname,
+            littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC));
+    LogWriter writer(fd);
+
+    /* Call all callbacks to let modules print initial log records */
+    if (area != STORAGE_AREA_UNKNOWN) {
+        for (auto it = callbacks.begin(); it != callbacks.end(); it++) {
+            (*it)(area);
+        }
+    }
+
+    /* Enter the main loop and start processing requests */
+    while (_queue.receive(request)) {
+        writer.write(request);
+    }
+}
+
 /**
  * @brief Updates the index of the last log file.
  * @return whether the operation was successful
  */
-void ExperimentDataRecorder::updateLastLogIndex(size_t index)
+void ExperimentDataRecorder::_updateLastLogIndex(size_t index)
 {
     /* Open LASTLOG.TXT */
     SmartFileHandle fd(this->_fs, this->_fs->open(LASTLOG_FILE, littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC));
