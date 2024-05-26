@@ -1,5 +1,4 @@
 #include "hal/gpio.h"
-#include "hal/led.h"
 #include "hal/system.h"
 
 #include "modules/rxsm.h"
