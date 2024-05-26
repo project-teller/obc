@@ -22,7 +22,7 @@ void destroy(void);
 /**
  * @brief Returns the time elapsed since boot, in milliseconds.
  */
-std::uint32_t getTimeSinceBootMsec(void);
+uint32_t getTimeSinceBootMsec(void);
 
 /**
  * @brief Delays the execution of the current thread or task with the given

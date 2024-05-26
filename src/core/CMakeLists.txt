@@ -12,6 +12,7 @@ add_library(
 
     utils/crc.c
     utils/majority_voter.cpp
+    utils/random.c
     utils/smart_file_handle.cpp
     utils/time.c
 )

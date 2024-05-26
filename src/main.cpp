@@ -7,6 +7,7 @@
 #include "modules/cmd.h"
 #include "modules/edr.hpp"
 #include "modules/errors.h"
+#include "modules/imu.h"
 #include "modules/lcl.h"
 #include "modules/log.h"
 #include "modules/rxsm.h"
@@ -16,6 +17,7 @@
 #include "tasks/blinker.h"
 #include "tasks/cmd.h"
 #include "tasks/flashmem.h"
+#include "tasks/imu.h"
 #include "tasks/pins.h"
 #include "tasks/sdcard.h"
 #include "tasks/serial.h"
@@ -63,6 +65,7 @@ static const task_definition_t tasks[] = {
     { .func = commandTask, .name = "cmd", .priority = LOW, .stack_size = 1024 },
     { .func = flashMemoryTask, .name = "flashmem", .priority = HIGH, .stack_size = 1024 },
     { .func = sdCardTask, .name = "sdcard", .priority = HIGH, .stack_size = 1024 },
+    { .func = imuTask, .name = "imu", .priority = NORMAL, .stack_size = 1024 },
     NO_MORE_TASKS
 };
 
@@ -91,6 +94,7 @@ void bootSystem(void)
     inited &= teller::telem::init();
     inited &= teller::cmd::init();
     inited &= teller::edr::init();
+    inited &= teller::imu::init();
 
     /* The remaining tasks are started only if the HAL and the module
      * initialization was successful */

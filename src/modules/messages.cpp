@@ -2,6 +2,7 @@
 #include "hal/system.h"
 
 #include "modules/errors.h"
+#include "modules/imu.h"
 #include "modules/lcl.h"
 #include "modules/messages.h"
 #include "modules/rxsm.h"
@@ -24,6 +25,7 @@ void teller::telem::updateHeartbeatData(frames::heartbeat_data_t* data)
     data->rxsmStatusBits.sods = state.sods;
     data->rxsmStatusBits.soe = state.soe;
 
+    data->subsystemStatus.imu = teller::imu::getSubsystemStatus();
     data->subsystemStatus.sto = teller::storage::getSubsystemStatus();
 
     data->lclStatusBits.gmm = teller::lcl::triggered(teller::lcl::GMM_LCL);

@@ -6,6 +6,7 @@ set(HAL_LIBRARIES lfs)
 if(TARGET_MCU STREQUAL "POSIX")
     list(APPEND HAL_SOURCES
         posix/gpio.cpp
+        posix/imu.cpp
         posix/led.cpp
         posix/rcc.cpp
         posix/rtc.cpp
@@ -18,6 +19,7 @@ if(TARGET_MCU STREQUAL "POSIX")
 else()
     list(APPEND HAL_SOURCES
         stm32/gpio.cpp
+        stm32/imu.cpp
         stm32/led.cpp
         stm32/rcc.cpp
         stm32/rtc.cpp

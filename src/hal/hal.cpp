@@ -1,6 +1,7 @@
 #include "hal.h"
 
 #include "gpio.h"
+#include "imu.h"
 #include "led.h"
 #include "rcc.h"
 #include "rtc.h"
@@ -24,6 +25,7 @@ bool teller::hal::init()
     success &= gpio::init();
     success &= uart::init();
     success &= storage::init();
+    success &= imu::init();
 
     return success;
 }

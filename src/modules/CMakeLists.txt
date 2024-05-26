@@ -4,6 +4,7 @@ add_library(
     cmd.cpp
     edr.cpp
     errors.cpp
+    imu.cpp
     lcl.cpp
     log.cpp
     messages.cpp
