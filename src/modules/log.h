@@ -53,7 +53,7 @@ public:
 
     bool vsend(teller::telem::log_level_t level, const char* format, std::va_list args)
     {
-        std::lock_guard<std::mutex> lock(_mutex);
+        teller::hal::lock_guard<teller::hal::mutex> lock(_mutex);
         std::vsnprintf(_buf, sizeof(_buf), format, args);
         return send(level, _buf);
     }

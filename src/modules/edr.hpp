@@ -188,11 +188,9 @@ public:
     void operator()(Args... args) const
     {
         LogRequest request;
-        size_t written;
 
         request.format = &_format;
         if (sdlog_message_format_encode(&_format, request.message, &request.length, args...) == SDLOG_SUCCESS) {
-            request.length = written;
             teller::edr::sendRequest(request);
         }
     }
