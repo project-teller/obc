@@ -9,14 +9,16 @@ using namespace teller::telem;
 
 namespace teller::log {
 
-static uint8_t payload[MAX_PAYLOAD_LENGTH];
-static Logger loggers[NUM_MODULES];
+/**
+ * @brief Type specification for functions that the logging module will call periodically.
+ */
+typedef void log_func_t(void);
 
 typedef struct {
     uint16_t period; /**< Period multiplier for the log task */
     log_func_t* func; /**< Function to call when this log task needs to be executed */
     uint16_t counter;
-} log_task_t;
+} task_t;
 
 #define NO_MORE_TASKS \
     {                 \
@@ -26,10 +28,13 @@ typedef struct {
 /**
  * @brief Table containing all the logging tasks that the system needs to execute periodically.
  */
-log_task_t tasks[] = {
+task_t tasks[] = {
     { 1, teller::imu::log },
     NO_MORE_TASKS
 };
+
+static uint8_t payload[MAX_PAYLOAD_LENGTH];
+static Logger loggers[NUM_MODULES];
 
 bool init()
 {
@@ -45,9 +50,9 @@ void destroy()
 {
 }
 
-void update()
+void runSingleIteration()
 {
-    for (log_task_t* task = tasks; task->period > 0; task++) {
+    for (task_t* task = tasks; task->period > 0; task++) {
         task->counter++;
         if (task->counter >= task->period) {
             task->counter = 0;

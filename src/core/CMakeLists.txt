@@ -6,6 +6,7 @@ add_library(
     telem/clock_status.cpp
     telem/generic.cpp
     telem/heartbeat.cpp
+    telem/imu.cpp
     telem/parser.cpp
     telem/storage.cpp
     telem/text_message.cpp

@@ -5,6 +5,7 @@
 #include "hal/queue.hpp"
 #include "hal/uart.h"
 #include "modules/errors.h"
+#include "modules/messages.h"
 #include "modules/telem.h"
 
 using namespace std;
@@ -19,6 +20,17 @@ typedef struct {
     uint8_t length;
 } message_t;
 
+/**
+ * @brief Type specification for functions that the logging module will call periodically.
+ */
+typedef void telem_func_t(uint8_t*);
+
+typedef struct {
+    uint16_t period; /**< Period multiplier for the telemetry task */
+    telem_func_t* func; /**< Function to call when this log task needs to be executed */
+    uint16_t counter;
+} task_t;
+
 /** Sequence number of next message */
 static uint8_t seq_no = 0;
 
@@ -28,21 +40,42 @@ static const int QUEUE_SIZE = 64;
 /** Queue in which the enqueued messages are stored */
 static BlockingQueue<message_t> out_queue(QUEUE_SIZE);
 
+static void sendHeartbeat(uint8_t* payload);
+static void sendClockStatus(uint8_t* payload);
+static void sendIMUMeasurement(uint8_t* payload);
+
 static bool sendLowLevel(uint8_t* buf, uint8_t length);
 
-bool teller::telem::init()
+#define NO_MORE_TASKS \
+    {                 \
+        0             \
+    }
+
+/**
+ * @brief Table containing all the logging tasks that the system needs to execute periodically.
+ */
+task_t tasks[] = {
+    { 25, sendHeartbeat },
+    { 250, sendClockStatus },
+    { 1, sendIMUMeasurement },
+    NO_MORE_TASKS
+};
+
+namespace teller::telem {
+
+bool init()
 {
     seq_no = 0;
     return true;
 }
 
-void teller::telem::destroy()
+void destroy()
 {
     out_queue.clear();
     seq_no = 0;
 }
 
-bool teller::telem::flushNext()
+bool flushNext()
 {
     message_t message;
 
@@ -58,7 +91,18 @@ bool teller::telem::flushNext()
     return true;
 }
 
-bool teller::telem::send(const uint8_t* data, uint8_t length)
+void runSingleIteration(uint8_t* payload)
+{
+    for (task_t* task = tasks; task->period > 0; task++) {
+        task->counter++;
+        if (task->counter >= task->period) {
+            task->counter = 0;
+            task->func(payload);
+        }
+    }
+}
+
+bool send(const uint8_t* data, uint8_t length)
 {
     if (data == nullptr) {
         return true;
@@ -71,13 +115,12 @@ bool teller::telem::send(const uint8_t* data, uint8_t length)
     return sendLowLevel(buf, length);
 }
 
-bool teller::telem::send(const char* data)
+bool send(const char* data)
 {
     return send(reinterpret_cast<uint8_t*>(const_cast<char*>(data)), strlen(data));
 }
 
-bool teller::telem::send(
-    envelope_t envelope, const uint8_t* payload, uint8_t length)
+bool send(envelope_t envelope, const uint8_t* payload, uint8_t length)
 {
     uint8_t* buf;
     uint8_t buf_length;
@@ -106,7 +149,7 @@ bool teller::telem::send(
     return sendLowLevel(buf, length + 8);
 }
 
-bool teller::telem::send(
+bool send(
     teller::telem::frames::frame_type_t type, const uint8_t* payload,
     uint8_t length)
 {
@@ -115,6 +158,8 @@ bool teller::telem::send(
     envelope.source = ONBOARD_COMPUTER;
     envelope.target = GROUND_STATION;
     return send(envelope, payload, length);
+}
+
 }
 
 /* ************************************************************************* */
@@ -126,4 +171,33 @@ bool sendLowLevel(uint8_t* buf, uint8_t length)
         .length = length
     };
     return out_queue.send(message);
+}
+
+/* ************************************************************************* */
+
+using teller::telem::send;
+
+static void sendHeartbeat(uint8_t* payload)
+{
+    frames::heartbeat_data_t heartbeat;
+
+    memset(&heartbeat, 0, sizeof(heartbeat));
+    updateHeartbeatData(&heartbeat);
+    send(frames::HEARTBEAT, payload, encodeHeartbeatFrame(&heartbeat, payload));
+}
+
+static void sendClockStatus(uint8_t* payload)
+{
+    frames::clock_status_data_t clock_status;
+
+    updateClockStatusData(&clock_status);
+    send(frames::CLOCK_STATUS, payload, encodeClockStatusFrame(&clock_status, payload));
+}
+
+static void sendIMUMeasurement(uint8_t* payload)
+{
+    frames::imu_data_t imu_measurement;
+
+    updateIMUMeasurement(&imu_measurement);
+    send(frames::IMU, payload, encodeIMUFrame(&imu_measurement, payload));
 }

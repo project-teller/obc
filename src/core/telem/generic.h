@@ -104,6 +104,7 @@ namespace frames {
         ACK = 4,
         RESET = 5,
         STORAGE = 6,
+        IMU = 7,
     } frame_type_t;
 
 }

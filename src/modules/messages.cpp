@@ -1,3 +1,6 @@
+#include <algorithm>
+
+#include "hal/imu.h"
 #include "hal/rtc.h"
 #include "hal/system.h"
 
@@ -12,7 +15,9 @@ using namespace teller::errors;
 using namespace teller::hal;
 using namespace teller::telem;
 
-void teller::telem::updateHeartbeatData(frames::heartbeat_data_t* data)
+namespace teller::telem {
+
+void updateHeartbeatData(frames::heartbeat_data_t* data)
 {
     teller::rxsm::State state;
 
@@ -36,8 +41,27 @@ void teller::telem::updateHeartbeatData(frames::heartbeat_data_t* data)
     data->lclStatusBits.hvpsu = teller::lcl::triggered(teller::lcl::HVPSU_LCL);
 }
 
-void teller::telem::updateClockStatusData(frames::clock_status_data_t* data)
+void updateClockStatusData(frames::clock_status_data_t* data)
 {
     data->timestampInMsec = system::getTimeSinceBootMsec();
     data->rtcTimestampInMsec = rtc::getTimeMsec();
+}
+
+void updateIMUMeasurement(frames::imu_data_t* data)
+{
+    teller::hal::imu::measurement_t measurement;
+
+    teller::hal::imu::getAcceleration(measurement);
+    data->timestampInMsec = measurement.timestampInMsec;
+    data->acceleration.x = measurement.x;
+    data->acceleration.y = measurement.y;
+    data->acceleration.z = measurement.z;
+
+    teller::hal::imu::getAngularVelocity(measurement);
+    data->timestampInMsec = std::max(data->timestampInMsec, measurement.timestampInMsec);
+    data->angularVelocity.x = measurement.x;
+    data->angularVelocity.y = measurement.y;
+    data->angularVelocity.z = measurement.z;
+}
+
 }

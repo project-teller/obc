@@ -11,11 +11,6 @@ namespace teller::log {
 class Logger;
 
 /**
- * @brief Type specification for functions that the logging module will call periodically.
- */
-typedef void log_func_t(void);
-
-/**
  * @brief Initializes the logging module of the experiment.
  */
 [[nodiscard]] bool init(void);
@@ -26,14 +21,14 @@ typedef void log_func_t(void);
 void destroy(void);
 
 /**
- * @brief Runs a single update cycle of the logging module.
+ * @brief Runs a single iteration of the main loop of the logging module.
  *
  * This function must be called periodically from a logging task. The function
  * must produce telemetry messages and add new records to the onboard logs
  * according to a predefined log schedule, and then return. It is the duty
  * of the caller to wait before calling this function again.
  */
-void update(void);
+void runSingleIteration(void);
 
 /**
  * @brief Returns a logger object corresponding to the given module.

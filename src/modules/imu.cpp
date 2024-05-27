@@ -11,7 +11,7 @@ using namespace teller::telem;
 
 static subsystem_status_t status = SUBSYSTEM_STATUS_CRITICAL;
 static imu::measurement_t acceleration;
-static imu::measurement_t angular_velocity;
+static imu::measurement_t angularVelocity;
 
 static teller::edr::FormattedLogRecord<uint32_t, uint8_t, float, float, float, float, float, float>
     logRecord(2, "IMU", "TimeMS,I,AccX,AccY,AccZ,GyrX,GyrY,GyrZ", "IBffffff", "s#EEEooo"); // multipliers: C-000000
@@ -46,14 +46,14 @@ void log()
     bool changed = false;
 
     changed |= teller::hal::imu::getAcceleration(acceleration);
-    changed |= teller::hal::imu::getAngularVelocity(angular_velocity);
+    changed |= teller::hal::imu::getAngularVelocity(angularVelocity);
 
     if (changed) {
         logRecord.write(
-            std::max(acceleration.timestampInMsec, angular_velocity.timestampInMsec),
+            std::max(acceleration.timestampInMsec, angularVelocity.timestampInMsec),
             0, /* first IMU */
             acceleration.x, acceleration.y, acceleration.z,
-            angular_velocity.x, angular_velocity.y, angular_velocity.z);
+            angularVelocity.x, angularVelocity.y, angularVelocity.z);
     }
 }
 

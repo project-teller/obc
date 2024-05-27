@@ -28,7 +28,7 @@ namespace teller::hal::imu {
 #define GYRO_NOISE 0.1f
 
 static measurement_t acceleration;
-static measurement_t angular_velocity;
+static measurement_t angularVelocity;
 
 bool init()
 {
@@ -48,8 +48,8 @@ bool getAcceleration(measurement_t& result)
 
 bool getAngularVelocity(measurement_t& result)
 {
-    bool updated = result.timestampInMsec != angular_velocity.timestampInMsec;
-    result = angular_velocity;
+    bool updated = result.timestampInMsec != angularVelocity.timestampInMsec;
+    result = angularVelocity;
     return updated;
 }
 
@@ -67,10 +67,10 @@ bool update()
     acceleration.y = rng_gauss() * ACCEL_NOISE;
     acceleration.z = -9.81f + rng_gauss() * ACCEL_NOISE;
 
-    angular_velocity.timestampInMsec = now;
-    angular_velocity.x = rng_gauss() * GYRO_NOISE;
-    angular_velocity.y = rng_gauss() * GYRO_NOISE;
-    angular_velocity.z = rng_gauss() * GYRO_NOISE;
+    angularVelocity.timestampInMsec = now;
+    angularVelocity.x = rng_gauss() * GYRO_NOISE;
+    angularVelocity.y = rng_gauss() * GYRO_NOISE;
+    angularVelocity.z = rng_gauss() * GYRO_NOISE;
 
     return true;
 }

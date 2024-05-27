@@ -14,7 +14,7 @@ using namespace teller::hal;
 [[noreturn]] void teller::tasks::loggerTask(void* arg)
 {
     while (true) {
-        teller::log::update();
+        teller::log::runSingleIteration();
         system::delayMsec(1000 / BASE_LOG_FREQ_HZ);
     }
 }

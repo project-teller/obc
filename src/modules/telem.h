@@ -27,6 +27,18 @@ void destroy(void);
 bool flushNext(void);
 
 /**
+ * @brief Runs a single iteration of the main loop of the telemetry module.
+ *
+ * This function must be called periodically from a telemetry task. The function
+ * must produce telemetry messages according to a predefined telemetry schedule,
+ * and then return. It is the duty of the caller to wait before calling this
+ * function again.
+ *
+ * @param payload  a buffer where the payload of telemetry messages can be assembled
+ */
+void runSingleIteration(uint8_t* payload);
+
+/**
  * @brief Sends a raw byte sequence to the telemetry module.
  *
  * The data being sent here is copied before it is enqueued for the telemetry
