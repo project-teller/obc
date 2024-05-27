@@ -185,7 +185,7 @@ public:
         sdlog_message_format_destroy(&_format);
     }
 
-    void operator()(Args... args) const
+    void write(Args... args) const
     {
         LogRequest request;
 

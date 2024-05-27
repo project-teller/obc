@@ -11,6 +11,11 @@ namespace teller::log {
 class Logger;
 
 /**
+ * @brief Type specification for functions that the logging module will call periodically.
+ */
+typedef void log_func_t(void);
+
+/**
  * @brief Initializes the logging module of the experiment.
  */
 [[nodiscard]] bool init(void);
@@ -21,7 +26,21 @@ class Logger;
 void destroy(void);
 
 /**
+ * @brief Runs a single update cycle of the logging module.
+ *
+ * This function must be called periodically from a logging task. The function
+ * must produce telemetry messages and add new records to the onboard logs
+ * according to a predefined log schedule, and then return. It is the duty
+ * of the caller to wait before calling this function again.
+ */
+void update(void);
+
+/**
  * @brief Returns a logger object corresponding to the given module.
+ *
+ * Loggers are thread-safe; you can call them from multiple tasks, but the
+ * logger object may block until the log message was sent to the telemetry
+ * module.
  */
 Logger* getLogger(teller::telem::module_id_t module);
 
@@ -31,7 +50,7 @@ Logger* getLogger(teller::telem::module_id_t module);
  * Shortcut for cases when you do not want to construct a logger object. You
  * should use the \ref Logger class instead where possible.
  */
-bool send(
+bool sendToTelemetry(
     teller::telem::module_id_t module, teller::telem::log_level_t level,
     const char* message);
 
@@ -48,7 +67,7 @@ public:
 public:
     bool send(teller::telem::log_level_t level, const char* message) const
     {
-        return teller::log::send(_module, level, message);
+        return teller::log::sendToTelemetry(_module, level, message);
     }
 
     bool vsend(teller::telem::log_level_t level, const char* format, std::va_list args)

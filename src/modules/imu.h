@@ -24,4 +24,9 @@ teller::telem::subsystem_status_t getSubsystemStatus(void);
  */
 void update(void);
 
+/**
+ * @brief Saves IMU measurements to the log and sends them via telemetry.
+ */
+void log(void);
+
 }

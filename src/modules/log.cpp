@@ -1,6 +1,7 @@
 #include <cstring>
 
 #include "core/telem/text_message.h"
+#include "modules/imu.h"
 #include "modules/log.h"
 #include "modules/telem.h"
 
@@ -10,6 +11,25 @@ namespace teller::log {
 
 static uint8_t payload[MAX_PAYLOAD_LENGTH];
 static Logger loggers[NUM_MODULES];
+
+typedef struct {
+    uint16_t period; /**< Period multiplier for the log task */
+    log_func_t* func; /**< Function to call when this log task needs to be executed */
+    uint16_t counter;
+} log_task_t;
+
+#define NO_MORE_TASKS \
+    {                 \
+        0             \
+    }
+
+/**
+ * @brief Table containing all the logging tasks that the system needs to execute periodically.
+ */
+log_task_t tasks[] = {
+    { 1, teller::imu::log },
+    NO_MORE_TASKS
+};
 
 bool init()
 {
@@ -25,12 +45,23 @@ void destroy()
 {
 }
 
+void update()
+{
+    for (log_task_t* task = tasks; task->period > 0; task++) {
+        task->counter++;
+        if (task->counter >= task->period) {
+            task->counter = 0;
+            task->func();
+        }
+    }
+}
+
 Logger* getLogger(teller::telem::module_id_t module)
 {
     return &loggers[module];
 }
 
-bool send(
+bool sendToTelemetry(
     teller::telem::module_id_t module, teller::telem::log_level_t level,
     const char* message)
 {

@@ -5,9 +5,10 @@
 using namespace teller::rxsm;
 using teller::telem::storage_area_t;
 
-namespace teller::rxsm {
+static teller::edr::FormattedLogRecord<bool, bool, bool> logRecord(
+    1, "RXSM", "SODS,SOE,LO", "BBB", "---");
 
-edr::FormattedLogRecord<bool, bool, bool> log(1, "RXSM", "sods,soe,lo", "BBB", "---");
+namespace teller::rxsm {
 
 /**
  * @brief State updater mechanism for the signals of the REXUS service module.
@@ -118,7 +119,7 @@ static void logCurrentState()
     State state;
 
     rxsmStateManager.getState(state);
-    log(state.sods, state.soe, state.lo);
+    logRecord.write(state.sods, state.soe, state.lo);
 }
 
 static void onLogOpened(storage_area_t area)

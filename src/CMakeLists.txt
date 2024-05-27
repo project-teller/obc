@@ -103,6 +103,7 @@ add_executable(
 	tasks/cmd.cpp
 	tasks/flashmem.cpp
 	tasks/imu.cpp
+	tasks/logger.cpp
 	tasks/pins.cpp
 	tasks/sdcard.cpp
 	tasks/serial.cpp

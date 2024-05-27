@@ -30,7 +30,8 @@ TEST_F(LogTest, sendRawMessage)
 {
     hal::uart::UARTOutputRedirector redirect(hal::uart::TELEMETRY);
 
-    ASSERT_TRUE(log::send(telem::MODULE_ID_GMM, telem::LOG_LEVEL_WARNING, "dummy message"));
+    ASSERT_TRUE(log::sendToTelemetry(
+        telem::MODULE_ID_GMM, telem::LOG_LEVEL_WARNING, "dummy message"));
     ASSERT_TRUE(telem::flushNext());
 
     EXPECT_EQ(
