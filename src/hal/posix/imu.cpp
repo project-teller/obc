@@ -41,14 +41,14 @@ void destroy()
 
 bool getAcceleration(measurement_t& result)
 {
-    bool updated = result.time_msec != acceleration.time_msec;
+    bool updated = result.timestampInMsec != acceleration.timestampInMsec;
     result = acceleration;
     return updated;
 }
 
 bool getAngularVelocity(measurement_t& result)
 {
-    bool updated = result.time_msec != angular_velocity.time_msec;
+    bool updated = result.timestampInMsec != angular_velocity.timestampInMsec;
     result = angular_velocity;
     return updated;
 }
@@ -62,12 +62,12 @@ bool update()
 
     now = system::getTimeSinceBootMsec();
 
-    acceleration.time_msec = now;
+    acceleration.timestampInMsec = now;
     acceleration.x = rng_gauss() * ACCEL_NOISE;
     acceleration.y = rng_gauss() * ACCEL_NOISE;
     acceleration.z = -9.81f + rng_gauss() * ACCEL_NOISE;
 
-    angular_velocity.time_msec = now;
+    angular_velocity.timestampInMsec = now;
     angular_velocity.x = rng_gauss() * GYRO_NOISE;
     angular_velocity.y = rng_gauss() * GYRO_NOISE;
     angular_velocity.z = rng_gauss() * GYRO_NOISE;

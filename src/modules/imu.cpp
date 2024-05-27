@@ -50,7 +50,7 @@ void log()
 
     if (changed) {
         logRecord.write(
-            std::max(acceleration.time_msec, angular_velocity.time_msec),
+            std::max(acceleration.timestampInMsec, angular_velocity.timestampInMsec),
             0, /* first IMU */
             acceleration.x, acceleration.y, acceleration.z,
             angular_velocity.x, angular_velocity.y, angular_velocity.z);

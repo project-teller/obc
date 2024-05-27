@@ -5,7 +5,7 @@
 namespace teller::hal::imu {
 
 typedef struct {
-    uint32_t time_msec;
+    uint32_t timestampInMsec;
     float x;
     float y;
     float z;
