@@ -5,6 +5,14 @@
 namespace teller::telem::frames {
 
 /**
+ * @brief Enum representing the possible modes of the OBC.
+ */
+typedef enum {
+    OBC_MODE_MISSION = 0,
+    OBC_MODE_TESTING = 1,
+} obc_mode_t;
+
+/**
  * @brief Structure containing all the data required to construct a heartbeat frame.
  *
  * This structure is not the same as the wire encoding of the heartbeat
@@ -14,6 +22,7 @@ namespace teller::telem::frames {
 typedef struct {
     std::uint32_t timestampInMsec;
     std::uint8_t error;
+    obc_mode_t mode;
     float voltageInVolts;
     float temperateInCelsius;
     struct {

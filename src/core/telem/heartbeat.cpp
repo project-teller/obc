@@ -9,6 +9,7 @@ using namespace teller::telem;
 #define RXSM_SODS_BIT_INDEX 0
 #define RXSM_SOE_BIT_INDEX 1
 #define RXSM_LO_BIT_INDEX 2
+#define MODE_BIT_INDEX 7
 
 #define SUBSYSTEM_GMM_BIT_INDEX 0
 #define SUBSYSTEM_SCM_BIT_INDEX 2
@@ -68,6 +69,7 @@ uint8_t encodeHeartbeatFrame(const heartbeat_data_t* data, uint8_t* encoded)
         (data->rxsmStatusBits.lo ? (1 << RXSM_LO_BIT_INDEX) : 0) |
         (data->rxsmStatusBits.sods ? (1 << RXSM_SODS_BIT_INDEX) : 0) |
         (data->rxsmStatusBits.soe ? (1 << RXSM_SOE_BIT_INDEX) : 0) |
+        (data->mode == OBC_MODE_TESTING ? (1 << MODE_BIT_INDEX) : 0) |
         0
     );
     /* clang-format on */

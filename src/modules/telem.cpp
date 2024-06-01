@@ -27,7 +27,7 @@ typedef void telem_func_t(uint8_t*);
 
 typedef struct {
     uint16_t period; /**< Period multiplier for the telemetry task */
-    telem_func_t* func; /**< Function to call when this log task needs to be executed */
+    telem_func_t* func; /**< Function to call when this task needs to be executed */
     uint16_t counter;
 } task_t;
 

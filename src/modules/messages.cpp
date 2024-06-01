@@ -26,6 +26,8 @@ void updateHeartbeatData(frames::heartbeat_data_t* data)
     data->timestampInMsec = system::getTimeSinceBootMsec();
     data->error = getError();
 
+    data->mode = frames::OBC_MODE_TESTING;
+
     data->rxsmStatusBits.lo = state.lo;
     data->rxsmStatusBits.sods = state.sods;
     data->rxsmStatusBits.soe = state.soe;

@@ -1,12 +1,14 @@
 #include "modules/rxsm.h"
+
 #include "core/telem/generic.h"
+#include "hal/system.h"
 #include "modules/edr.hpp"
 
 using namespace teller::rxsm;
 using teller::telem::storage_area_t;
 
-static teller::edr::FormattedLogRecord<bool, bool, bool> logRecord(
-    1, "RXSM", "SODS,SOE,LO", "BBB", "---");
+static teller::edr::FormattedLogRecord<uint32_t, bool, bool, bool> logRecord(
+    1, "RXSM", "TimeMS,SODS,SOE,LO", "IBBB", "----");
 
 namespace teller::rxsm {
 
@@ -119,7 +121,9 @@ static void logCurrentState()
     State state;
 
     rxsmStateManager.getState(state);
-    logRecord.write(state.sods, state.soe, state.lo);
+    logRecord.write(
+        teller::hal::system::getTimeSinceBootMsec(),
+        state.sods, state.soe, state.lo);
 }
 
 static void onLogOpened(storage_area_t area)

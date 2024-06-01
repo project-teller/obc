@@ -105,6 +105,9 @@ namespace frames {
         RESET = 5,
         STORAGE = 6,
         IMU = 7,
+        MAG = 8,
+        GMM = 9,
+        SCM = 10,
     } frame_type_t;
 
 }

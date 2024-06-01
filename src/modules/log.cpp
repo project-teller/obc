@@ -16,7 +16,7 @@ typedef void log_func_t(void);
 
 typedef struct {
     uint16_t period; /**< Period multiplier for the log task */
-    log_func_t* func; /**< Function to call when this log task needs to be executed */
+    log_func_t* func; /**< Function to call when this task needs to be executed */
     uint16_t counter;
 } task_t;
 
