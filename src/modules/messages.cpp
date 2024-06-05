@@ -1,5 +1,6 @@
 #include <algorithm>
 
+#include "hal/board.h"
 #include "hal/imu.h"
 #include "hal/rtc.h"
 #include "hal/system.h"
@@ -27,6 +28,9 @@ void updateHeartbeatData(frames::heartbeat_data_t* data)
     data->error = getError();
 
     data->mode = frames::OBC_MODE_TESTING;
+
+    data->voltageInVolts = board::getBoardVoltage();
+    data->temperateInCelsius = board::getBoardTemperature();
 
     data->rxsmStatusBits.lo = state.lo;
     data->rxsmStatusBits.sods = state.sods;

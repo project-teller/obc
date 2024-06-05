@@ -14,7 +14,9 @@ static imu::measurement_t acceleration;
 static imu::measurement_t angularVelocity;
 
 static teller::edr::FormattedLogRecord<uint32_t, uint8_t, float, float, float, float, float, float>
-    logRecord(2, "IMU", "TimeMS,I,AccX,AccY,AccZ,GyrX,GyrY,GyrZ", "IBffffff", "s#EEEooo"); // multipliers: C-000000
+    logRecord(
+        2, "IMU", "TimeMS,I,AccX,AccY,AccZ,GyrX,GyrY,GyrZ",
+        "IBffffff", "s#EEEooo", "C-000000");
 
 namespace teller::imu {
 

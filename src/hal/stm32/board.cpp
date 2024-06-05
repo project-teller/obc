@@ -1,12 +1,12 @@
-#include "hal/rcc.h"
+#include "hal/board.h"
 
 #include "stm32_hal.h"
 
-using namespace teller::hal::rcc;
+using namespace teller::hal::board;
 
 static reset_reason_t reasonOfLastReset = RESET_REASON_UNKNOWN;
 
-namespace teller::hal::rcc {
+namespace teller::hal::board {
 
 bool init()
 {
@@ -61,6 +61,16 @@ bool init()
 
 void destroy()
 {
+}
+
+float getBoardTemperature()
+{
+    return 0.0f;
+}
+
+float getBoardVoltage()
+{
+    return 0.0f;
 }
 
 reset_reason_t getReasonOfLastReset(void)

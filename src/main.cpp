@@ -1,7 +1,7 @@
 #include "config.h"
 
+#include "hal/board.h"
 #include "hal/hal.h"
-#include "hal/rcc.h"
 #include "hal/system.h"
 
 #include "modules/cmd.h"

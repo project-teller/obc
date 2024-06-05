@@ -1,6 +1,6 @@
-#include "hal/rcc.h"
+#include "hal/board.h"
 
-namespace teller::hal::rcc {
+namespace teller::hal::board {
 
 static bool resetRequested = false;
 static reset_reason_t reasonOfLastReset = RESET_REASON_NORMAL;
@@ -19,6 +19,16 @@ void destroy()
 reset_reason_t getReasonOfLastReset(void)
 {
     return reasonOfLastReset;
+}
+
+float getBoardTemperature(void)
+{
+    return 25.0f;
+}
+
+float getBoardVoltage(void)
+{
+    return 3.3f;
 }
 
 }

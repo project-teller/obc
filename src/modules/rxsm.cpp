@@ -8,7 +8,7 @@ using namespace teller::rxsm;
 using teller::telem::storage_area_t;
 
 static teller::edr::FormattedLogRecord<uint32_t, bool, bool, bool> logRecord(
-    1, "RXSM", "TimeMS,SODS,SOE,LO", "IBBB", "----");
+    1, "RXSM", "TimeMS,SODS,SOE,LO", "IBBB", "s---", "C---");
 
 namespace teller::rxsm {
 

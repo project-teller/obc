@@ -169,7 +169,7 @@ class FormattedLogRecord {
 public:
     FormattedLogRecord(
         uint8_t id, const char* msg_type, const char* names,
-        const char* types, const char* units)
+        const char* types, const char* units, const char* multipliers)
     {
         if (sdlog_message_format_init(&_format, id, msg_type) != SDLOG_SUCCESS) {
             throw std::runtime_error("Cannot create log record");

@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace teller::hal::rcc {
+namespace teller::hal::board {
 
 typedef enum {
     RESET_REASON_UNKNOWN,
@@ -26,6 +26,20 @@ typedef enum {
  * base state.
  */
 void destroy(void);
+
+/**
+ * @brief Retrieves the most recent board temperature measurement.
+ *
+ * @return the most recent temperature measurement
+ */
+float getBoardTemperature(void);
+
+/**
+ * @brief Returns the most recent board voltage measurement.
+ *
+ * @return the most recent board voltage measurement; 0.0 in case of an error
+ */
+float getBoardVoltage(void);
 
 /**
  * @brief Returns the reason of the last system reset.

@@ -4,6 +4,7 @@
 #include "core/utils/crc.h"
 #include "hal/queue.hpp"
 #include "hal/uart.h"
+#include "modules/edr.hpp"
 #include "modules/errors.h"
 #include "modules/messages.h"
 #include "modules/telem.h"
@@ -11,6 +12,8 @@
 using namespace std;
 using namespace teller::hal;
 using namespace teller::telem;
+
+using teller::edr::FormattedLogRecord;
 
 typedef struct {
     /** Data to write to the UART */
@@ -60,6 +63,10 @@ task_t tasks[] = {
     { 1, sendIMUMeasurement },
     NO_MORE_TASKS
 };
+
+/** Log message format for board voltage and temperature */
+static FormattedLogRecord<uint32_t, uint8_t, uint8_t> brdLogRecord(
+    3, "BRD", "TimeMS,Voltage,Temp", "IBb", "sOO", "CA0");
 
 namespace teller::telem {
 
@@ -184,6 +191,11 @@ static void sendHeartbeat(uint8_t* payload)
     memset(&heartbeat, 0, sizeof(heartbeat));
     updateHeartbeatData(&heartbeat);
     send(frames::HEARTBEAT, payload, encodeHeartbeatFrame(&heartbeat, payload));
+
+    brdLogRecord.write(
+        heartbeat.timestampInMsec,
+        static_cast<uint8_t>(heartbeat.voltageInVolts * 0.1),
+        static_cast<int8_t>(heartbeat.temperateInCelsius));
 }
 
 static void sendClockStatus(uint8_t* payload)

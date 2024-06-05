@@ -1,9 +1,9 @@
 #include "hal.h"
 
+#include "board.h"
 #include "gpio.h"
 #include "imu.h"
 #include "led.h"
-#include "rcc.h"
 #include "rtc.h"
 #include "storage.h"
 #include "system.h"
@@ -19,7 +19,7 @@ bool teller::hal::init()
     system::init();
     led::init();
 
-    success &= rcc::init();
+    success &= board::init();
     success &= watchdog::init();
     success &= rtc::init();
     success &= gpio::init();
@@ -37,8 +37,9 @@ void teller::hal::destroy()
     uart::destroy();
     gpio::destroy();
     rtc::destroy();
+    board::destroy();
     watchdog::destroy();
-    rcc::destroy();
+    board::destroy();
 
     led::destroy();
     system::destroy();
