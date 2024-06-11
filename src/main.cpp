@@ -10,6 +10,7 @@
 #include "modules/imu.h"
 #include "modules/lcl.h"
 #include "modules/log.h"
+#include "modules/mode.h"
 #include "modules/rxsm.h"
 #include "modules/storage.h"
 #include "modules/telem.h"
@@ -91,6 +92,7 @@ void bootSystem(void)
      * was successful */
     inited &= teller::log::init();
     inited &= teller::lcl::init();
+    inited &= teller::mode::init();
     inited &= teller::rxsm::init();
     inited &= teller::storage::init();
     inited &= teller::telem::init();

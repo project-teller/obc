@@ -8,6 +8,7 @@ add_library(
     lcl.cpp
     log.cpp
     messages.cpp
+    mode.cpp
     rxsm.cpp
     storage.cpp
     telem.cpp

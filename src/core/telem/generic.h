@@ -40,6 +40,15 @@ typedef struct {
 } envelope_t;
 
 /**
+ * @brief Enum representing the possible modes of the OBC.
+ */
+typedef enum {
+    OBC_MODE_UNKNOWN = 0,
+    OBC_MODE_MISSION = 1,
+    OBC_MODE_TESTING = 2,
+} obc_mode_t;
+
+/**
  * @brief Enum representing the storage areas of the system.
  */
 typedef enum {

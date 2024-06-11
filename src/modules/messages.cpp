@@ -9,11 +9,13 @@
 #include "modules/imu.h"
 #include "modules/lcl.h"
 #include "modules/messages.h"
+#include "modules/mode.h"
 #include "modules/rxsm.h"
 #include "modules/storage.h"
 
 using namespace teller::errors;
 using namespace teller::hal;
+using namespace teller::mode;
 using namespace teller::telem;
 
 namespace teller::telem {
@@ -27,7 +29,7 @@ void updateHeartbeatData(frames::heartbeat_data_t* data)
     data->timestampInMsec = system::getTimeSinceBootMsec();
     data->error = getError();
 
-    data->mode = frames::OBC_MODE_TESTING;
+    data->mode = getMode();
 
     data->voltageInVolts = board::getBoardVoltage();
     data->temperateInCelsius = board::getBoardTemperature();

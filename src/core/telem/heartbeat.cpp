@@ -69,7 +69,7 @@ uint8_t encodeHeartbeatFrame(const heartbeat_data_t* data, uint8_t* encoded)
         (data->rxsmStatusBits.lo ? (1 << RXSM_LO_BIT_INDEX) : 0) |
         (data->rxsmStatusBits.sods ? (1 << RXSM_SODS_BIT_INDEX) : 0) |
         (data->rxsmStatusBits.soe ? (1 << RXSM_SOE_BIT_INDEX) : 0) |
-        (data->mode == OBC_MODE_TESTING ? (1 << MODE_BIT_INDEX) : 0) |
+        (data->mode == OBC_MODE_MISSION ? 0 : (1 << MODE_BIT_INDEX)) |
         0
     );
     /* clang-format on */
