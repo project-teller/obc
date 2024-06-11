@@ -91,6 +91,7 @@ TEST(TelemetryTest, heartbeatFrameEncoding)
     frames::heartbeat_data_t heartbeat = {
         .timestampInMsec = 1234000,
         .error = 42,
+        .mode = OBC_MODE_MISSION,
         .voltageInVolts = 4.2,
         .temperateInCelsius = -42.42,
         .rxsmStatusBits = {
