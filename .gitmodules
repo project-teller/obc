@@ -7,3 +7,6 @@
 [submodule "src/lib/libsdlog"]
 	path = src/lib/sdlog
 	url = https://github.com/ntamas/libsdlog
+[submodule "src/lib/socketstream"]
+	path = src/lib/socketstream
+	url = https://github.com/Protovision/socketstream
