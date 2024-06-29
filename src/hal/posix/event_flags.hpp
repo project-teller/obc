@@ -111,6 +111,9 @@ public:
         return old;
     }
 
+    /** Constant denoting an event set that contains all events */
+    static const uint32_t ALL_EVENTS = 0x7FFFFFFF;
+
 private:
     /** Current values of the event flags */
     uint32_t current;

@@ -16,6 +16,9 @@ using namespace teller::telem;
 using teller::edr::FormattedLogRecord;
 
 typedef struct {
+    /** Bitmask indicating the UARTs to write the message to */
+    uint8_t targets;
+
     /** Data to write to the UART */
     uint8_t* data;
 
@@ -33,6 +36,9 @@ typedef struct {
     telem_func_t* func; /**< Function to call when this task needs to be executed */
     uint16_t counter;
 } task_t;
+
+/** Bitmask indicating which UARTs we are sending telemetry to */
+static uint8_t telemetry_channel_mask = 0;
 
 /** Sequence number of next message */
 static uint8_t seq_no = 0;
@@ -73,6 +79,10 @@ namespace teller::telem {
 bool init()
 {
     seq_no = 0;
+    telemetry_channel_mask = 0;
+
+    requestTelemetry(uart::TELEMETRY);
+
     return true;
 }
 
@@ -80,6 +90,7 @@ void destroy()
 {
     out_queue.clear();
     seq_no = 0;
+    telemetry_channel_mask = 0;
 }
 
 bool flushNext()
@@ -91,11 +102,23 @@ bool flushNext()
     }
 
     if (message.data != nullptr) {
-        uart::write(uart::TELEMETRY, message.data, message.length);
+        if (message.targets & (1 << uart::TELEMETRY)) {
+            uart::write(uart::TELEMETRY, message.data, message.length);
+        }
+
+        if (message.targets & (1 << uart::DEBUG)) {
+            uart::write(uart::DEBUG, message.data, message.length);
+        }
+
         free(message.data);
     }
 
     return true;
+}
+
+void requestTelemetry(uart::uart_t index)
+{
+    telemetry_channel_mask |= (1 << index);
 }
 
 void runSingleIteration(uint8_t* payload)
@@ -167,6 +190,11 @@ bool send(
     return send(envelope, payload, length);
 }
 
+void stopTelemetry(uart::uart_t index)
+{
+    telemetry_channel_mask &= ~(1 << index);
+}
+
 }
 
 /* ************************************************************************* */
@@ -174,6 +202,7 @@ bool send(
 bool sendLowLevel(uint8_t* buf, uint8_t length)
 {
     message_t message = {
+        .targets = telemetry_channel_mask,
         .data = buf,
         .length = length
     };

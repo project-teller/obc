@@ -1,5 +1,7 @@
 #pragma once
 
+#include "hal/uart.h"
+
 namespace teller::cmd {
 
 /**
@@ -19,10 +21,11 @@ void destroy(void);
  *
  * Blocks indefinitely if there is nothing to read from the UART.
  *
+ * @param index  index of the UART to read
  * @param buf  a pre-allocated buffer where the response to the command can
  *        be composed if needed
  * @return Whether an incoming packet was decoded and handled successfully.
  */
-bool handleCommands(uint8_t* buf);
+bool handleCommands(teller::hal::uart::uart_t index, uint8_t* buf);
 
 }

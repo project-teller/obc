@@ -31,6 +31,15 @@ typedef enum {
 void destroy(void);
 
 /**
+ * @brief Returns whether the UART with the given index is connected.
+ *
+ * Most UARTs are defined to be connected all the time. The only exception is
+ * the external USB debug port, where we can detect whether a USB cable is
+ * connected or not, and return a value accordingly.
+ */
+bool isConnected(uart_t index);
+
+/**
  * @brief Reads exactly a given number of raw bytes from a UART.
  *
  * The function will block and yield to other tasks until the given number of
@@ -44,6 +53,16 @@ void destroy(void);
  * @return whether the read was successful
  */
 bool read(uart_t index, std::uint8_t* data, std::uint16_t size, uint16_t* bytes_read);
+
+/**
+ * @brief Waits until the given UART becomes connected.
+ */
+void waitUntilConnected(uart_t index);
+
+/**
+ * @brief Waits until the given UART becomes disconnected.
+ */
+void waitUntilDisconnected(uart_t index);
 
 /**
  * @brief Writes a buffer containing raw bytes to a UART.

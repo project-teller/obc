@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/telem/generic.h"
+#include "hal/uart.h"
 
 namespace teller::telem {
 
@@ -25,6 +26,11 @@ void destroy(void);
  * @return whether a message was received successfully
  */
 bool flushNext(void);
+
+/**
+ * @brief Requests the telemetry stream to be forwarded to the UART with the given index.
+ */
+void requestTelemetry(teller::hal::uart::uart_t index);
 
 /**
  * @brief Runs a single iteration of the main loop of the telemetry module.
@@ -95,5 +101,10 @@ bool send(envelope_t envelope, const std::uint8_t* payload, std::uint8_t length)
  * @return whether the data was sent successfully to the telemetry module
  */
 bool send(frames::frame_type_t type, const std::uint8_t* payload, std::uint8_t length);
+
+/**
+ * @brief Stops the telemetry stream onthe UART with the given index.
+ */
+void stopTelemetry(teller::hal::uart::uart_t index);
 
 }

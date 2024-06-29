@@ -1,4 +1,3 @@
-#include <cstdio>
 #include <cstring>
 #include <optional>
 
@@ -6,11 +5,10 @@
 #include "core/telem/parser.h"
 #include "core/telem/storage.h"
 #include "hal/system.h"
-#include "hal/uart.h"
+#include "modules/cmd.h"
 #include "modules/log.h"
 #include "modules/storage.h"
 #include "modules/telem.h"
-#include "tasks/cmd.h"
 
 using namespace std;
 using namespace teller::hal;
@@ -81,13 +79,13 @@ void destroy()
     logger = nullptr;
 }
 
-bool handleCommands(uint8_t* buf)
+bool handleCommands(teller::hal::uart::uart_t index, uint8_t* buf)
 {
     uint8_t ch;
     uint16_t read;
     optional<Response> response;
 
-    if (!uart::read(uart::TELEMETRY, &ch, 1, &read) || read <= 0) {
+    if (!uart::read(index, &ch, 1, &read) || read <= 0) {
         return false;
     }
 

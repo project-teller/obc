@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdarg>
-#include <cstdio>
 
 #include "core/telem/generic.h"
 #include "hal/mutex.hpp"

@@ -6,6 +6,7 @@
 #include <cmsis_os2.h>
 
 #include "config.h"
+#include "hal/system.h"
 #include "hal/uart.h"
 #include "utils.h"
 
@@ -68,6 +69,8 @@ const int8_t uart_map[NUM_UARTS] = { -1, -1 };
 static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t* cfg);
 static uart_phy_state_t* find_phy_for_uart(int8_t index);
 
+static bool isUARTAlwaysConnected(uart_t index);
+
 static UART_HandleTypeDef* uart_handle_ptrs[10];
 static uart_phy_state_t uart_phy_state[NUM_PHY_UARTS];
 
@@ -85,6 +88,16 @@ bool teller::hal::uart::init()
 void teller::hal::uart::destroy()
 {
     /* Not needed; we never call the destructor in STM32 */
+}
+
+bool teller::hal::uart::isConnected(uart_t index)
+{
+    if (isUARTAlwaysConnected(index)) {
+        return true;
+    }
+
+    /* TODO: detect when the debug UART is connected or disconnected */
+    return index != DEBUG;
 }
 
 bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_t* bytes_read)
@@ -116,6 +129,28 @@ bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_
     }
 
     return true;
+}
+
+void teller::hal::uart::waitUntilConnected(uart_t index)
+{
+    if (isUARTAlwaysConnected(index)) {
+        return;
+    } else {
+        while (!isConnected(index)) {
+            teller::hal::system::delayMsec(100);
+        }
+    }
+}
+
+void teller::hal::uart::waitUntilDisconnected(uart_t index)
+{
+    if (isUARTAlwaysConnected(index)) {
+        teller::hal::system::sleepForever();
+    } else {
+        while (isConnected(index)) {
+            teller::hal::system::delayMsec(100);
+        }
+    }
 }
 
 bool teller::hal::uart::write(uart_t index, uint8_t* data, uint16_t size)
@@ -218,6 +253,11 @@ static uart_phy_state_t* find_phy_for_uart(int8_t index)
 
     int8_t uart_phy_index = uart_map[index];
     return uart_phy_index >= 0 ? &uart_phy_state[uart_phy_index] : nullptr;
+}
+
+static bool isUARTAlwaysConnected(uart_t index)
+{
+    return index != DEBUG;
 }
 
 /* ************************************************************************** */

@@ -1,4 +1,3 @@
-#include <cstdio>
 #include <fstream>
 
 #include "hal/storage.h"

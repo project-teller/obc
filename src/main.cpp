@@ -17,9 +17,11 @@
 
 #include "tasks/blinker.h"
 #include "tasks/cmd.h"
+#include "tasks/debug.h"
 #include "tasks/flashmem.h"
 #include "tasks/imu.h"
 #include "tasks/logger.h"
+#include "tasks/mode.h"
 #include "tasks/pins.h"
 #include "tasks/sdcard.h"
 #include "tasks/serial.h"
@@ -58,23 +60,35 @@ typedef struct {
         0             \
     }
 
+static cmd_task_args_t cmd_task_args = {
+    .uart_index = teller::hal::uart::TELEMETRY
+};
+
 static const task_definition_t tasks[] = {
     { .func = blinkTask, .name = "blinker", .priority = LOW },
     { .func = pinsTask, .name = "pins", .priority = NORMAL },
     { .func = serialTask, .name = "serial", .priority = HIGH, .stack_size = 1024 },
     { .func = supervisorTask, .name = "supervisor", .priority = LOW },
     { .func = telemetryTask, .name = "telem", .priority = NORMAL, .stack_size = 1024 },
-    { .func = commandTask, .name = "cmd", .priority = LOW, .stack_size = 1024 },
+    { .func = commandTask, .name = "cmd", .priority = LOW, .stack_size = 1024, .context = &cmd_task_args },
     { .func = flashMemoryTask, .name = "flashmem", .priority = HIGH, .stack_size = 1024 },
     { .func = sdCardTask, .name = "sdcard", .priority = HIGH, .stack_size = 1024 },
     { .func = imuTask, .name = "imu", .priority = NORMAL, .stack_size = 1024 },
     { .func = loggerTask, .name = "log", .priority = NORMAL, .stack_size = 1024 },
+    { .func = modeManagerTask, .name = "mode", .priority = NORMAL, .stack_size = 1024 },
+    { .func = debugTask, .name = "debug", .priority = NORMAL, .stack_size = 1024 },
     NO_MORE_TASKS
 };
 
 static void initialize(void);
 static bool startTasks(void);
 static void runScheduler(void);
+
+#ifdef TELLER_BOARD_POSIX
+namespace teller::hal::uart {
+void setDebugPort(const std::string&);
+}
+#endif
 
 void bootSystem(void)
 {
@@ -138,6 +152,9 @@ int main(void)
 
         case 0:
             /* Child process */
+
+            // Prevent broken sockets from causing SIGPIPE signals
+            signal(SIGPIPE, SIG_IGN);
             bootSystem();
             return EXIT_SUCCESS;
 
@@ -159,12 +176,19 @@ int main(void)
 
 static void initialize()
 {
+    std::string DEBUG_PORT("4747");
+
+    std::cerr << "Opening debug port on port " << DEBUG_PORT << "... " << std::flush;
+    teller::hal::uart::setDebugPort(DEBUG_PORT);
+    std::cerr << " done." << std::endl;
+
     std::cerr << "TELLER OBC initializing... " << std::flush;
 }
 
 static void runScheduler()
 {
     std::cerr << " done." << std::endl;
+
     for (;;) {
         teller::hal::system::delayMsec(60000);
     }

@@ -101,9 +101,11 @@ add_executable(
 
 	tasks/blinker.cpp
 	tasks/cmd.cpp
+	tasks/debug.cpp
 	tasks/flashmem.cpp
 	tasks/imu.cpp
 	tasks/logger.cpp
+	tasks/mode.cpp
 	tasks/pins.cpp
 	tasks/sdcard.cpp
 	tasks/serial.cpp

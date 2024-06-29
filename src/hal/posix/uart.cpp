@@ -1,9 +1,14 @@
+#include <cassert>
 #include <cstring>
 #include <iostream>
 #include <map>
 
+#include "hal/system.h"
 #include "hal/uart.h"
+#include "lib/socketstream/socketstream.hh"
 #include "uart_debug.h"
+
+using swoope::socketstream;
 
 using namespace std;
 using namespace teller::hal::uart;
@@ -14,14 +19,28 @@ public:
     int overflow(int c) { return c; }
 };
 
-static NullBuffer null_buffer;
-iostream null_stream(&null_buffer);
+static NullBuffer nullBuffer;
+static iostream nullStream(&nullBuffer);
 
+/** Service name or port for the debug port */
+static string debugServerPort;
+
+/** TCP socket server that is used to simulate the debug port */
+static std::unique_ptr<socketstream> debugServerSocket;
+
+/** TCP socket client that is non-null when a client is connected to the debug port */
+static std::unique_ptr<socketstream> debugClientSocket;
+
+static void handleDebugPort(void);
 static istream& uartToInputStream(uart_t index);
 static ostream& uartToOutputStream(uart_t index);
 
 static map<uart_t, stringstream> uartInputOverrides;
 static map<uart_t, stringstream> uartOutputOverrides;
+
+namespace teller::hal::uart {
+void setDebugPort(const std::string& service);
+}
 
 bool teller::hal::uart::init()
 {
@@ -33,6 +52,18 @@ bool teller::hal::uart::init()
 
 void teller::hal::uart::destroy()
 {
+    teller::hal::uart::setDebugPort("");
+}
+
+bool teller::hal::uart::isConnected(uart_t index)
+{
+    if (index != DEBUG) {
+        return true;
+    } else {
+        /* Return true if a client is connected to the TCP socket simulating
+         * the debug UART, false otherwise */
+        return debugClientSocket.get() != nullptr;
+    }
 }
 
 bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_t* bytes_read)
@@ -45,23 +76,99 @@ bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_
     }
 
     istream& stream = uartToInputStream(index);
+    bool result = false;
+
     if (stream.rdstate() & (stream.failbit | stream.eofbit)) {
         if (bytes_read) {
             *bytes_read = 0;
         }
-        return false;
+    } else {
+        stream.read(reinterpret_cast<char*>(data), size);
+
+        if (bytes_read) {
+            *bytes_read = stream.gcount();
+        }
+
+        result = stream.gcount() > 0 || !(stream.rdstate() & (stream.failbit | stream.eofbit));
     }
 
-    stream.read(reinterpret_cast<char*>(data), size);
-    if (bytes_read) {
-        *bytes_read = stream.gcount();
+    if (!result) {
+        // Read error. If this was the debug socket, close it. TODO(ntamas)
     }
-    return stream.gcount() > 0 || !(stream.rdstate() & (stream.failbit | stream.eofbit));
+
+    return result;
+}
+
+void teller::hal::uart::setDebugPort(const std::string& service)
+{
+    // Close the connected debug client, if any
+    if (debugClientSocket) {
+        debugClientSocket->shutdown(ios_base::out);
+        debugClientSocket->close();
+        debugClientSocket.reset(nullptr);
+    }
+
+    // Close the debug socket
+    if (debugServerSocket) {
+        debugServerSocket->close();
+        debugServerSocket.reset(nullptr);
+    }
+
+    debugServerPort = service;
+
+    if (!debugServerPort.empty()) {
+        // Open the debug socket
+        debugServerSocket = make_unique<socketstream>();
+        debugServerSocket->open(debugServerPort, 4);
+    }
+}
+
+void teller::hal::uart::waitUntilConnected(uart_t index)
+{
+    while (!isConnected(index)) {
+        if (index == DEBUG && !debugServerPort.empty()) {
+            socketstream client;
+
+            debugServerSocket->accept(client);
+            if (client.is_open()) {
+                debugClientSocket.reset(new socketstream());
+                debugClientSocket->swap(client);
+                (*debugClientSocket) << "Hello world\n";
+            }
+        } else {
+            teller::hal::system::sleepForever();
+        }
+    }
+}
+
+void teller::hal::uart::waitUntilDisconnected(uart_t index)
+{
+    while (isConnected(index)) {
+        if (index == DEBUG) {
+            while (debugClientSocket.get() != nullptr) {
+                teller::hal::system::delayMsec(200);
+            }
+        } else {
+            teller::hal::system::sleepForever();
+        }
+    }
 }
 
 bool teller::hal::uart::write(uart_t index, uint8_t* data, uint16_t size)
 {
-    uartToOutputStream(index).write(reinterpret_cast<const char*>(data), size);
+    ostream& stream = uartToOutputStream(index);
+    bool result = false;
+
+    stream.write(reinterpret_cast<const char*>(data), size);
+    if (stream.bad()) {
+        if (index == DEBUG) {
+            // Close the client socket
+            debugClientSocket->close();
+            debugClientSocket.reset(nullptr);
+        }
+        return false;
+    }
+
     return true;
 }
 
@@ -80,8 +187,10 @@ static istream& uartToInputStream(uart_t index)
     switch (index) {
     case TELEMETRY:
         return cin;
+    case DEBUG:
+        return debugClientSocket ? *debugClientSocket : nullStream;
     default:
-        return null_stream;
+        return nullStream;
     }
 }
 
@@ -96,9 +205,9 @@ static ostream& uartToOutputStream(uart_t index)
     case TELEMETRY:
         return cout;
     case DEBUG:
-        return cerr;
+        return debugClientSocket ? *debugClientSocket : nullStream;
     default:
-        return null_stream;
+        return nullStream;
     }
 }
 
