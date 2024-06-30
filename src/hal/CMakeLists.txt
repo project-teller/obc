@@ -45,6 +45,7 @@ else()
         ${HAL_NAMESPACE}::DMA
         ${HAL_NAMESPACE}::IWDG
         ${HAL_NAMESPACE}::RTC
+        ${HAL_NAMESPACE}::SPI
         ${HAL_NAMESPACE}::UART
         ${HAL_NAMESPACE}::CORTEX
         CMSIS::${TARGET_MCU_CMSIS_MODULE}
@@ -54,6 +55,7 @@ else()
 
     if(TARGET_MCU STREQUAL "STM32H7")
         list(APPEND HAL_LIBRARIES
+            ${HAL_NAMESPACE}::SPIEx
             ${HAL_NAMESPACE}::UARTEx
         )
     endif()

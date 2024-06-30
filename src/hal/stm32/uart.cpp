@@ -6,18 +6,20 @@
 #include <cmsis_os2.h>
 
 #include "config.h"
+#include "hal/stm32/utils.h"
 #include "hal/system.h"
 #include "hal/uart.h"
-#include "utils.h"
 
 using namespace std;
 using namespace teller::hal::uart;
 using namespace teller::hal::utils;
 
+static const uint32_t EVT_READ = 0x00000001U;
+static const uint32_t EVT_WRITTEN = 0x00000002U;
+
 typedef struct {
     USART_TypeDef* instance;
-    GPIO_TypeDef* gpio_port;
-    uint32_t gpio_pins;
+    gpio_port_and_pins_t gpio;
     IRQn_Type irq;
 
     uint32_t baud_rate;
@@ -31,9 +33,6 @@ typedef struct {
     bool initialized;
 } uart_phy_state_t;
 
-static const uint32_t EVT_READ = 0x00000001U;
-static const uint32_t EVT_WRITTEN = 0x00000002U;
-
 /* NOTE: Each UART must be mapped to a different UART_HandleTypeDef. This is
  * not checked explicitly. */
 
@@ -46,24 +45,24 @@ static const uint32_t EVT_WRITTEN = 0x00000002U;
 // STM32H743ZI Nucleo-144 dev board, for testing purposes
 #define NUM_PHY_UARTS 1
 const uart_phy_config_t uart_phy_config[] = {
-    { USART3, GPIOD, GPIO_PIN_8 | GPIO_PIN_9, USART3_IRQn },
+    { USART3, { GPIOD, GPIO_PIN_8 | GPIO_PIN_9 }, USART3_IRQn },
     NO_MORE_UARTS
 };
-const int8_t uart_map[NUM_UARTS] = { 0, 0 };
+const int8_t uart_map[NUM_UARTS] = { 0, 0, 0 };
 #elif defined STM32F4
 // STM32F4-Discovery
 #define NUM_PHY_UARTS 0
 const uart_phy_config_t uart_phy_config[] = {
     NO_MORE_UARTS
 };
-const int8_t uart_map[NUM_UARTS] = { -1, -1 };
+const int8_t uart_map[NUM_UARTS] = { -1, -1, -1 };
 #else
 // No UART supported on this hardware
 #define NUM_PHY_UARTS 0
 const uart_phy_config_t uart_phy_config[NUM_UARTS] = {
     NO_MORE_UARTS
 };
-const int8_t uart_map[NUM_UARTS] = { -1, -1 };
+const int8_t uart_map[NUM_UARTS] = { -1, -1, -1 };
 #endif
 
 static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t* cfg);
@@ -260,8 +259,6 @@ static bool isUARTAlwaysConnected(uart_t index)
     return index != DEBUG;
 }
 
-/* ************************************************************************** */
-
 /* Finds the UART configuration corresponding to the given physical UART */
 static uart_phy_state_t* find_uart_phy_state(UART_HandleTypeDef* huart)
 {
@@ -273,6 +270,10 @@ static uart_phy_state_t* find_uart_phy_state(UART_HandleTypeDef* huart)
 
     return nullptr;
 }
+
+/* ************************************************************************** */
+
+extern "C" {
 
 /* Weakly linked function that is called by the STM32 HAL when a physical UART is
  * initialized
@@ -304,14 +305,14 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     }
 
     /* GPIO configuration */
-    if (cfg->gpio_port && cfg->gpio_pins) {
-        enableGPIOClocksForPort(cfg->gpio_port);
-        GPIO_InitStruct.Pin = cfg->gpio_pins;
+    if (cfg->gpio.port && cfg->gpio.pins) {
+        enableGPIOClocksForPort(cfg->gpio.port);
+        GPIO_InitStruct.Pin = cfg->gpio.pins;
         GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
         GPIO_InitStruct.Alternate = GPIO_AF7_USART3;
-        HAL_GPIO_Init(cfg->gpio_port, &GPIO_InitStruct);
+        HAL_GPIO_Init(cfg->gpio.port, &GPIO_InitStruct);
     }
 
     /* IRQ configuration */
@@ -344,8 +345,8 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
         __HAL_RCC_USART3_CLK_DISABLE();
     }
 
-    if (cfg->gpio_port && cfg->gpio_pins) {
-        HAL_GPIO_DeInit(cfg->gpio_port, cfg->gpio_pins);
+    if (cfg->gpio.port && cfg->gpio.pins) {
+        HAL_GPIO_DeInit(cfg->gpio.port, cfg->gpio.pins);
     }
 
     if (cfg->irq) {
@@ -360,6 +361,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
     if (huart->Instance == USART3) {
         uart_handle_ptrs[3] = nullptr;
     }
+}
 }
 
 /* ************************************************************************** */
