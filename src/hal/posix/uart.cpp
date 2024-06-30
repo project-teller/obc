@@ -2,6 +2,7 @@
 #include <cstring>
 #include <iostream>
 #include <map>
+#include <memory>
 
 #include "hal/system.h"
 #include "hal/uart.h"
