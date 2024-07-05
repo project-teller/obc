@@ -44,7 +44,7 @@ void notifyPossibleModeChange(ModeChangeReasons reason)
 
 void updateMode()
 {
-    uint32_t reasons = modeChangeReasons.waitAny(EventFlags::ALL_EVENTS);
+    uint32_t reasons = modeChangeReasons.waitAny(MODE_CHANGE_REASON_ANY);
     obc_mode_t newMode = currentMode;
 
     if (reasons & MODE_CHANGE_REASON_GND_TEST_START) {

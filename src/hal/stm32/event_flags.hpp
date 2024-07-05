@@ -51,9 +51,6 @@ public:
         return osEventFlagsWait(handle, flags, osFlagsWaitAny, timeout);
     }
 
-    /** Constant denoting an event set that contains all events */
-    static const uint32_t ALL_EVENTS = 0x7FFFFFFF;
-
 private:
     /** FreeRTOS handle to the underlying event flags */
     osEventFlagsId_t handle;

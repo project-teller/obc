@@ -25,6 +25,8 @@ enum ModeChangeReasons : uint32_t {
     MODE_CHANGE_REASON_GND_TEST_STOP = 8
 };
 
+const uint32_t MODE_CHANGE_REASON_ANY = 15;
+
 /**
  * @brief Initializes the module handling whether the experiment is in mission or test mode.
  *
