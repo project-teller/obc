@@ -1,5 +1,8 @@
 #include "hal/imu.h"
 #include "config.h"
+#include "hal/system.h"
+
+using namespace teller::hal::system;
 
 namespace teller::hal::imu {
 
@@ -24,6 +27,7 @@ bool getAngularVelocity(measurement_t& result)
 
 bool update()
 {
+    sleepForever();
     return false;
 }
 
