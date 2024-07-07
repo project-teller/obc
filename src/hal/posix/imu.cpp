@@ -53,6 +53,11 @@ bool getAngularVelocity(measurement_t& result)
     return updated;
 }
 
+bool setup()
+{
+    return true;
+}
+
 bool update()
 {
     uint32_t now;

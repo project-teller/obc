@@ -36,11 +36,20 @@ subsystem_status_t getSubsystemStatus()
     return status;
 }
 
-void update()
+bool setup()
+{
+    status = teller::hal::imu::setup()
+        ? SUBSYSTEM_STATUS_OK
+        : SUBSYSTEM_STATUS_ERROR;
+    return status == SUBSYSTEM_STATUS_OK;
+}
+
+bool update()
 {
     status = teller::hal::imu::update()
         ? SUBSYSTEM_STATUS_OK
         : SUBSYSTEM_STATUS_ERROR;
+    return status == SUBSYSTEM_STATUS_OK;
 }
 
 void log()

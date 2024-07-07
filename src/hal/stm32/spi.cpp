@@ -1,24 +1,40 @@
 #include "stm32_hal.h"
+#include <cmsis_os2.h>
 
+#include "hal/mutex.hpp"
 #include "hal/spi.h"
 #include "hal/stm32/utils.h"
 
 using namespace teller::hal::utils;
 
-#define NUM_GPIO_CFG 4
+static const uint32_t EVT_DONE = 0x00000001U;
+
+#define NUM_GPIO_PINS_PER_BUS 3
+#define NUM_CS_PINS_PER_BUS 4
 
 typedef struct {
     SPI_TypeDef* instance;
-    gpio_port_and_pins_t gpio[NUM_GPIO_CFG];
+    union {
+        gpio_port_and_pins_t by_index[NUM_GPIO_PINS_PER_BUS];
+        struct {
+            gpio_port_and_pins_t clk;
+            gpio_port_and_pins_t miso;
+            gpio_port_and_pins_t mosi;
+        } by_name;
+    } gpio;
+    gpio_port_and_pins_t cs[NUM_CS_PINS_PER_BUS];
+    IRQn_Type irq;
 
     uint32_t baud_rate;
-} spi_config_t;
+} spi_bus_config_t;
 
 typedef struct {
     SPI_HandleTypeDef handle;
-    const spi_config_t* cfg;
+    const spi_bus_config_t* cfg;
+    osEventFlagsId_t event;
     bool initialized;
-} spi_state_t;
+    teller::hal::mutex in_use;
+} spi_bus_state_t;
 
 #define NO_MORE_SPI_BUSES \
     {                     \
@@ -30,36 +46,50 @@ typedef struct {
         0                \
     }
 
+/* clang-format off */
 #if defined TELLER_BOARD_NUCLEO144
 // STM32H743ZI Nucleo-144 dev board, for testing purposes
 #define NUM_SPI_BUSES 2
-const spi_config_t spi_config[] = {
-    { .instance = SPI1,
-        .gpio_cfg = {
-            { GPIOA, GPIO_PIN_5 | GPIO_PIN_6 },
-            { GPIOD, GPIO_PIN_7 },
-            NO_MORE_GPIO_CFG } },
-    { .instance = SPI2, .gpio_cfg = { { GPIOC, GPIO_PIN_2 | GPIO_PIN_3 }, { GPIOB, GPIO_PIN_10 }, NO_MORE_GPIO_CFG } }, NO_MORE_SPI_BUSES
+const spi_bus_config_t spi_config[] = {
+    {
+        .instance = SPI1,
+        .gpio = {
+            .by_name = {
+                .clk = { GPIOA, GPIO_PIN_5 },
+                .miso = { GPIOA, GPIO_PIN_6 },
+                .mosi = { GPIOB, GPIO_PIN_5 }
+            }
+        },
+        .cs = {
+            // Device 0: ICM-20649 accelerometer
+            { GPIOD, GPIO_PIN_14 },
+            NO_MORE_GPIO_CFG
+        },
+        .irq = SPI1_IRQn,
+    },
+    NO_MORE_SPI_BUSES
 };
 #elif defined STM32F4
 // STM32F4-Discovery
 #define NUM_SPI_BUSES 0
-const spi_config_t spi_config[] = {
+const spi_bus_config_t spi_config[] = {
     NO_MORE_SPI_BUSES
 };
 #else
 // No SPI buses supported on this hardware
 #define NUM_SPI_BUSES 0
-const spi_config_t spi_config[] = {
+const spi_bus_config_t spi_config[] = {
     NO_MORE_SPI_BUSES
 };
 #endif
+/* clang-format on */
 
-static bool configure_spi_bus(spi_state_t* state, const spi_config_t* cfg);
-static spi_state_t* find_spi_state(SPI_HandleTypeDef* hspi);
+static bool configure_spi_bus(spi_bus_state_t* state, const spi_bus_config_t* cfg);
+static spi_bus_state_t* find_spi_bus_state(SPI_HandleTypeDef* hspi);
+static bool is_spi_address_valid(teller::hal::spi::address_t address);
 
 static SPI_HandleTypeDef* spi_handle_ptrs[7];
-static spi_state_t spi_state[NUM_SPI_BUSES];
+static spi_bus_state_t spi_state[NUM_SPI_BUSES];
 
 namespace teller::hal::spi {
 
@@ -78,11 +108,52 @@ void destroy()
 {
 }
 
+bool transfer(address_t address, std::uint8_t* buf, std::uint16_t size)
+{
+    return transfer(address, buf, buf, size);
+}
+
+bool transfer(address_t address, std::uint8_t* txBuf, std::uint8_t* rxBuf, std::uint16_t size)
+{
+    const spi_bus_config_t* pCfg;
+    spi_bus_state_t* pState;
+    bool success = false;
+
+    if (!is_spi_address_valid(address)) {
+        return false;
+    }
+
+    pCfg = &spi_config[address.bus];
+    pState = &spi_state[address.bus];
+
+    if (osKernelGetState() == osKernelRunning) {
+        // RTOS kernel is running so we can use event flags
+        lock_guard lock(pState->in_use);
+
+        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+        if (HAL_SPI_TransmitReceive_IT(&pState->handle, txBuf, rxBuf, size) == HAL_OK) {
+            success = true;
+            osEventFlagsWait(pState->event, EVT_DONE, osFlagsWaitAny, osWaitForever);
+        }
+        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+    } else {
+        // Simplified implementation for the initialization where we cannot
+        // use RTOS primitives yet
+        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+        if (HAL_SPI_TransmitReceive(&pState->handle, txBuf, rxBuf, size, 500) == HAL_OK) {
+            success = true;
+        }
+        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+    }
+
+    return success;
+}
+
 }
 
 /* ************************************************************************** */
 
-static bool configure_spi_bus(spi_state_t* state, const spi_config_t* cfg)
+static bool configure_spi_bus(spi_bus_state_t* state, const spi_bus_config_t* cfg)
 {
     bool success = false;
 
@@ -106,7 +177,7 @@ static bool configure_spi_bus(spi_state_t* state, const spi_config_t* cfg)
     pHandle->Init.CLKPolarity = SPI_POLARITY_LOW;
     pHandle->Init.CLKPhase = SPI_PHASE_1EDGE;
     pHandle->Init.NSS = SPI_NSS_SOFT;
-    pHandle->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_2;
+    pHandle->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
     pHandle->Init.FirstBit = SPI_FIRSTBIT_MSB;
     pHandle->Init.TIMode = SPI_TIMODE_DISABLE;
     pHandle->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
@@ -132,6 +203,11 @@ static bool configure_spi_bus(spi_state_t* state, const spi_config_t* cfg)
         goto cleanup;
     }
 
+    state->event = osEventFlagsNew(nullptr);
+    if (!state->event) {
+        goto cleanup;
+    }
+
     success = true;
 
 cleanup:
@@ -144,7 +220,7 @@ cleanup:
 }
 
 /* Finds the SPI configuration corresponding to the given physical SPI bus handle */
-static spi_state_t* find_spi_state(SPI_HandleTypeDef* hspi)
+static spi_bus_state_t* find_spi_bus_state(SPI_HandleTypeDef* hspi)
 {
     for (int index = 0; index < NUM_SPI_BUSES; index++) {
         if (hspi == &spi_state[index].handle) {
@@ -153,6 +229,20 @@ static spi_state_t* find_spi_state(SPI_HandleTypeDef* hspi)
     }
 
     return nullptr;
+}
+
+/* Returns whether an SPI address is valid */
+static bool is_spi_address_valid(teller::hal::spi::address_t address)
+{
+    if (address.bus >= NUM_SPI_BUSES || !spi_state[address.bus].initialized) {
+        return false;
+    }
+
+    if (address.device >= NUM_CS_PINS_PER_BUS || !spi_config[address.bus].cs[address.device].port) {
+        return false;
+    }
+
+    return true;
 }
 
 /* ************************************************************************** */
@@ -172,8 +262,8 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
     PeriphClkInitStruct.Spi123ClockSelection = RCC_SPI123CLKSOURCE_PLL;
 #endif
 
-    spi_state_t* state = find_spi_state(hspi);
-    const spi_config_t* cfg = state ? state->cfg : nullptr;
+    spi_bus_state_t* state = find_spi_bus_state(hspi);
+    const spi_bus_config_t* cfg = state ? state->cfg : nullptr;
     if (!cfg) {
         return;
     }
@@ -206,19 +296,56 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
 
         /* Peripheral clock enable */
         __HAL_RCC_SPI2_CLK_ENABLE();
+    } else if (hspi->Instance == SPI3) {
+        gpioFunc = GPIO_AF5_SPI2;
+
+#ifdef STM32H7
+        RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = { 0 };
+
+        /* Initializes the peripherals clock */
+        PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_SPI3;
+        if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
+            return;
+        }
+#endif
+
+        /* Peripheral clock enable */
+        __HAL_RCC_SPI3_CLK_ENABLE();
     }
 
     /* GPIO configuration */
-    for (int i = 0; i < NUM_GPIO_CFG; i++) {
-        if (cfg->gpio[i].port && cfg->gpio[i].pins) {
-            enableGPIOClocksForPort(cfg->gpio[i].port);
-            GPIO_InitStruct.Pin = cfg->gpio[i].pins;
+    for (int i = 0; i < NUM_GPIO_PINS_PER_BUS; i++) {
+        if (cfg->gpio.by_index[i].port && cfg->gpio.by_index[i].pins) {
+            enableGPIOClocksForPort(cfg->gpio.by_index[i].port);
+            GPIO_InitStruct.Pin = cfg->gpio.by_index[i].pins;
             GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
             GPIO_InitStruct.Pull = GPIO_NOPULL;
             GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
             GPIO_InitStruct.Alternate = gpioFunc;
-            HAL_GPIO_Init(cfg->gpio[i].port, &GPIO_InitStruct);
+            HAL_GPIO_Init(cfg->gpio.by_index[i].port, &GPIO_InitStruct);
         }
+    }
+
+    /* Chip select pin configuration */
+    for (int i = 0; i < NUM_CS_PINS_PER_BUS; i++) {
+        if (cfg->cs[i].port && cfg->cs[i].pins) {
+            enableGPIOClocksForPort(cfg->cs[i].port);
+            GPIO_InitStruct.Pin = cfg->cs[i].pins;
+            GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+            GPIO_InitStruct.Pull = GPIO_NOPULL;
+            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+            GPIO_InitStruct.Alternate = gpioFunc;
+            HAL_GPIO_Init(cfg->cs[i].port, &GPIO_InitStruct);
+            HAL_GPIO_WritePin(cfg->cs[i].port, cfg->cs[i].pins, GPIO_PIN_SET);
+        }
+    }
+
+    /* IRQ configuration */
+    if (cfg->irq) {
+        /* Priority 5 is the highest (i.e. smallest numeric value) that is
+         * allowed without interfering with FreeRTOS */
+        HAL_NVIC_SetPriority(cfg->irq, 5, 0);
+        HAL_NVIC_EnableIRQ(cfg->irq);
     }
 
     state->initialized = true;
@@ -227,6 +354,8 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
         spi_handle_ptrs[1] = hspi;
     } else if (hspi->Instance == SPI2) {
         spi_handle_ptrs[2] = hspi;
+    } else if (hspi->Instance == SPI3) {
+        spi_handle_ptrs[3] = hspi;
     }
 }
 
@@ -235,8 +364,8 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
  */
 void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
 {
-    spi_state_t* state = find_spi_state(hspi);
-    const spi_config_t* cfg = state ? state->cfg : nullptr;
+    spi_bus_state_t* state = find_spi_bus_state(hspi);
+    const spi_bus_config_t* cfg = state ? state->cfg : nullptr;
     if (!cfg) {
         return;
     }
@@ -245,15 +374,28 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
         __HAL_RCC_SPI1_CLK_DISABLE();
     } else if (hspi->Instance == SPI2) {
         __HAL_RCC_SPI2_CLK_DISABLE();
+    } else if (hspi->Instance == SPI3) {
+        __HAL_RCC_SPI3_CLK_DISABLE();
     }
 
-    for (int i = NUM_GPIO_CFG - 1; i >= 0; i--) {
-        if (cfg->gpio[i].port && cfg->gpio[i].pins) {
-            HAL_GPIO_DeInit(cfg->gpio[i].port, cfg->gpio[i].pins);
+    for (int i = NUM_GPIO_PINS_PER_BUS - 1; i >= 0; i--) {
+        if (cfg->gpio.by_index[i].port && cfg->gpio.by_index[i].pins) {
+            HAL_GPIO_DeInit(cfg->gpio.by_index[i].port, cfg->gpio.by_index[i].pins);
         }
     }
 
+    for (int i = NUM_CS_PINS_PER_BUS - 1; i >= 0; i--) {
+        if (cfg->cs[i].port && cfg->cs[i].pins) {
+            HAL_GPIO_DeInit(cfg->cs[i].port, cfg->cs[i].pins);
+        }
+    }
+
+    if (cfg->irq) {
+        HAL_NVIC_DisableIRQ(cfg->irq);
+    }
+
     if (state) {
+        osEventFlagsDelete(state->event);
         state->initialized = false;
     }
 
@@ -261,6 +403,40 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
         spi_handle_ptrs[1] = nullptr;
     } else if (hspi->Instance == SPI2) {
         spi_handle_ptrs[2] = nullptr;
+    } else if (hspi->Instance == SPI3) {
+        spi_handle_ptrs[3] = nullptr;
+    }
+}
+
+void SPI1_IRQHandler(void)
+{
+    SPI_HandleTypeDef* ptr = spi_handle_ptrs[1];
+    if (ptr) {
+        HAL_SPI_IRQHandler(ptr);
+    }
+}
+
+void SPI2_IRQHandler(void)
+{
+    SPI_HandleTypeDef* ptr = spi_handle_ptrs[2];
+    if (ptr) {
+        HAL_SPI_IRQHandler(ptr);
+    }
+}
+
+void SPI3_IRQHandler(void)
+{
+    SPI_HandleTypeDef* ptr = spi_handle_ptrs[3];
+    if (ptr) {
+        HAL_SPI_IRQHandler(ptr);
+    }
+}
+
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef* spi)
+{
+    spi_bus_state_t* state = find_spi_bus_state(spi);
+    if (state) {
+        osEventFlagsSet(state->event, EVT_DONE);
     }
 }
 }

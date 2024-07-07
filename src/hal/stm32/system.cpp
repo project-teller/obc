@@ -11,6 +11,7 @@ namespace teller::hal::system {
 
 void init()
 {
+    HAL_Init();
     SystemInit();
 
     assert(osKernelGetTickFreq() == 1000);

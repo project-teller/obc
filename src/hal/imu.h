@@ -28,6 +28,16 @@ typedef struct {
 void destroy(void);
 
 /**
+ * @brief Setup function for the IMU.
+ *
+ * This function is called right before we start reading IMU measurements in
+ * a loop.
+ *
+ * @return whether the setup was successful
+ */
+bool setup(void);
+
+/**
  * @brief Retrieves the most recent acceleration measurement.
  *
  * @param result  the measurement will be returned here

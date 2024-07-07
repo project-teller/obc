@@ -20,9 +20,19 @@ void destroy(void);
 teller::telem::subsystem_status_t getSubsystemStatus(void);
 
 /**
- * @brief Updates the IMU measurements.
+ * @brief Sets up the IMU before entering its main loop.
+ * @return Whether the IMU subsystem is healthy
  */
-void update(void);
+bool setup(void);
+
+/**
+ * @brief Updates the IMU measurements.
+ *
+ * Blocks until a new measurement was received.
+ *
+ * @return Whether the IMU subsystem is healthy
+ */
+bool update(void);
 
 /**
  * @brief Saves IMU measurements to the log and sends them via telemetry.

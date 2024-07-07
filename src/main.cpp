@@ -66,7 +66,7 @@ static cmd_task_args_t cmd_task_args = {
 
 static const task_definition_t tasks[] = {
     { .func = blinkTask, .name = "blinker", .priority = LOW },
-    { .func = pinsTask, .name = "pins", .priority = NORMAL },
+    { .func = pinsTask, .name = "pins", .priority = NORMAL, .stack_size = 1024 },
     { .func = serialTask, .name = "serial", .priority = HIGH, .stack_size = 1024 },
     { .func = supervisorTask, .name = "supervisor", .priority = LOW },
     { .func = telemetryTask, .name = "telem", .priority = NORMAL, .stack_size = 1024 },

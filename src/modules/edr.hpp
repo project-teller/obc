@@ -187,11 +187,11 @@ public:
 
     void write(Args... args) const
     {
-        LogRequest request;
+        std::unique_ptr<LogRequest> request = std::make_unique<LogRequest>();
 
-        request.format = &_format;
-        if (sdlog_message_format_encode(&_format, request.message, &request.length, args...) == SDLOG_SUCCESS) {
-            teller::edr::sendRequest(request);
+        request->format = &_format;
+        if (sdlog_message_format_encode(&_format, request->message, &request->length, args...) == SDLOG_SUCCESS) {
+            teller::edr::sendRequest(*request);
         }
     }
 

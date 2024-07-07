@@ -1,34 +1,9 @@
-#include "hal/imu.h"
 #include "config.h"
-#include "hal/system.h"
 
-using namespace teller::hal::system;
-
-namespace teller::hal::imu {
-
-bool init()
-{
-    return true;
-}
-
-void destroy()
-{
-}
-
-bool getAcceleration(measurement_t& result)
-{
-    return false;
-}
-
-bool getAngularVelocity(measurement_t& result)
-{
-    return false;
-}
-
-bool update()
-{
-    sleepForever();
-    return false;
-}
-
-}
+#if defined TELLER_BOARD_NUCLEO144
+// STM32H743ZI Nucleo-144 dev board, for testing purposes
+#include "imu_icm_20649.cpp"
+#else
+// No IMU on this board
+#include "imu_dummy.cpp"
+#endif

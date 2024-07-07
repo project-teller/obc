@@ -27,7 +27,7 @@ bool teller::hal::init()
     success &= spi::init();
     success &= uart::init();
     success &= storage::init();
-    success &= imu::init();
+    success &= imu::init(); /* depends on SPI */
 
     return success;
 }

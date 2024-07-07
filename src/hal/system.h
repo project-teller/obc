@@ -38,6 +38,6 @@ void requestReset(void);
 /**
  * @brief Suspends the execution of the current thread or task forever.
  */
-void sleepForever(void);
+[[noreturn]] void sleepForever(void);
 
 }
