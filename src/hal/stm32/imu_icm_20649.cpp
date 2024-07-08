@@ -33,6 +33,9 @@ static imu::measurement_t angularVelocity;
 #define REG_ACCEL_SMPLRT_DIV_2 0x11
 #define REG_ACCEL_CONFIG 0x14
 
+#define READ_REGISTER(x) (static_cast<uint8_t>(x | 0x80))
+#define WRITE_REGISTER(x) (x)
+
 [[nodiscard]] static bool readRegisterByte(uint8_t index, uint8_t& result);
 [[nodiscard]] static bool writeRegisterByte(uint8_t index, uint8_t value, bool verify = false);
 
@@ -173,7 +176,7 @@ bool update()
 
 static bool readRegisterByte(uint8_t index, uint8_t& result)
 {
-    uint8_t buf[] = { index + 0x80, 0x00 };
+    uint8_t buf[] = { READ_REGISTER(index), 0x00 };
     if (!spi::transfer(imu_address, buf, sizeof(buf))) {
         return false;
     }
@@ -183,7 +186,7 @@ static bool readRegisterByte(uint8_t index, uint8_t& result)
 
 static bool writeRegisterByte(uint8_t index, uint8_t value, bool verify)
 {
-    uint8_t buf[] = { index, value };
+    uint8_t buf[] = { WRITE_REGISTER(index), value };
     if (!spi::transfer(imu_address, buf, sizeof(buf))) {
         return false;
     }
