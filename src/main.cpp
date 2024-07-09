@@ -135,13 +135,24 @@ void bootSystem(void)
 #include <iostream>
 #include <thread>
 
+static void parentPipeWatcher(int fd);
+
 int main(void)
 {
     pid_t pid;
     int result = 0;
+    int pipes[2];
     bool shouldBoot = true;
 
     srand(time(NULL));
+
+    /* Create a pipe that will be used to allow the child process to detect
+     * when the parent died. When the parent dies, the pipe is closed, and
+     * this wil lbe detected by the child. */
+    if (pipe(pipes)) {
+        perror("pipe");
+        return EXIT_FAILURE;
+    }
 
     while (shouldBoot) {
         pid = fork();
@@ -153,16 +164,26 @@ int main(void)
             return EXIT_FAILURE;
 
         case 0:
-            /* Child process */
+            /* Child process. Close the write end of the pipe, fork a thread
+             * to read from the read end. */
 
             // Prevent broken sockets from causing SIGPIPE signals
             signal(SIGPIPE, SIG_IGN);
-            bootSystem();
+            close(pipes[1]);
+
+            {
+                std::thread t(parentPipeWatcher, pipes[0]);
+                t.detach();
+                bootSystem();
+            }
             return EXIT_SUCCESS;
 
         default:
-            /* Parent process. Wait for the child and decide based on the
-             * return code. */
+            /* Parent process. Close the read end of the pipe, keep the write
+             * end open. */
+            close(pipes[0]);
+
+            /* Wait for the child and decide based on the return code. */
             if (waitpid(pid, &result, 0) < 0) {
                 perror("waitpid");
                 return EXIT_FAILURE;
@@ -174,6 +195,23 @@ int main(void)
     }
 
     return WIFEXITED(result) ? WEXITSTATUS(result) : 0;
+}
+
+static void parentPipeWatcher(int fd)
+{
+    char buf;
+
+    while (true) {
+        while (read(fd, &buf, 1) > 0)
+            ;
+
+        if (errno == 0) {
+            close(fd);
+            kill(getpid(), SIGTERM);
+            sleep(3);
+            kill(getpid(), SIGKILL);
+        }
+    }
 }
 
 static void initialize()
