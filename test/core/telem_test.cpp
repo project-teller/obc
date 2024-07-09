@@ -2,9 +2,11 @@
 #include <gtest/gtest.h>
 
 #include "core/telem/ack.h"
+#include "core/telem/calibration.h"
 #include "core/telem/clock_status.h"
 #include "core/telem/generic.h"
 #include "core/telem/heartbeat.h"
+#include "core/telem/imu.h"
 #include "core/telem/parser.h"
 #include "core/telem/storage.h"
 #include "core/telem/text_message.h"
@@ -252,6 +254,60 @@ TEST(TelemetryTest, storageCommandFrameEncoding)
     frames::decodeStorageCommandFrame(encoded, &decoded);
     EXPECT_EQ(decoded.area, STORAGE_AREA_UNKNOWN);
     EXPECT_EQ(decoded.command, frames::STORAGE_COMMAND_NOP);
+}
+
+TEST(TelemetryTest, imuFrameEncoding)
+{
+    /* clang-format off */
+    frames::imu_data_t message = {
+        .timestampInMsec = 0x12345678,
+        .acceleration = { 1, 2, 3 },
+        .angularVelocity = { 4, 5, 6 },
+    };
+    uint8_t encoded[MAX_MESSAGE_LENGTH];
+    uint8_t expectedBytes[] = {
+        0x78, 0x56, 0x34, 0x12,
+        0x00, 0x00, 0x80, 0x3f,
+        0x00, 0x00, 0x00, 0x40,
+        0x00, 0x00, 0x40, 0x40,
+        0x00, 0x00, 0x80, 0x40,
+        0x00, 0x00, 0xa0, 0x40,
+        0x00, 0x00, 0xc0, 0x40,
+    };
+    frames::imu_data_t decoded;
+    /* clang-format on */
+
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeIMUFrame(&message, encoded));
+    EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
+
+    frames::decodeIMUFrame(encoded, &decoded);
+
+    EXPECT_EQ(decoded.timestampInMsec, message.timestampInMsec);
+    EXPECT_EQ(decoded.acceleration.x, message.acceleration.x);
+    EXPECT_EQ(decoded.acceleration.y, message.acceleration.y);
+    EXPECT_EQ(decoded.acceleration.z, message.acceleration.z);
+    EXPECT_EQ(decoded.angularVelocity.x, message.angularVelocity.x);
+    EXPECT_EQ(decoded.angularVelocity.y, message.angularVelocity.y);
+    EXPECT_EQ(decoded.angularVelocity.z, message.angularVelocity.z);
+}
+
+TEST(TelemetryTest, calibrationRequestFrameEncoding)
+{
+    /* clang-format off */
+    frames::calibration_request_data_t message = {
+        .procedure = frames::CALIBRATION_IMU,
+    };
+    uint8_t encoded[MAX_MESSAGE_LENGTH];
+    uint8_t expectedBytes[] = { 0x01 };
+    frames::calibration_request_data_t decoded;
+    /* clang-format on */
+
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeCalibrationRequestFrame(&message, encoded));
+    EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
+
+    frames::decodeCalibrationRequestFrame(encoded, &decoded);
+
+    EXPECT_EQ(decoded.procedure, message.procedure);
 }
 
 const uint8_t clockStatusMessage[] = {

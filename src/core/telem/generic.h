@@ -117,6 +117,12 @@ namespace frames {
         MAG = 8,
         GMM = 9,
         SCM = 10,
+        DIRECTORY_LISTING = 11,
+        FILE_DOWNLOAD = 12,
+        DIRECTORY_ENTRY = 13,
+        BINARY_DATA = 14,
+        LCL_RESET = 15,
+        CALIBRATION = 16,
     } frame_type_t;
 
 }
