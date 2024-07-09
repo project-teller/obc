@@ -12,6 +12,11 @@ extern "C" {
  */
 float rng_gauss();
 
+/**
+ * @brief Generates a random number uniformly distributed in [0; 1)
+ */
+float rng_unif01();
+
 #ifdef __cplusplus
 }
 #endif

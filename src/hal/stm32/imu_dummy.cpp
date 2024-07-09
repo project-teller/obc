@@ -3,6 +3,7 @@
 #include "hal/system.h"
 
 using namespace teller::hal::system;
+using teller::telem::measurement_3d_t;
 
 namespace teller::hal::imu {
 
@@ -15,22 +16,12 @@ void destroy()
 {
 }
 
-bool getAcceleration(measurement_t& result)
-{
-    return false;
-}
-
-bool getAngularVelocity(measurement_t& result)
-{
-    return false;
-}
-
 bool setup()
 {
     return false;
 }
 
-bool update()
+bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
 {
     sleepForever();
     return false;

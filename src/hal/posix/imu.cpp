@@ -6,6 +6,9 @@
 #include "config.h"
 
 using namespace teller::hal;
+using teller::telem::measurement_3d_t;
+
+static measurement_3d_t gyroOffset;
 
 namespace teller::hal::imu {
 
@@ -27,11 +30,14 @@ namespace teller::hal::imu {
  */
 #define GYRO_NOISE 0.1f
 
-static measurement_t acceleration;
-static measurement_t angularVelocity;
-
 bool init()
 {
+    /* Generate a random gyro offset to simulate measurement errors that can
+     * be compensated for with a calibration procedure */
+    gyroOffset.x = (2 * rng_unif01() - 1) * GYRO_NOISE * 100;
+    gyroOffset.y = (2 * rng_unif01() - 1) * GYRO_NOISE * 100;
+    gyroOffset.z = (2 * rng_unif01() - 1) * GYRO_NOISE * 100;
+
     return true;
 }
 
@@ -39,26 +45,12 @@ void destroy()
 {
 }
 
-bool getAcceleration(measurement_t& result)
-{
-    bool updated = result.timestampInMsec != acceleration.timestampInMsec;
-    result = acceleration;
-    return updated;
-}
-
-bool getAngularVelocity(measurement_t& result)
-{
-    bool updated = result.timestampInMsec != angularVelocity.timestampInMsec;
-    result = angularVelocity;
-    return updated;
-}
-
 bool setup()
 {
     return true;
 }
 
-bool update()
+bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
 {
     uint32_t now;
 
@@ -73,9 +65,9 @@ bool update()
     acceleration.z = -9.81f + rng_gauss() * ACCEL_NOISE;
 
     angularVelocity.timestampInMsec = now;
-    angularVelocity.x = rng_gauss() * GYRO_NOISE;
-    angularVelocity.y = rng_gauss() * GYRO_NOISE;
-    angularVelocity.z = rng_gauss() * GYRO_NOISE;
+    angularVelocity.x = rng_gauss() * GYRO_NOISE + gyroOffset.x;
+    angularVelocity.y = rng_gauss() * GYRO_NOISE + gyroOffset.y;
+    angularVelocity.z = rng_gauss() * GYRO_NOISE + gyroOffset.z;
 
     return true;
 }

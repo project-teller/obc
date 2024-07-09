@@ -57,15 +57,15 @@ void updateClockStatusData(frames::clock_status_data_t* data)
 
 void updateIMUMeasurement(frames::imu_data_t* data)
 {
-    teller::hal::imu::measurement_t measurement;
+    measurement_3d_t measurement;
 
-    teller::hal::imu::getAcceleration(measurement);
+    measurement = teller::imu::getAcceleration();
     data->timestampInMsec = measurement.timestampInMsec;
     data->acceleration.x = measurement.x;
     data->acceleration.y = measurement.y;
     data->acceleration.z = measurement.z;
 
-    teller::hal::imu::getAngularVelocity(measurement);
+    measurement = teller::imu::getAngularVelocity();
     data->timestampInMsec = std::max(data->timestampInMsec, measurement.timestampInMsec);
     data->angularVelocity.x = measurement.x;
     data->angularVelocity.y = measurement.y;

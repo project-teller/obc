@@ -2,14 +2,9 @@
 
 #include <cstdint>
 
-namespace teller::hal::imu {
+#include "core/telem/generic.h"
 
-typedef struct {
-    uint32_t timestampInMsec;
-    float x;
-    float y;
-    float z;
-} measurement_t;
+namespace teller::hal::imu {
 
 /**
  * @brief Initialization function for the IMU.
@@ -38,28 +33,16 @@ void destroy(void);
 bool setup(void);
 
 /**
- * @brief Retrieves the most recent acceleration measurement.
- *
- * @param result  the measurement will be returned here
- * @return whether a new, valid measurement was returned
- */
-bool getAcceleration(measurement_t& result);
-
-/**
- * @brief Returns the most recent angular velocity measurement.
- *
- * @param result  the measurement will be returned here
- * @return whether a new, valid measurement was returned
- */
-bool getAngularVelocity(measurement_t& result);
-
-/**
  * @brief Updates the IMU measurements.
  *
  * This function should block until the next measurement becomes available.
  *
+ * @param  acceleration     the acceleration measurement is returned here
+ * @param  angularVelocity  the angular velocity measurement is returned here
  * @return whether the IMU is healthy
  */
-bool update(void);
+bool update(
+    teller::telem::measurement_3d_t& acceleration,
+    teller::telem::measurement_3d_t& angularVelocity);
 
 }

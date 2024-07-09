@@ -141,6 +141,8 @@ int main(void)
     int result = 0;
     bool shouldBoot = true;
 
+    srand(time(NULL));
+
     while (shouldBoot) {
         pid = fork();
 

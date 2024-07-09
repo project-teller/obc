@@ -7,8 +7,13 @@
 
 float rng_gauss()
 {
-    float x = (float)random() / RAND_MAX,
-          y = (float)random() / RAND_MAX,
+    float x = rng_unif01(),
+          y = rng_unif01(),
           z = sqrtf(-2 * logf(x)) * cosf(2 * M_PI_F * y);
     return z;
+}
+
+float rng_unif01()
+{
+    return (float)rand() / RAND_MAX;
 }

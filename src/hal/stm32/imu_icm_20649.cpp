@@ -16,9 +16,6 @@ static const spi::address_t imu_address = {
     .device = 0
 };
 
-static imu::measurement_t acceleration;
-static imu::measurement_t angularVelocity;
-
 /* Registers in user bank 0 */
 #define REG_WHO_AM_I 0x00
 #define REG_PWR_MGMT_1 0x06
@@ -97,9 +94,6 @@ bool init()
 {
     /* Most of the initialization is done in setup() because we need to run
      * SPI transfers with interrupts */
-    memset(&acceleration, 0, sizeof(measurement_t));
-    memset(&angularVelocity, 0, sizeof(measurement_t));
-
     logger = getLogger(MODULE_ID_IMU);
     return logger != nullptr;
 }
@@ -107,18 +101,6 @@ bool init()
 void destroy()
 {
     logger = nullptr;
-}
-
-bool getAcceleration(measurement_t& result)
-{
-    result = acceleration;
-    return true;
-}
-
-bool getAngularVelocity(measurement_t& result)
-{
-    result = angularVelocity;
-    return true;
 }
 
 bool setup()
@@ -135,7 +117,7 @@ bool setup()
     }
 }
 
-bool update()
+bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
 {
     std::uint8_t buf[13] = { 0x80 + REG_ACCEL_XOUT_H };
     std::int16_t rawValue;

@@ -6,7 +6,8 @@ namespace teller::telem::frames {
 
 typedef enum {
     CALIBRATION_NOP,
-    CALIBRATION_IMU,
+    CALIBRATION_GYRO,
+    CALIBRATION_ACCEL,
     NUM_CALIBRATION_PROCEDURES,
 } calibration_procedure_t;
 

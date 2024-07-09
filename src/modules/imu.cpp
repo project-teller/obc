@@ -10,8 +10,8 @@ using namespace teller::hal;
 using namespace teller::telem;
 
 static subsystem_status_t status = SUBSYSTEM_STATUS_CRITICAL;
-static imu::measurement_t acceleration;
-static imu::measurement_t angularVelocity;
+static measurement_3d_t acceleration;
+static measurement_3d_t angularVelocity;
 
 static teller::edr::FormattedLogRecord<uint32_t, uint8_t, float, float, float, float, float, float>
     logRecord(
@@ -31,6 +31,16 @@ void destroy()
     status = SUBSYSTEM_STATUS_CRITICAL;
 }
 
+measurement_3d_t getAcceleration(void)
+{
+    return acceleration;
+}
+
+measurement_3d_t getAngularVelocity(void)
+{
+    return angularVelocity;
+}
+
 subsystem_status_t getSubsystemStatus()
 {
     return status;
@@ -46,7 +56,7 @@ bool setup()
 
 bool update()
 {
-    status = teller::hal::imu::update()
+    status = teller::hal::imu::update(acceleration, angularVelocity)
         ? SUBSYSTEM_STATUS_OK
         : SUBSYSTEM_STATUS_ERROR;
     return status == SUBSYSTEM_STATUS_OK;
@@ -54,18 +64,11 @@ bool update()
 
 void log()
 {
-    bool changed = false;
-
-    changed |= teller::hal::imu::getAcceleration(acceleration);
-    changed |= teller::hal::imu::getAngularVelocity(angularVelocity);
-
-    if (changed) {
-        logRecord.write(
-            std::max(acceleration.timestampInMsec, angularVelocity.timestampInMsec),
-            0, /* first IMU */
-            acceleration.x, acceleration.y, acceleration.z,
-            angularVelocity.x, angularVelocity.y, angularVelocity.z);
-    }
+    logRecord.write(
+        std::max(acceleration.timestampInMsec, angularVelocity.timestampInMsec),
+        0, /* first IMU */
+        acceleration.x, acceleration.y, acceleration.z,
+        angularVelocity.x, angularVelocity.y, angularVelocity.z);
 }
 
 }

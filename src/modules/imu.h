@@ -15,6 +15,16 @@ namespace teller::imu {
 void destroy(void);
 
 /**
+ * @brief Returns the most recent acceleration measurement from the IMU.
+ */
+teller::telem::measurement_3d_t getAcceleration(void);
+
+/**
+ * @brief Returns the most recent angular velocity measurement from the IMU.
+ */
+teller::telem::measurement_3d_t getAngularVelocity(void);
+
+/**
  * @brief Returns the status of the IMU subsystem.
  */
 teller::telem::subsystem_status_t getSubsystemStatus(void);

@@ -100,6 +100,16 @@ typedef enum {
     LOG_LEVEL_DEBUG = 7,
 } log_level_t;
 
+/**
+ * @brief Struct encoding a 3D timestamped measurement.
+ */
+typedef struct {
+    uint32_t timestampInMsec;
+    float x;
+    float y;
+    float z;
+} measurement_3d_t;
+
 namespace frames {
 
     /**

@@ -295,7 +295,7 @@ TEST(TelemetryTest, calibrationRequestFrameEncoding)
 {
     /* clang-format off */
     frames::calibration_request_data_t message = {
-        .procedure = frames::CALIBRATION_IMU,
+        .procedure = frames::CALIBRATION_GYRO,
     };
     uint8_t encoded[MAX_MESSAGE_LENGTH];
     uint8_t expectedBytes[] = { 0x01 };
