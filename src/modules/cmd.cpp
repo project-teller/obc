@@ -2,10 +2,12 @@
 #include <optional>
 
 #include "core/telem/ack.h"
+#include "core/telem/calibration.h"
 #include "core/telem/parser.h"
 #include "core/telem/storage.h"
 #include "hal/system.h"
 #include "modules/cmd.h"
+#include "modules/imu.h"
 #include "modules/log.h"
 #include "modules/storage.h"
 #include "modules/telem.h"
@@ -59,6 +61,7 @@ public:
 };
 
 static optional<Response> processPacket(const envelope_t& envelope, const uint8_t* payload);
+static optional<Response> processCalibrationPacket(const envelope_t& envelope, const uint8_t* payload);
 static optional<Response> processStoragePacket(const envelope_t& envelope, const uint8_t* payload);
 static bool sendResponse(const envelope_t& envelope, Response response, uint8_t* buf);
 
@@ -139,6 +142,12 @@ optional<Response> processPacket(const envelope_t& envelope, const uint8_t* payl
         }
         break;
 
+    case frames::CALIBRATION:
+        REJECT_UNLESS_FROM_GCS("calibration")
+        {
+            return processCalibrationPacket(envelope, payload);
+        }
+
     default:
         /* We are not interested in this packet */
         logger->warning("Unhandled pkt: %d", envelope.frame_type);
@@ -158,6 +167,36 @@ bool sendResponse(const envelope_t& envelope, Response response, uint8_t* buf)
     };
     uint8_t length = frames::encodeAckFrame(&data, buf);
     return teller::telem::send(frames::ACK, buf, length);
+}
+
+optional<Response> processCalibrationPacket(const envelope_t& envelope, const uint8_t* payload)
+{
+    frames::calibration_request_data_t data;
+    int retval = 0;
+
+    /* TODO(ntamas): check the length of the packet! */
+    frames::decodeCalibrationRequestFrame(payload, &data);
+
+    switch (data.procedure) {
+    case frames::CALIBRATION_NOP:
+        break;
+
+    case frames::CALIBRATION_GYRO:
+        teller::imu::startGyroCalibration();
+        break;
+
+    case frames::CALIBRATION_ACCEL:
+        return Response::unsupported();
+
+    default:
+        return Response::invalid();
+    }
+
+    if (retval) {
+        return Response::failed(retval);
+    } else {
+        return Response::ok();
+    }
 }
 
 optional<Response> processStoragePacket(const envelope_t& envelope, const uint8_t* payload)

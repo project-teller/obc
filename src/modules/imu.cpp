@@ -8,15 +8,21 @@
 
 #include "modules/edr.hpp"
 #include "modules/imu.h"
+#include "modules/log.h"
 
 using namespace teller::hal;
+using namespace teller::log;
 using namespace teller::math;
 using namespace teller::telem;
 
 static subsystem_status_t status = SUBSYSTEM_STATUS_CRITICAL;
 
 static measurement_3d_t acceleration;
+static measurement_3d_t rawAngularVelocity;
 static measurement_3d_t angularVelocity;
+
+/** Gyro offset used for compensation after calibration */
+static Vector3f gyroOffset;
 
 static teller::edr::FormattedLogRecord<uint32_t, uint8_t, float, float, float, float, float, float>
     logRecord(
@@ -33,6 +39,7 @@ public:
     GyroCalibration()
         : mean()
         , running(false)
+        , startedAt(0)
     {
     }
 
@@ -43,6 +50,7 @@ public:
     {
         mean.reset();
         running = true;
+        startedAt = teller::hal::system::getTimeSinceBootMsec();
     }
 
     /**
@@ -52,26 +60,57 @@ public:
      */
     bool feedMeasurement(const measurement_3d_t& measurement)
     {
-        return true;
+        bool ended;
+
+        mean.add(measurement.value);
+
+        // We need at least 50 samples and at least 1 second of measurement
+        ended = mean.countSamples() >= 50 && (measurement.timestampInMsec - startedAt) >= 1000;
+
+        if (ended) {
+            running = false;
+        }
+
+        return ended;
+    }
+
+    /**
+     * @brief Returns the estimated gyro offset.
+     */
+    void getOffset(Vector3f& result) const
+    {
+        result = mean.get();
+    }
+
+    /**
+     * @brief Returns whether the calibration process is running.
+     */
+    bool isRunning()
+    {
+        return running;
     }
 
 private:
     RunningMean<Vector3f> mean;
     bool running;
+    uint32_t startedAt;
 };
 
-GyroCalibration gyroCalibration;
+static GyroCalibration gyroCalibration;
+static Logger* logger;
 
 namespace teller::imu {
 
 bool init()
 {
     status = SUBSYSTEM_STATUS_CRITICAL;
-    return true;
+    logger = getLogger(MODULE_ID_IMU);
+    return logger != nullptr;
 }
 
 void destroy()
 {
+    logger = nullptr;
     status = SUBSYSTEM_STATUS_CRITICAL;
 }
 
@@ -98,13 +137,31 @@ bool setup()
     return status == SUBSYSTEM_STATUS_OK;
 }
 
+void startGyroCalibration(void)
+{
+    if (logger != nullptr) {
+        logger->info("Starting gyro calibration.");
+    }
+    gyroCalibration.start();
+}
+
 bool update()
 {
-    status = teller::hal::imu::update(acceleration, angularVelocity)
+    status = teller::hal::imu::update(acceleration, rawAngularVelocity)
         ? SUBSYSTEM_STATUS_OK
         : SUBSYSTEM_STATUS_ERROR;
 
+    if (gyroCalibration.isRunning() && gyroCalibration.feedMeasurement(rawAngularVelocity)) {
+        /* Calibration ended, store the offset */
+        gyroCalibration.getOffset(gyroOffset);
+        if (logger != nullptr) {
+            logger->info("Gyro calibrated %f.", gyroOffset.y);
+        }
+    }
+
     /* Apply gyro offset to measurement */
+    angularVelocity.timestampInMsec = rawAngularVelocity.timestampInMsec;
+    angularVelocity.value = rawAngularVelocity.value - gyroOffset;
 
     return status == SUBSYSTEM_STATUS_OK;
 }

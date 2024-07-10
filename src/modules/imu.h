@@ -36,6 +36,11 @@ teller::telem::subsystem_status_t getSubsystemStatus(void);
 bool setup(void);
 
 /**
+ * @brief Starts the calibration of the gyroscope.
+ */
+void startGyroCalibration(void);
+
+/**
  * @brief Updates the IMU measurements.
  *
  * Blocks until a new measurement was received.
