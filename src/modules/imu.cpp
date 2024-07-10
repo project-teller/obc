@@ -1,5 +1,8 @@
 #include <algorithm>
 
+#include "core/math/running_mean.hpp"
+#include "core/math/vector.hpp"
+
 #include "hal/imu.h"
 #include "hal/system.h"
 
@@ -7,9 +10,11 @@
 #include "modules/imu.h"
 
 using namespace teller::hal;
+using namespace teller::math;
 using namespace teller::telem;
 
 static subsystem_status_t status = SUBSYSTEM_STATUS_CRITICAL;
+
 static measurement_3d_t acceleration;
 static measurement_3d_t angularVelocity;
 
@@ -17,6 +22,45 @@ static teller::edr::FormattedLogRecord<uint32_t, uint8_t, float, float, float, f
     logRecord(
         2, "IMU", "TimeMS,I,AccX,AccY,AccZ,GyrX,GyrY,GyrZ",
         "IBffffff", "s#EEEooo", "C-000000");
+
+/**
+ * @brief Class representing the status of the gyro calibration.
+ *
+ */
+class GyroCalibration {
+
+public:
+    GyroCalibration()
+        : mean()
+        , running(false)
+    {
+    }
+
+    /**
+     * @brief Starts or restarts the calibration process of the gyroscope.
+     */
+    void start()
+    {
+        mean.reset();
+        running = true;
+    }
+
+    /**
+     * @brief Feeds a new raw measurement into the calibration process.
+     *
+     * @return Whether the calibration process has ended.
+     */
+    bool feedMeasurement(const measurement_3d_t& measurement)
+    {
+        return true;
+    }
+
+private:
+    RunningMean<Vector3f> mean;
+    bool running;
+};
+
+GyroCalibration gyroCalibration;
 
 namespace teller::imu {
 
@@ -59,6 +103,9 @@ bool update()
     status = teller::hal::imu::update(acceleration, angularVelocity)
         ? SUBSYSTEM_STATUS_OK
         : SUBSYSTEM_STATUS_ERROR;
+
+    /* Apply gyro offset to measurement */
+
     return status == SUBSYSTEM_STATUS_OK;
 }
 
@@ -67,8 +114,8 @@ void log()
     logRecord.write(
         std::max(acceleration.timestampInMsec, angularVelocity.timestampInMsec),
         0, /* first IMU */
-        acceleration.x, acceleration.y, acceleration.z,
-        angularVelocity.x, angularVelocity.y, angularVelocity.z);
+        acceleration.value.x, acceleration.value.y, acceleration.value.z,
+        angularVelocity.value.x, angularVelocity.value.y, angularVelocity.value.z);
 }
 
 }

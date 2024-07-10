@@ -137,20 +137,16 @@ bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
 
     /* TODO(ntamas): lock for atomic modification? */
     acceleration.timestampInMsec = now;
-    rawValue = (buf[1] << 8) + buf[2];
-    acceleration.x = rawValue * ACCEL_SCALE;
-    rawValue = (buf[3] << 8) + buf[4];
-    acceleration.y = rawValue * ACCEL_SCALE;
-    rawValue = (buf[5] << 8) + buf[6];
-    acceleration.z = rawValue * ACCEL_SCALE;
+    acceleration.value.set(
+        ((buf[1] << 8) + buf[2]) * ACCEL_SCALE,
+        ((buf[3] << 8) + buf[4]) * ACCEL_SCALE,
+        ((buf[5] << 8) + buf[6]) * ACCEL_SCALE);
 
     angularVelocity.timestampInMsec = now;
-    rawValue = (buf[7] << 8) + buf[8];
-    angularVelocity.x = rawValue * GYRO_SCALE;
-    rawValue = (buf[9] << 8) + buf[10];
-    angularVelocity.y = rawValue * GYRO_SCALE;
-    rawValue = (buf[11] << 8) + buf[12];
-    angularVelocity.z = rawValue * GYRO_SCALE;
+    angularVelocity.value.set(
+        ((buf[7] << 8) + buf[8]) * GYRO_SCALE,
+        ((buf[9] << 8) + buf[10]) * GYRO_SCALE,
+        ((buf[11] << 8) + buf[12]) * GYRO_SCALE);
 
     return true;
 }

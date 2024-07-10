@@ -34,9 +34,10 @@ bool init()
 {
     /* Generate a random gyro offset to simulate measurement errors that can
      * be compensated for with a calibration procedure */
-    gyroOffset.x = (2 * rng_unif01() - 1) * GYRO_NOISE * 100;
-    gyroOffset.y = (2 * rng_unif01() - 1) * GYRO_NOISE * 100;
-    gyroOffset.z = (2 * rng_unif01() - 1) * GYRO_NOISE * 100;
+    gyroOffset.value.set(
+        (2 * rng_unif01() - 1) * GYRO_NOISE * 100,
+        (2 * rng_unif01() - 1) * GYRO_NOISE * 100,
+        (2 * rng_unif01() - 1) * GYRO_NOISE * 100);
 
     return true;
 }
@@ -60,14 +61,16 @@ bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
     now = system::getTimeSinceBootMsec();
 
     acceleration.timestampInMsec = now;
-    acceleration.x = rng_gauss() * ACCEL_NOISE;
-    acceleration.y = rng_gauss() * ACCEL_NOISE;
-    acceleration.z = -9.81f + rng_gauss() * ACCEL_NOISE;
+    acceleration.value.set(
+        rng_gauss() * ACCEL_NOISE,
+        rng_gauss() * ACCEL_NOISE,
+        -9.81f + rng_gauss() * ACCEL_NOISE);
 
     angularVelocity.timestampInMsec = now;
-    angularVelocity.x = rng_gauss() * GYRO_NOISE + gyroOffset.x;
-    angularVelocity.y = rng_gauss() * GYRO_NOISE + gyroOffset.y;
-    angularVelocity.z = rng_gauss() * GYRO_NOISE + gyroOffset.z;
+    angularVelocity.value.set(
+        rng_gauss() * GYRO_NOISE + gyroOffset.value.x,
+        rng_gauss() * GYRO_NOISE + gyroOffset.value.y,
+        rng_gauss() * GYRO_NOISE + gyroOffset.value.z);
 
     return true;
 }

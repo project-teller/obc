@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <cstdlib>
 
+#include "core/math/vector.hpp"
+
 namespace teller::telem {
 
 /** Length of the header of a telemetry message */
@@ -105,9 +107,7 @@ typedef enum {
  */
 typedef struct {
     uint32_t timestampInMsec;
-    float x;
-    float y;
-    float z;
+    teller::math::Vector3f value;
 } measurement_3d_t;
 
 namespace frames {

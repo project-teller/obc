@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/math/vector.hpp"
 #include "core/telem/generic.h"
 
 namespace teller::telem::frames {
@@ -12,16 +13,8 @@ namespace teller::telem::frames {
  */
 typedef struct {
     std::uint32_t timestampInMsec;
-    struct {
-        float x;
-        float y;
-        float z;
-    } acceleration;
-    struct {
-        float x;
-        float y;
-        float z;
-    } angularVelocity;
+    teller::math::Vector3f acceleration;
+    teller::math::Vector3f angularVelocity;
 } imu_data_t;
 
 /**

@@ -8,8 +8,10 @@ add_executable(
     ${TARGET_NAME}
     core/crc_test.cpp
     core/majority_voter_test.cpp
+    core/running_mean_test.cpp
     core/telem_test.cpp
     core/time_test.cpp
+    core/vector_test.cpp
     hal/posix_board_test.cpp
     hal/posix_gpio_test.cpp
     hal/posix_hal_test.cpp

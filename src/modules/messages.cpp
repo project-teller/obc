@@ -61,15 +61,11 @@ void updateIMUMeasurement(frames::imu_data_t* data)
 
     measurement = teller::imu::getAcceleration();
     data->timestampInMsec = measurement.timestampInMsec;
-    data->acceleration.x = measurement.x;
-    data->acceleration.y = measurement.y;
-    data->acceleration.z = measurement.z;
+    data->acceleration = measurement.value;
 
     measurement = teller::imu::getAngularVelocity();
     data->timestampInMsec = std::max(data->timestampInMsec, measurement.timestampInMsec);
-    data->angularVelocity.x = measurement.x;
-    data->angularVelocity.y = measurement.y;
-    data->angularVelocity.z = measurement.z;
+    data->angularVelocity = measurement.value;
 }
 
 }
