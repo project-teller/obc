@@ -120,7 +120,6 @@ bool setup()
 bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
 {
     std::uint8_t buf[13] = { 0x80 + REG_ACCEL_XOUT_H };
-    std::int16_t rawValue;
     std::uint32_t now;
 
     /* TODO: periodically check configuration registers */
@@ -138,15 +137,15 @@ bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
     /* TODO(ntamas): lock for atomic modification? */
     acceleration.timestampInMsec = now;
     acceleration.value.set(
-        ((buf[1] << 8) + buf[2]) * ACCEL_SCALE,
-        ((buf[3] << 8) + buf[4]) * ACCEL_SCALE,
-        ((buf[5] << 8) + buf[6]) * ACCEL_SCALE);
+        static_cast<std::int8_t>((buf[1] << 8) + buf[2]) * ACCEL_SCALE,
+        static_cast<std::int8_t>((buf[3] << 8) + buf[4]) * ACCEL_SCALE,
+        static_cast<std::int8_t>((buf[5] << 8) + buf[6]) * ACCEL_SCALE);
 
     angularVelocity.timestampInMsec = now;
     angularVelocity.value.set(
-        ((buf[7] << 8) + buf[8]) * GYRO_SCALE,
-        ((buf[9] << 8) + buf[10]) * GYRO_SCALE,
-        ((buf[11] << 8) + buf[12]) * GYRO_SCALE);
+        static_cast<std::int8_t>((buf[7] << 8) + buf[8]) * GYRO_SCALE,
+        static_cast<std::int8_t>((buf[9] << 8) + buf[10]) * GYRO_SCALE,
+        static_cast<std::int8_t>((buf[11] << 8) + buf[12]) * GYRO_SCALE);
 
     return true;
 }

@@ -155,7 +155,7 @@ bool update()
         /* Calibration ended, store the offset */
         gyroCalibration.getOffset(gyroOffset);
         if (logger != nullptr) {
-            logger->info("Gyro calibrated %f.", gyroOffset.y);
+            logger->info("Gyro calibrated", gyroOffset.y);
         }
     }
 
