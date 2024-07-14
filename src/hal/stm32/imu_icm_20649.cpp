@@ -11,7 +11,7 @@ using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::telem;
 
-static const spi::address_t imu_address = {
+static const spi::address_t address = {
     .bus = 0,
     .device = 0
 };
@@ -129,7 +129,7 @@ bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
 
     /* Read accelerometer and gyro measurements */
     now = system::getTimeSinceBootMsec();
-    if (!spi::transfer(imu_address, buf, sizeof(buf))) {
+    if (!spi::transfer(address, buf, sizeof(buf))) {
         logger->error("SPI transfer failed");
         return false;
     }
@@ -154,7 +154,7 @@ bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
 static bool readRegisterByte(uint8_t index, uint8_t& result)
 {
     uint8_t buf[] = { READ_REGISTER(index), 0x00 };
-    if (!spi::transfer(imu_address, buf, sizeof(buf))) {
+    if (!spi::transfer(address, buf, sizeof(buf))) {
         return false;
     }
     result = buf[1];
@@ -164,7 +164,7 @@ static bool readRegisterByte(uint8_t index, uint8_t& result)
 static bool writeRegisterByte(uint8_t index, uint8_t value, bool verify)
 {
     uint8_t buf[] = { WRITE_REGISTER(index), value };
-    if (!spi::transfer(imu_address, buf, sizeof(buf))) {
+    if (!spi::transfer(address, buf, sizeof(buf))) {
         return false;
     }
 
