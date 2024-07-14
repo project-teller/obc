@@ -7,6 +7,8 @@
 
 using namespace teller::hal::utils;
 
+#define SPI_TIMEOUT_MSEC 500
+
 static const uint32_t EVT_DONE = 0x00000001U;
 
 #define NUM_GPIO_PINS_PER_BUS 3
@@ -93,6 +95,8 @@ static spi_bus_state_t spi_state[NUM_SPI_BUSES];
 
 namespace teller::hal::spi {
 
+const transfer_t NO_MORE_TRANSFERS = { 0, 0, 0 };
+
 bool init()
 {
     for (size_t i = 0; i < NUM_SPI_BUSES; i++) {
@@ -140,9 +144,79 @@ bool transfer(address_t address, std::uint8_t* txBuf, std::uint8_t* rxBuf, std::
         // Simplified implementation for the initialization where we cannot
         // use RTOS primitives yet
         HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
-        if (HAL_SPI_TransmitReceive(&pState->handle, txBuf, rxBuf, size, 500) == HAL_OK) {
+        if (HAL_SPI_TransmitReceive(&pState->handle, txBuf, rxBuf, size, SPI_TIMEOUT_MSEC) == HAL_OK) {
             success = true;
         }
+        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+    }
+
+    return success;
+}
+
+bool transfer(address_t address, const transfer_t* transfers, std::uint16_t count)
+{
+    const transfer_t* transfer;
+    const spi_bus_config_t* pCfg;
+    spi_bus_state_t* pState;
+    bool success = false;
+
+    if (!is_spi_address_valid(address)) {
+        return false;
+    }
+
+    pCfg = &spi_config[address.bus];
+    pState = &spi_state[address.bus];
+
+    if (count == 0) {
+        count = std::numeric_limits<std::uint16_t>::max();
+    }
+
+    success = true;
+    if (osKernelGetState() == osKernelRunning) {
+        // RTOS kernel is running so we can use event flags
+        lock_guard lock(pState->in_use);
+
+        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+
+        transfer = transfers;
+        while (count > 0 && transfer->tx_buf != nullptr) {
+            count--;
+
+            if (HAL_SPI_TransmitReceive_IT(
+                    &pState->handle, transfer->tx_buf,
+                    transfer->rx_buf ? transfer->rx_buf : transfer->tx_buf,
+                    transfer->size)
+                != HAL_OK) {
+                success = false;
+                break;
+            }
+            osEventFlagsWait(pState->event, EVT_DONE, osFlagsWaitAny, osWaitForever);
+
+            transfer++;
+        }
+
+        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+    } else {
+        // Simplified implementation for the initialization where we cannot
+        // use RTOS primitives yet
+        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+
+        transfer = transfers;
+        while (count > 0 && transfer->tx_buf != nullptr) {
+            count--;
+
+            if (HAL_SPI_TransmitReceive(
+                    &pState->handle, transfer->tx_buf,
+                    transfer->rx_buf ? transfer->rx_buf : transfer->tx_buf,
+                    transfer->size, SPI_TIMEOUT_MSEC)
+                != HAL_OK) {
+                success = false;
+                break;
+            }
+
+            transfer++;
+        }
+
         HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
     }
 
