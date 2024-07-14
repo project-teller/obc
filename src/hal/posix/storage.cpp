@@ -50,7 +50,7 @@ static lfs_filebd_t filebds[NUM_STORAGE_AREAS];
 /**
  * @brief Filesystem configuration objects for the simulated storage devices.
  */
-static std::shared_ptr<FilesystemConfig> cfg[NUM_STORAGE_AREAS];
+static std::unique_ptr<FilesystemConfig> cfg[NUM_STORAGE_AREAS];
 
 /**
  * @brief Filenames of the simulated storage devices.
@@ -114,7 +114,7 @@ bool initArea(storage_area_t area_to_init)
     bool result;
 
     try {
-        auto new_config = std::make_shared<FilesystemConfig>(
+        auto new_config = std::make_unique<FilesystemConfig>(
             lfs_filebd_read,
             lfs_filebd_prog,
             lfs_filebd_erase,
@@ -135,7 +135,7 @@ bool initArea(storage_area_t area_to_init)
             == LFS_ERR_OK;
 
         if (result) {
-            cfg[area_to_init] = new_config;
+            cfg[area_to_init] = std::move(new_config);
         }
         /* LCOV_EXCL_START */
     } catch (std::bad_alloc&) {

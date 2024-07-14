@@ -6,10 +6,12 @@ set(HAL_LIBRARIES lfs)
 if(TARGET_MCU STREQUAL "POSIX")
     list(APPEND HAL_SOURCES
         posix/board.cpp
+        posix/flashmem.cpp
         posix/gpio.cpp
         posix/imu.cpp
         posix/led.cpp
         posix/rtc.cpp
+        posix/sdcard.cpp
         posix/spi.cpp
         posix/storage.cpp
         posix/system.cpp
@@ -20,10 +22,12 @@ if(TARGET_MCU STREQUAL "POSIX")
 else()
     list(APPEND HAL_SOURCES
         stm32/board.cpp
+        stm32/flashmem.cpp
         stm32/gpio.cpp
         stm32/imu.cpp
         stm32/led.cpp
         stm32/rtc.cpp
+        stm32/sdcard.cpp
         stm32/spi.cpp
         stm32/storage.cpp
         stm32/system.cpp

@@ -1,10 +1,12 @@
 #include "hal.h"
 
 #include "board.h"
+#include "flashmem.h"
 #include "gpio.h"
 #include "imu.h"
 #include "led.h"
 #include "rtc.h"
+#include "sdcard.h"
 #include "spi.h"
 #include "storage.h"
 #include "system.h"
@@ -20,13 +22,22 @@ bool teller::hal::init()
     system::init();
     led::init();
 
+    /* Low-level stuff */
     success &= board::init();
     success &= watchdog::init();
     success &= rtc::init();
+
+    /* I/O devices and buses */
     success &= gpio::init();
     success &= spi::init();
     success &= uart::init();
+
+    /* Storage devices */
+    success &= flashmem::init(); /* depends on SPI */
+    success &= sdcard::init(); /* depends on SPI */
     success &= storage::init();
+
+    /* Sensors */
     success &= imu::init(); /* depends on SPI */
 
     return success;
