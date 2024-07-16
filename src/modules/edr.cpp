@@ -35,23 +35,31 @@ void destroy()
  * @brief Static array holding the experiment recorder instances, one for each
  * storage area.
  */
-ExperimentDataRecorder recorders[NUM_STORAGE_AREAS];
+static ExperimentDataRecorder recorders[NUM_STORAGE_AREAS];
+
+/**
+ * @brief Sentinel element used to stop a running experiment data recorder.
+ */
+static const LogRequest stopRecorderRequest = { 0 };
 
 /**
  * @brief List of callbacks to be called when a log is opened.
  */
-std::list<event_callback_t*> callbacks;
+static std::list<event_callback_t*> callbacks;
 
-[[noreturn]] void manage(const char* name, storage_area_t area)
+[[noreturn]] void manage(storage_area_t area)
 {
     teller::log::Logger* log = teller::log::getLogger(MODULE_ID_EDR);
+    const char* name = getStorageAreaName(area);
+
+    log->info("%s: started", name);
 
     for (;;) {
         littlefs::Filesystem* fs;
         int retval;
 
         fs = storage::waitUntilMounted(area);
-        log->info("%s mounted", name);
+        log->info("%s: mounted", name);
 
         try {
             recorders[area].run(fs, area);
@@ -61,11 +69,11 @@ std::list<event_callback_t*> callbacks;
 
         retval = storage::unmountStorage(area);
         if (retval) {
-            log->error("%s unmount failed, code = %d", name, retval);
+            log->error("%s: unmount failed, code = %d", name, retval);
             storage::waitUntilUnmounted(area);
         }
 
-        log->warning("%s unmounted, waiting for remount", name);
+        log->warning("%s: unmounted, waiting for remount", name);
     }
 }
 
@@ -73,6 +81,16 @@ bool registerCallback(event_t event, event_callback_t* callback)
 {
     if (event == EVENT_LOG_OPENED) {
         callbacks.push_back(callback);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+bool requestStopAndUnmount(teller::telem::storage_area_t area)
+{
+    if (recorders[area].running()) {
+        sendRequest(stopRecorderRequest, area);
         return true;
     } else {
         return false;
@@ -233,6 +251,7 @@ void ExperimentDataRecorder::run(littlefs::Filesystem* fs, storage_area_t area)
         this->_fs = nullptr;
         throw;
     }
+    this->_fs = nullptr;
 }
 
 void ExperimentDataRecorder::stop()
@@ -276,6 +295,8 @@ size_t ExperimentDataRecorder::_getLastLogIndex()
     return index < 0 ? 0 : index;
 }
 
+#define IS_END_OF_QUEUE(request) (request.format == nullptr)
+
 void ExperimentDataRecorder::_run(storage_area_t area)
 {
     ssize_t logIndex = _getLastLogIndex();
@@ -302,10 +323,12 @@ void ExperimentDataRecorder::_run(storage_area_t area)
     }
 
     /* Enter the main loop and start processing requests */
-    while (_queue.receive(request)) {
+    while (_queue.receive(request) && !IS_END_OF_QUEUE(request)) {
         writer.write(request);
     }
 }
+
+#undef IS_END_OF_QUEUE
 
 /**
  * @brief Updates the index of the last log file.

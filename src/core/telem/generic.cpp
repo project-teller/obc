@@ -6,11 +6,26 @@
 using namespace std;
 using namespace teller::telem;
 
+static const char* storageAreaNames[] = {
+    "unknownfs",
+    "flashfs",
+    "sdfs"
+};
+
 namespace teller::telem {
 
 uint8_t getMessageSizeForPayloadLength(uint8_t payload_length)
 {
     return payload_length <= MAX_PAYLOAD_LENGTH ? payload_length + 8 : 0;
+}
+
+const char* getStorageAreaName(storage_area_t area)
+{
+    if (area >= NUM_STORAGE_AREAS) {
+        area = STORAGE_AREA_UNKNOWN;
+    }
+
+    return storageAreaNames[area];
 }
 
 uint8_t serialize(

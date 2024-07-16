@@ -5,11 +5,14 @@
 #include "hal/event_flags.hpp"
 #include "hal/storage.h"
 #include "hal/system.h"
+#include "modules/log.h"
 #include "modules/storage.h"
 
 using namespace teller::hal::storage;
 using namespace teller::hal::system;
 using namespace teller::telem;
+
+static teller::log::Logger* logger = nullptr;
 
 /**
  * @brief Tracks the state of a single filesystem in the storage module.
@@ -28,8 +31,9 @@ class FilesystemState {
     };
 
 public:
-    FilesystemState(littlefs::FilesystemConfig& cfg)
-        : _fs(cfg)
+    FilesystemState(storage_area_t area, littlefs::FilesystemConfig& cfg)
+        : _area(area)
+        , _fs(cfg)
         , _flags(NO_FLAGS)
     {
     }
@@ -58,6 +62,7 @@ public:
             return false;
         } else {
             _flags |= FLAG_MOUNTED;
+            _events.set(EVT_MOUNTED);
             return true;
         }
     }
@@ -78,6 +83,7 @@ public:
             return false;
         } else {
             _flags &= ~FLAG_MOUNTED;
+            _events.set(EVT_UNMOUNTED);
             return true;
         }
     }
@@ -92,10 +98,27 @@ public:
      *
      * Filesystems with errors are unmounted and no attempts will be made to
      * mount them again until the error flag is cleared.
+     *
+     * @param  error  a POSIX error code to report in the log
+     * @return the same error code as the one that was received
      */
-    void markErrored()
+    int markErrored(int error = 0)
     {
-        _flags |= FLAG_ERRORED;
+        if (!(_flags & FLAG_ERRORED)) {
+            if (logger) {
+                if (error) {
+                    logger->error(
+                        "%s: %s (errno=%d)", getStorageAreaName(_area),
+                        strerror(error), error);
+                } else {
+                    logger->error("%s: marked as errored", getStorageAreaName(_area));
+                }
+            }
+
+            _flags |= FLAG_ERRORED;
+        }
+
+        return error;
     }
 
     /**
@@ -142,6 +165,7 @@ public:
     }
 
 private:
+    storage_area_t _area;
     littlefs::Filesystem _fs;
     uint8_t _flags;
     teller::hal::EventFlags _events;
@@ -167,7 +191,7 @@ public:
             storage_area_t area = static_cast<storage_area_t>(i);
             auto cfg = getFilesystemConfig(area);
             if (cfg) {
-                _filesystems[i] = std::make_shared<FilesystemState>(*cfg);
+                _filesystems[i] = std::make_shared<FilesystemState>(area, *cfg);
             } else {
                 _filesystems[i].reset();
             }
@@ -307,7 +331,7 @@ private:
     std::shared_ptr<FilesystemState> _filesystems[NUM_STORAGE_AREAS];
 };
 
-Filesystems fs;
+static Filesystems fs;
 
 namespace teller::storage {
 
@@ -316,12 +340,21 @@ bool init(InitMode mode)
     std::optional<littlefs::Error> err;
     bool success;
 
-    if (!fs.init()) {
+    logger = teller::log::getLogger(MODULE_ID_EDR);
+    if (!logger) {
         return false;
     }
 
+    if (!fs.init()) {
+        logger = nullptr;
+        return false;
+    }
+
+    /* destroy() is safe to be called from here */
+
     if (mode == INIT_MODE_FORMAT) {
         if (!fs.formatAll()) {
+            destroy();
             return false;
         }
     }
@@ -342,6 +375,7 @@ bool init(InitMode mode)
 void destroy()
 {
     fs.destroy();
+    logger = nullptr;
 }
 
 subsystem_status_t getSubsystemStatus()
@@ -374,8 +408,7 @@ int eraseStorage(storage_area_t area)
 
     auto error_code = _filesystem->format();
     if (error_code) {
-        _filesystem->markErrored();
-        return convertLittleFSErrorCode(error_code);
+        return _filesystem->markErrored(convertLittleFSErrorCode(error_code));
     } else {
         return 0;
     }
@@ -387,11 +420,11 @@ bool isStorageMounted(storage_area_t area)
     return _filesystem && _filesystem->isMounted();
 }
 
-void markStorageAsErrored(teller::telem::storage_area_t area)
+void markStorageAsErrored(teller::telem::storage_area_t area, int error)
 {
     auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
     if (_filesystem) {
-        _filesystem->markErrored();
+        _filesystem->markErrored(error);
     }
 }
 
@@ -403,8 +436,7 @@ int mountStorage(storage_area_t area)
     }
 
     if (!_filesystem->ensureMounted()) {
-        _filesystem->markErrored();
-        return EIO;
+        return _filesystem->markErrored(EIO);
     }
 
     return 0;
@@ -418,8 +450,7 @@ int unmountStorage(storage_area_t area)
     }
 
     if (!_filesystem->ensureUnmounted()) {
-        _filesystem->markErrored();
-        return EIO;
+        return _filesystem->markErrored(EIO);
     }
 
     return 0;

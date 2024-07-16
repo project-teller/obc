@@ -2,6 +2,7 @@
 add_library(
     obc-modules
     cmd.cpp
+    debug.cpp
     edr.cpp
     errors.cpp
     imu.cpp

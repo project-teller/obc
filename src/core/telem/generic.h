@@ -148,6 +148,11 @@ namespace frames {
 std::uint8_t getMessageSizeForPayloadLength(std::uint8_t payload_length);
 
 /**
+ * @brief Returns the human-readable name of a storage area.
+ */
+const char* getStorageAreaName(storage_area_t area);
+
+/**
  * @brief Serializes a telemetry message into a pre-allocated buffer.
  *
  * @param buffer  the buffer to write the serialized message into

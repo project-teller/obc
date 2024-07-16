@@ -7,6 +7,7 @@
 #include "core/telem/storage.h"
 #include "hal/system.h"
 #include "modules/cmd.h"
+#include "modules/edr.hpp"
 #include "modules/imu.h"
 #include "modules/log.h"
 #include "modules/storage.h"
@@ -213,7 +214,11 @@ optional<Response> processStoragePacket(const envelope_t& envelope, const uint8_
         break;
 
     case frames::STORAGE_COMMAND_UNMOUNT:
-        retval = teller::storage::unmountStorage(data.area);
+        /* We cannot unmount the storage directly because there are
+         * ExperimentDataRecorder instances logging into the area; we need to
+         * ask the EDR to stop recording first, which will in turn unmount
+         * the storage in the EDR task */
+        retval = teller::edr::requestStopAndUnmount(data.area) ? 0 : EIO;
         break;
 
     case frames::STORAGE_COMMAND_ERASE:

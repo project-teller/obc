@@ -5,6 +5,7 @@
 #include "hal/system.h"
 
 #include "modules/cmd.h"
+#include "modules/debug.h"
 #include "modules/edr.hpp"
 #include "modules/errors.h"
 #include "modules/imu.h"
@@ -70,7 +71,7 @@ static const task_definition_t tasks[] = {
     { .func = serialTask, .name = "serial", .priority = HIGH, .stack_size = 1024 },
     { .func = supervisorTask, .name = "supervisor", .priority = LOW },
     { .func = telemetryTask, .name = "telem", .priority = NORMAL, .stack_size = 1024 },
-    { .func = commandTask, .name = "cmd", .priority = LOW, .stack_size = 1024, .context = &cmd_task_args },
+    { .func = commandTask, .name = "cmd", .priority = LOW, .stack_size = 2048, .context = &cmd_task_args },
     { .func = flashMemoryTask, .name = "flashmem", .priority = HIGH, .stack_size = 1024 },
     { .func = sdCardTask, .name = "sdcard", .priority = HIGH, .stack_size = 1024 },
     { .func = imuTask, .name = "imu", .priority = NORMAL, .stack_size = 1024 },
@@ -95,6 +96,11 @@ void bootSystem(void)
     bool inited;
 
     initialize();
+
+    /* Start with initializing the debugging module. This is guaranteed to
+     * succeed and it will be needed later for any sort of crashes; in
+     * particular, stack overflows are logged there */
+    teller::debug::init();
 
     inited = teller::hal::init();
 
@@ -229,6 +235,8 @@ static void runScheduler()
 {
     std::cerr << " done." << std::endl;
 
+    teller::debug::reportErrorsDuringPreviousBoot();
+
     for (;;) {
         teller::hal::system::delayMsec(60000);
     }
@@ -280,6 +288,9 @@ static bool startTasks()
 static void runScheduler()
 {
     osKernelStart();
+
+    teller::debug::reportErrorsDuringPreviousBoot();
+
     for (;;)
         ;
 }
@@ -321,6 +332,8 @@ extern "C" void vApplicationMallocFailedHook(void)
 {
     /* TODO: store the event in a .noinit variable so we can report it at next
      * boot. Maybe also auto-reset? */
+
+    /* https://atadiat.com/en/e-how-to-preserve-a-variable-in-ram-between-software-resets/ */
     teller::hal::notifyFatalError();
 
     taskDISABLE_INTERRUPTS();
@@ -333,14 +346,18 @@ extern "C" void vApplicationStackOverflowHook(TaskHandle_t pxTask, char* pcTaskN
     (void)pcTaskName;
     (void)pxTask;
 
-    /* TODO: store the event in a .noinit variable so we can report it at next
-     * boot. Maybe also auto-reset? */
+    /* Store the name of the task that caused a stack overflow so we can
+     * report it at the next boot */
+    strncpy(teller::debug::getDebugInfo()->task, pcTaskName, 16);
+    teller::debug::getDebugInfo()->task[15] = 0;
 
     teller::hal::notifyFatalError();
 
     taskDISABLE_INTERRUPTS();
     for (;;)
         ;
+
+    /* The watchdog will take care of resetting the board */
 }
 
 #endif

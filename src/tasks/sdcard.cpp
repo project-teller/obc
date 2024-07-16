@@ -7,5 +7,5 @@
 
 [[noreturn]] void teller::tasks::sdCardTask(void* arg)
 {
-    teller::edr::manage("sdfs", teller::telem::STORAGE_AREA_SD_CARD);
+    teller::edr::manage(teller::telem::STORAGE_AREA_SD_CARD);
 }

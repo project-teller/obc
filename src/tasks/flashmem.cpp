@@ -3,9 +3,11 @@
 #include "tasks/flashmem.h"
 
 #include "core/telem/generic.h"
+#include "hal/flashmem.h"
 #include "modules/edr.hpp"
 
 [[noreturn]] void teller::tasks::flashMemoryTask(void* arg)
 {
-    teller::edr::manage("flashfs", teller::telem::STORAGE_AREA_FLASH_MEMORY);
+    teller::hal::flashmem::setup();
+    teller::edr::manage(teller::telem::STORAGE_AREA_FLASH_MEMORY);
 }

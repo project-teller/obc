@@ -1,16 +1,17 @@
 #include "hal/storage.h"
+#include "hal/flashmem.h"
 
 #include "stm32_hal.h"
 #include <littlefs-cpp.h>
 
 using namespace littlefs;
-using namespace teller::hal::storage;
+using namespace teller::hal;
 using namespace teller::telem;
 
 /**
  * @brief Filesystem configuration objects for the simulated storage devices.
  */
-static std::shared_ptr<FilesystemConfig> cfg[NUM_STORAGE_AREAS];
+static std::unique_ptr<FilesystemConfig> cfg[NUM_STORAGE_AREAS];
 
 static bool initArea(storage_area_t area_to_init);
 static void destroyArea(storage_area_t area_to_destroy);
@@ -39,7 +40,7 @@ void destroy()
 
 littlefs::FilesystemConfig* getFilesystemConfig(storage_area_t area)
 {
-    return nullptr;
+    return cfg[area].get();
 }
 
 }
@@ -48,33 +49,14 @@ bool initArea(storage_area_t area_to_init)
 {
     bool result = false;
 
-    if (area_to_init != STORAGE_AREA_FLASH_MEMORY) {
-        return false;
-    }
-
-    result = true;
-
-    /*
     try {
-        auto new_config = std::make_shared<FilesystemConfig>(
-            lfs_filebd_read,
-            lfs_filebd_prog,
-            lfs_filebd_erase,
-            lfs_filebd_sync,
-            filebd_configs[area_to_init].read_size,
-            filebd_configs[area_to_init].prog_size,
-            filebd_configs[area_to_init].erase_size,
-            filebd_configs[area_to_init].erase_count,
-            500,
-            filebd_configs[area_to_init].read_size,
-            filebd_configs[area_to_init].read_size);
-
-        new_config->raw_cfg().context = &filebds[area_to_init];
-        cfg[area_to_init] = new_config;
+        if (area_to_init == STORAGE_AREA_FLASH_MEMORY) {
+            cfg[area_to_init] = flashmem::createFilesystemConfiguration();
+            result = true;
+        }
     } catch (std::bad_alloc&) {
-        result = false;
+        /* nothing to do */
     }
-    */
 
     return result;
 }

@@ -50,15 +50,29 @@ void destroy(void);
  * filesystem is unmounted and the function waits until the filesystem is mounted
  * again externally, then resumes logging to the area.
  *
- * @param name  name of the storage area, used for logging
  * @param area  the storage area to manage
  */
-[[noreturn]] void manage(const char* name, teller::telem::storage_area_t area);
+[[noreturn]] void manage(teller::telem::storage_area_t area);
 
 /**
  * @brief Registers a new callback to call when a log file is opened.
  */
 [[nodiscard]] bool registerCallback(event_t event, event_callback_t* callback);
+
+/**
+ * @brief Requests the experiment data recorder corresponding to the given area
+ * to be stopped.
+ *
+ * This function adds a sentinel LogRequest to the end of the request queue of
+ * the experiment data recorder instance corresponding to the given storage
+ * area. When the sentinel request is reached, the request loop of the EDR will
+ * exit and the EDR task will in turn unmount the storage area.
+ *
+ * @param area  the storage area to unmount
+ * @return whether the unmount request was posted successfully; false if the
+ *         area was not mounted when the function was called
+ */
+bool requestStopAndUnmount(teller::telem::storage_area_t area);
 
 /**
  * @brief Sends a new request to all attached experiment data recorder instances.
