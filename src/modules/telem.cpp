@@ -88,7 +88,14 @@ bool init()
 
 void destroy()
 {
-    out_queue.clear();
+    message_t message;
+
+    while (out_queue.receive(message)) {
+        if (message.data != nullptr) {
+            free(message.data);
+        }
+    }
+
     seq_no = 0;
     telemetry_channel_mask = 0;
 }
