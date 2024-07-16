@@ -48,7 +48,7 @@ bool isStorageMounted(teller::telem::storage_area_t area);
 /**
  * @brief Marks a storage area as having an error.
  */
-void markStorageAsErrored(teller::telem::storage_area_t area);
+void markStorageAsErrored(teller::telem::storage_area_t area, int error = 0);
 
 /**
  * @brief Mounts a storage area in the storage subsystem.
