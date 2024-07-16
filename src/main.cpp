@@ -325,10 +325,14 @@ extern "C" void vApplicationIdleHook(void)
 
 extern "C" void vApplicationMallocFailedHook(void)
 {
-    /* TODO: store the event in a .noinit variable so we can report it at next
-     * boot. Maybe also auto-reset? */
+    char* pcTaskName = pcTaskGetName(nullptr);
 
-    /* https://atadiat.com/en/e-how-to-preserve-a-variable-in-ram-between-software-resets/ */
+    /* Store the name of the current task that caused a malloc failed event
+     * so we can report it at the next boot */
+    teller::debug::getDebugInfo()->errors |= teller::debug::ERROR_MALLOC_FAILED;
+    strncpy(teller::debug::getDebugInfo()->task, pcTaskName, 16);
+    teller::debug::getDebugInfo()->task[15] = 0;
+
     teller::hal::notifyFatalError();
 
     taskDISABLE_INTERRUPTS();
@@ -343,8 +347,8 @@ extern "C" void vApplicationStackOverflowHook(TaskHandle_t pxTask, char* pcTaskN
 
     /* Store the name of the task that caused a stack overflow so we can
      * report it at the next boot */
-    strncpy(teller::debug::getDebugInfo()->task, pcTaskName, 16);
     teller::debug::getDebugInfo()->errors |= teller::debug::ERROR_STACK_OVERFLOW;
+    strncpy(teller::debug::getDebugInfo()->task, pcTaskName, 16);
     teller::debug::getDebugInfo()->task[15] = 0;
 
     teller::hal::notifyFatalError();

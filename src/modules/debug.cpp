@@ -55,7 +55,9 @@ void reportErrorsDuringPreviousBoot(void)
     Logger* logger = getLogger(MODULE_ID_GENERIC);
 
     if (errors & ERROR_STACK_OVERFLOW) {
-        logger->error("Stack overflow in task: %s", debug_info.task);
+        logger->error("%s: stack overflow", debug_info.task);
+    } else if (errors & ERROR_MALLOC_FAILED) {
+        logger->error("%s: malloc failed", debug_info.task);
     }
 }
 
