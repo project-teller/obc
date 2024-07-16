@@ -235,8 +235,6 @@ static void runScheduler()
 {
     std::cerr << " done." << std::endl;
 
-    teller::debug::reportErrorsDuringPreviousBoot();
-
     for (;;) {
         teller::hal::system::delayMsec(60000);
     }
@@ -288,9 +286,6 @@ static bool startTasks()
 static void runScheduler()
 {
     osKernelStart();
-
-    teller::debug::reportErrorsDuringPreviousBoot();
-
     for (;;)
         ;
 }
@@ -349,6 +344,7 @@ extern "C" void vApplicationStackOverflowHook(TaskHandle_t pxTask, char* pcTaskN
     /* Store the name of the task that caused a stack overflow so we can
      * report it at the next boot */
     strncpy(teller::debug::getDebugInfo()->task, pcTaskName, 16);
+    teller::debug::getDebugInfo()->errors |= teller::debug::ERROR_STACK_OVERFLOW;
     teller::debug::getDebugInfo()->task[15] = 0;
 
     teller::hal::notifyFatalError();

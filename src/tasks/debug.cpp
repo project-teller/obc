@@ -1,17 +1,21 @@
 #include "tasks/debug.h"
 
 #include "hal/uart.h"
+#include "modules/debug.h"
 #include "modules/mode.h"
 #include "modules/telem.h"
 
 #include <cstdio>
 
+using namespace teller::debug;
 using namespace teller::hal::uart;
 using namespace teller::mode;
 using namespace teller::telem;
 
 [[noreturn]] void teller::tasks::debugTask(void* arg)
 {
+    reportErrorsDuringPreviousBoot();
+
     while (true) {
         waitUntilConnected(DEBUG);
         notifyPossibleModeChange(MODE_CHANGE_REASON_DEBUG_UART);
