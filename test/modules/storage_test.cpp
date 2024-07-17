@@ -4,6 +4,7 @@
 #include "hal/posix/storage_debug.h"
 #include "hal/storage.h"
 #include "modules/storage.h"
+#include "modules/telem.h"
 
 using namespace teller;
 
@@ -11,6 +12,7 @@ class StorageTest : public testing::Test {
 protected:
     void SetUp() override
     {
+        telem::init();
         hal::storage::removeAllFiles();
         ASSERT_TRUE(hal::storage::init());
         ASSERT_TRUE(storage::init(/* format = */ storage::INIT_MODE_FORMAT));
@@ -21,6 +23,7 @@ protected:
         storage::destroy();
         hal::storage::destroy();
         hal::storage::removeAllFiles();
+        telem::destroy();
     }
 };
 
