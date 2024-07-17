@@ -236,10 +236,12 @@ TEST(TelemetryTest, storageCommandFrameEncoding)
 {
     frames::storage_command_data_t message = {
         .area = STORAGE_AREA_SD_CARD,
-        .command = frames::STORAGE_COMMAND_ERASE
+        .command = frames::STORAGE_COMMAND_READ,
+        .offset = 1234,
+        .length = 5678,
     };
     uint8_t encoded[MAX_MESSAGE_LENGTH];
-    uint8_t expectedBytes[] = { 0x23 };
+    uint8_t expectedBytes[] = { 0x24, 0xd2, 0x04, 0x00, 0x00, 0x2e, 0x16 };
     frames::storage_command_data_t decoded;
 
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeStorageCommandFrame(&message, encoded));
@@ -249,6 +251,19 @@ TEST(TelemetryTest, storageCommandFrameEncoding)
 
     EXPECT_EQ(decoded.area, message.area);
     EXPECT_EQ(decoded.command, message.command);
+    EXPECT_EQ(decoded.offset, message.offset);
+    EXPECT_EQ(decoded.length, message.length);
+
+    message.length = 8192;
+    expectedBytes[5] = expectedBytes[6] = 0;
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeStorageCommandFrame(&message, encoded));
+    EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
+    frames::decodeStorageCommandFrame(encoded, &decoded);
+
+    EXPECT_EQ(decoded.area, message.area);
+    EXPECT_EQ(decoded.command, message.command);
+    EXPECT_EQ(decoded.offset, message.offset);
+    EXPECT_EQ(decoded.length, message.length);
 
     encoded[0] = 0xff;
     frames::decodeStorageCommandFrame(encoded, &decoded);

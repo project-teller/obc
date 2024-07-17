@@ -9,6 +9,7 @@ typedef enum {
     STORAGE_COMMAND_MOUNT,
     STORAGE_COMMAND_UNMOUNT,
     STORAGE_COMMAND_ERASE,
+    STORAGE_COMMAND_READ,
     NUM_STORAGE_COMMANDS,
 } storage_command_t;
 
@@ -22,6 +23,12 @@ typedef struct {
 
     /** The command to execute */
     storage_command_t command;
+
+    /** The offset for read requests */
+    uint32_t offset;
+
+    /** The length for read requests */
+    uint16_t length;
 } storage_command_data_t;
 
 /**

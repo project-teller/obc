@@ -90,9 +90,8 @@ void destroy()
 {
     message_t message;
 
-    out_queue.close();
-
-    while (out_queue.receive(message)) {
+    while (!out_queue.empty()) {
+        out_queue.receive(message);
         if (message.data != nullptr) {
             free(message.data);
         }

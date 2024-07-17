@@ -12,7 +12,7 @@ class StorageTest : public testing::Test {
 protected:
     void SetUp() override
     {
-        telem::init();
+        ASSERT_TRUE(telem::init());
         hal::storage::removeAllFiles();
         ASSERT_TRUE(hal::storage::init());
         ASSERT_TRUE(storage::init(/* format = */ storage::INIT_MODE_FORMAT));

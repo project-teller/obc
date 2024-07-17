@@ -3,6 +3,8 @@
 using namespace std;
 using namespace teller::telem;
 
+#define MAX_READ_LENGTH 8192
+
 namespace teller::telem::frames {
 
 /**
@@ -13,6 +15,8 @@ namespace teller::telem::frames {
  */
 typedef struct __attribute__((packed)) {
     uint8_t area_and_command;
+    uint32_t offset;
+    uint16_t length;
 } storage_command_frame_t;
 
 uint8_t encodeStorageCommandFrame(
@@ -21,6 +25,8 @@ uint8_t encodeStorageCommandFrame(
     auto frame = reinterpret_cast<storage_command_frame_t*>(encoded);
 
     frame->area_and_command = (data->area << 4) | (data->command & 0x0F);
+    frame->offset = data->offset;
+    frame->length = data->length == MAX_READ_LENGTH ? 0 : data->length;
 
     return sizeof(storage_command_frame_t);
 }
@@ -37,6 +43,8 @@ void decodeStorageCommandFrame(const uint8_t* encoded, storage_command_data_t* d
     decoded->command = command < NUM_STORAGE_COMMANDS
         ? static_cast<storage_command_t>(command)
         : STORAGE_COMMAND_NOP;
+    decoded->offset = frame->offset;
+    decoded->length = frame->length ? frame->length : MAX_READ_LENGTH;
 }
 
 }
