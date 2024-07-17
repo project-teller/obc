@@ -1,3 +1,5 @@
+#include <cassert>
+
 #include "config.h"
 #include "hal/flashmem.h"
 #include "hal/spi.h"
@@ -23,6 +25,7 @@ static const spi::address_t address = {
 #define SECTORS_IN_BLOCK (BLOCK_SIZE_IN_KB / SECTOR_SIZE_IN_KB)
 
 /* Commands in instruction set 1 */
+#define CMD_INVALID 0x00
 #define CMD_PAGE_PROGRAM 0x02
 #define CMD_READ_DATA 0x03
 #define CMD_WRITE_DISABLE 0x04
@@ -72,10 +75,13 @@ static const flashmem_w25qxx_cfg_t known_devices[] = {
 
 static bool eraseSector(uint32_t sector);
 static const flashmem_w25qxx_cfg_t* identify(void);
+static bool isWriteEnabled(void);
 static bool readData(uint32_t offset, uint8_t* buf, uint16_t length);
 static uint32_t readJEDECId(void);
+static std::optional<uint8_t> readStatusRegister(uint8_t index);
+static uint32_t sectorToAddress(uint32_t sector, uint32_t off = 0);
 static bool waitWhileBusy(void);
-static bool writePage(uint32_t offset, const uint8_t* buf, uint8_t length);
+static bool writePage(uint32_t offset, const uint8_t* buf, uint16_t length);
 
 /** The logger used by the driver */
 static Logger* logger;
@@ -122,7 +128,7 @@ public:
         uint8_t buf[] = { CMD_WRITE_ENABLE };
         if (!enabled) {
             if (spi::transfer(address, buf, 1)) {
-                enabled = true;
+                enabled = isWriteEnabled();
             }
         }
         return enabled;
@@ -236,6 +242,37 @@ static uint32_t readJEDECId()
 }
 
 /**
+ * @brief Reads the status register with the given index.
+ */
+static std::optional<uint8_t> readStatusRegister(uint8_t index)
+{
+    uint8_t buf[2] = { CMD_INVALID, 0 };
+
+    if (index == 1) {
+        buf[0] = CMD_READ_STATUS_REGISTER_1;
+    } else if (index == 2) {
+        buf[0] = CMD_READ_STATUS_REGISTER_2;
+    } else if (index == 3) {
+        buf[0] = CMD_READ_STATUS_REGISTER_3;
+    }
+
+    if (buf[0] != CMD_INVALID && spi::transfer(address, buf, sizeof(buf))) {
+        return buf[1];
+    } else {
+        return std::nullopt;
+    }
+}
+
+/**
+ * @brief Returns whether writing to the flash memory is enabled.
+ */
+static bool isWriteEnabled()
+{
+    auto reg = readStatusRegister(1);
+    return reg && (reg.value() & 0x02);
+}
+
+/**
  * @brief Blocks the current task while the flash memory is busy according to
  * its status register.
  *
@@ -244,23 +281,51 @@ static uint32_t readJEDECId()
  */
 static bool waitWhileBusy()
 {
-    uint8_t buf[2] = { CMD_READ_STATUS_REGISTER_1, 0x00 };
-
     while (true) {
-        buf[0] = CMD_READ_STATUS_REGISTER_1;
-        buf[1] = 0x00;
-        if (!spi::transfer(address, buf, sizeof(buf))) {
+        auto reg = readStatusRegister(1);
+        if (!reg) {
             return false;
+        } else if ((reg.value() & 0x01) == 0) {
+            return true;
         }
-
-        if ((buf[1] & 0x01) == 0) {
-            break;
-        }
-
         system::delayMsec(1);
     }
+}
 
-    return true;
+/**
+ * @brief Converts a sector index to its start address.
+ *
+ * @param sector  the sector index
+ * @param off  the offset within the sector
+ * @return the start address of the sector plus the optional offset
+ */
+static uint32_t sectorToAddress(uint32_t sector, uint32_t off)
+{
+    return sector * SECTOR_SIZE + off;
+}
+
+/**
+ * @brief Fills a buffer with the given address.
+ *
+ * The address will be written in big endian format, in 3 or 4 bytes, depending
+ * on the size of the flash memory being handled.
+ *
+ * @param buf      the buffer to fill
+ * @param address  the address to write
+ * @return pointer to the first byte after the address that was written
+ */
+static uint8_t* fillBufferWithAddress(uint8_t* buf, uint32_t address)
+{
+    if (cfg->block_count >= 512) {
+        /* Needs 4-byte addressing */
+        *(buf++) = static_cast<uint8_t>((address >> 24) & 0xFF);
+    }
+
+    *(buf++) = static_cast<uint8_t>((address >> 16) & 0xFF);
+    *(buf++) = static_cast<uint8_t>((address >> 8) & 0xFF);
+    *(buf++) = static_cast<uint8_t>(address & 0xFF);
+
+    return buf;
 }
 
 /**
@@ -275,17 +340,14 @@ static bool eraseSector(uint32_t sector)
         return false;
     }
 
-    uint8_t buf[] = {
-        CMD_SECTOR_ERASE_4K,
-        static_cast<uint8_t>((sector >> 16) & 0xFF),
-        static_cast<uint8_t>((sector >> 8) & 0xFF),
-        static_cast<uint8_t>(sector & 0xFF)
-    };
+    uint32_t offset = sectorToAddress(sector);
+    uint8_t buf[6] = { CMD_SECTOR_ERASE_4K };
+    uint8_t* end = fillBufferWithAddress(buf + 1, offset);
     bool success = waitWhileBusy();
 
     if (success) {
         WriteEnabledContext ctx;
-        success = ctx.enable() && spi::transfer(address, buf, sizeof(buf));
+        success = ctx.enable() && spi::transfer(address, buf, static_cast<uint16_t>(end - buf));
 
         if (!waitWhileBusy()) {
             success = false;
@@ -297,39 +359,40 @@ static bool eraseSector(uint32_t sector)
 
 static bool readData(uint32_t offset, uint8_t* buf, uint16_t length)
 {
-    uint8_t header[] = {
-        CMD_FAST_READ,
-        static_cast<uint8_t>((offset >> 16) & 0xFF),
-        static_cast<uint8_t>((offset >> 8) & 0xFF),
-        static_cast<uint8_t>(offset & 0xFF),
-        0
-    };
+    uint8_t header[6] = { CMD_FAST_READ };
+    uint8_t* end = fillBufferWithAddress(header + 1, offset);
+
+    /* add 8 dummy clock cycles */
+    *(end++) = 0;
+
     spi::transfer_t xfer[] = {
-        { header, nullptr, sizeof(header) },
+        { header, nullptr, static_cast<uint16_t>(end - header) },
         { buf, nullptr, length },
         spi::NO_MORE_TRANSFERS
     };
     return waitWhileBusy() && spi::transfer(address, xfer, 0);
 }
 
-static bool writePage(uint32_t offset, const uint8_t* buf, uint8_t length)
+static bool writePage(uint32_t offset, const uint8_t* buf, uint16_t length)
 {
-    uint8_t header[] = {
-        CMD_PAGE_PROGRAM,
-        static_cast<uint8_t>((offset >> 16) & 0xFF),
-        static_cast<uint8_t>((offset >> 8) & 0xFF),
-        static_cast<uint8_t>(offset & 0xFF)
-    };
+    uint8_t header[6] = { CMD_PAGE_PROGRAM };
+    uint8_t* end = fillBufferWithAddress(header + 1, offset);
     spi::transfer_t xfer[] = {
-        { header, nullptr, sizeof(header) },
+        { header, nullptr, static_cast<uint16_t>(end - header) },
         { const_cast<uint8_t*>(buf), dummy_rx_buf, length },
         spi::NO_MORE_TRANSFERS
     };
     bool success = waitWhileBusy();
 
-    {
+    if (success) {
         WriteEnabledContext ctx;
-        success = ctx.enable() && spi::transfer(address, xfer, 0);
+        int code = 0;
+        success = ctx.enable() && (code = spi::transfer(address, xfer, 0));
+
+        if (!success) {
+            code = spi::getLastErrorCode();
+            logger->error("writePage: HAL error %d", code);
+        }
 
         if (!waitWhileBusy()) {
             success = false;
@@ -348,7 +411,7 @@ static int flashmem_read(
     void* buffer, lfs_size_t size)
 {
     auto ptr = static_cast<uint8_t*>(buffer);
-    uint32_t address = sector * SECTOR_SIZE + off;
+    uint32_t address = sectorToAddress(sector, off);
     uint16_t toRead;
     const uint16_t maxToRead = std::numeric_limits<uint16_t>::max();
 
@@ -370,7 +433,7 @@ static int flashmem_write(
     const void* buffer, lfs_size_t size)
 {
     auto ptr = static_cast<const uint8_t*>(buffer);
-    uint32_t address = sector * SECTOR_SIZE + off;
+    uint32_t address = sectorToAddress(sector, off);
     uint16_t toWrite;
 
     while (size > 0) {

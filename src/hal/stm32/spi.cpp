@@ -4,6 +4,7 @@
 #include "hal/mutex.hpp"
 #include "hal/spi.h"
 #include "hal/stm32/utils.h"
+#include "hal/system.h"
 
 using namespace teller::hal::utils;
 
@@ -93,6 +94,8 @@ static bool is_spi_address_valid(teller::hal::spi::address_t address);
 static SPI_HandleTypeDef* spi_handle_ptrs[7];
 static spi_bus_state_t spi_state[NUM_SPI_BUSES];
 
+static HAL_StatusTypeDef last_hal_status;
+
 namespace teller::hal::spi {
 
 const transfer_t NO_MORE_TRANSFERS = { 0, 0, 0 };
@@ -104,6 +107,8 @@ bool init()
             return false;
         }
     }
+
+    last_hal_status = HAL_OK;
 
     return true;
 }
@@ -158,7 +163,7 @@ bool transfer(address_t address, const transfer_t* transfers, std::uint16_t coun
     const transfer_t* transfer;
     const spi_bus_config_t* pCfg;
     spi_bus_state_t* pState;
-    bool success = false;
+    HAL_StatusTypeDef hal_status;
 
     if (!is_spi_address_valid(address)) {
         return false;
@@ -171,7 +176,7 @@ bool transfer(address_t address, const transfer_t* transfers, std::uint16_t coun
         count = std::numeric_limits<std::uint16_t>::max();
     }
 
-    success = true;
+    hal_status = HAL_OK;
     if (osKernelGetState() == osKernelRunning) {
         // RTOS kernel is running so we can use event flags
         lock_guard lock(pState->in_use);
@@ -182,12 +187,11 @@ bool transfer(address_t address, const transfer_t* transfers, std::uint16_t coun
         while (count > 0 && transfer->tx_buf != nullptr) {
             count--;
 
-            if (HAL_SPI_TransmitReceive_IT(
-                    &pState->handle, transfer->tx_buf,
-                    transfer->rx_buf ? transfer->rx_buf : transfer->tx_buf,
-                    transfer->size)
-                != HAL_OK) {
-                success = false;
+            hal_status = HAL_SPI_TransmitReceive_IT(
+                &pState->handle, transfer->tx_buf,
+                transfer->rx_buf ? transfer->rx_buf : transfer->tx_buf,
+                transfer->size);
+            if (hal_status != HAL_OK) {
                 break;
             }
             osEventFlagsWait(pState->event, EVT_DONE, osFlagsWaitAny, osWaitForever);
@@ -205,12 +209,11 @@ bool transfer(address_t address, const transfer_t* transfers, std::uint16_t coun
         while (count > 0 && transfer->tx_buf != nullptr) {
             count--;
 
-            if (HAL_SPI_TransmitReceive(
-                    &pState->handle, transfer->tx_buf,
-                    transfer->rx_buf ? transfer->rx_buf : transfer->tx_buf,
-                    transfer->size, SPI_TIMEOUT_MSEC)
-                != HAL_OK) {
-                success = false;
+            hal_status = HAL_SPI_TransmitReceive(
+                &pState->handle, transfer->tx_buf,
+                transfer->rx_buf ? transfer->rx_buf : transfer->tx_buf,
+                transfer->size, SPI_TIMEOUT_MSEC);
+            if (hal_status != HAL_OK) {
                 break;
             }
 
@@ -220,7 +223,14 @@ bool transfer(address_t address, const transfer_t* transfers, std::uint16_t coun
         HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
     }
 
-    return success;
+    last_hal_status = hal_status;
+
+    return hal_status == HAL_OK;
+}
+
+int getLastErrorCode(void)
+{
+    return static_cast<int>(last_hal_status);
 }
 
 }

@@ -87,4 +87,6 @@ bool transfer(address_t address, std::uint8_t* txBuf, std::uint8_t* rxBuf, std::
  */
 bool transfer(address_t address, const transfer_t* transfers, std::uint16_t count);
 
+int getLastErrorCode(void);
+
 }
