@@ -24,7 +24,7 @@ jobs:
         run: |
           cmake . --preset host -B build
           cmake --build build
-          ctest --test-dir build --output-junit report.xml --output-on-failure
+          ctest --timeout 5 --test-dir build --output-junit report.xml --output-on-failure
 
       - name: Build firmware
         run: |
