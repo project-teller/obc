@@ -26,6 +26,7 @@
 #include "tasks/pins.h"
 #include "tasks/sdcard.h"
 #include "tasks/serial.h"
+#include "tasks/storage.h"
 #include "tasks/supervisor.h"
 #include "tasks/telem.h"
 
@@ -78,6 +79,7 @@ static const task_definition_t tasks[] = {
     { .func = loggerTask, .name = "log", .priority = NORMAL, .stack_size = 1024 },
     { .func = modeManagerTask, .name = "mode", .priority = NORMAL, .stack_size = 1024 },
     { .func = debugTask, .name = "debug", .priority = NORMAL, .stack_size = 1024 },
+    { .func = storageReaderTask, .name = "storage", .priority = LOW, .stack_size = 1024 },
     NO_MORE_TASKS
 };
 

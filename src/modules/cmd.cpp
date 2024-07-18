@@ -229,6 +229,11 @@ optional<Response> processStoragePacket(const envelope_t& envelope, const uint8_
         retval = 0;
         break;
 
+    case frames::STORAGE_COMMAND_READ:
+        retval = teller::storage::startReadingStorage(
+            data.area, data.offset, data.length, envelope.seq_no);
+        break;
+
     default:
         return Response::invalid();
     }

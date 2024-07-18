@@ -36,7 +36,7 @@ public:
     std::optional<littlefs::Error> sync();
 
     /**
-     * @brief Writes the given number of bytes from the file handle.
+     * @brief Writes the given number of bytes to the file handle.
      *
      * @param buf   the buffer to write
      * @param bytes_to_write  the size of the buffer

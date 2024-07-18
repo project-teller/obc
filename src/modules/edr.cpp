@@ -315,16 +315,23 @@ void ExperimentDataRecorder::_run(storage_area_t area)
             littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC));
     LogWriter writer(fd);
 
-    /* Call all callbacks to let modules print initial log records */
+    /* Call all callbacks to let modules print initial log records. We have to
+     * be careful here; the callback should not create too many messages that
+     * would block the _queue before we start draining them.
+     *
+     * If this becomes a problem, we should drain the queue after every callback.
+     */
+    /*
     if (area != STORAGE_AREA_UNKNOWN) {
         for (auto it = callbacks.begin(); it != callbacks.end(); it++) {
             (*it)(area);
         }
     }
+    */
 
     /* Enter the main loop and start processing requests */
     while (_queue.receive(request) && !IS_END_OF_QUEUE(request)) {
-        // writer.write(request);
+        writer.write(request);
     }
 }
 

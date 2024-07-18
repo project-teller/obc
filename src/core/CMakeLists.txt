@@ -3,6 +3,7 @@ add_library(
     obc-core
 
     telem/ack.cpp
+    telem/binary_data.cpp
     telem/calibration.cpp
     telem/clock_status.cpp
     telem/generic.cpp

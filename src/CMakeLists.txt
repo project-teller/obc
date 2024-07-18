@@ -109,6 +109,7 @@ add_executable(
 	tasks/pins.cpp
 	tasks/sdcard.cpp
 	tasks/serial.cpp
+	tasks/storage.cpp
 	tasks/supervisor.cpp
 	tasks/telem.cpp
 )

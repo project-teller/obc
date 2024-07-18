@@ -1,5 +1,9 @@
 #include <fstream>
 
+#include "hal/flashmem.h"
+#include "hal/posix/flashmem_debug.h"
+#include "hal/posix/sdcard_debug.h"
+#include "hal/sdcard.h"
 #include "hal/storage.h"
 #include "lfs_filebd.h"
 
@@ -8,58 +12,9 @@ using namespace teller::hal::storage;
 using namespace teller::telem;
 
 /**
- * @brief Block size of the simulated flash memory device
- */
-#define FLASH_MEMORY_BLOCK_SIZE 512
-
-/**
- * @brief Total size of the simulated flash memory device
- */
-#define FLASH_MEMORY_SIZE (4 * 1024 * 1024)
-
-/**
- * @brief Block size of the simulated SD card
- */
-#define SD_CARD_BLOCK_SIZE 512
-
-/**
- * @brief Total size of the simulated SD card
- */
-#define SD_CARD_SIZE (4 * 1024 * 1024)
-
-/**
- * @brief Block device configurations for the simulated storage devices.
- */
-static struct lfs_filebd_config filebd_configs[NUM_STORAGE_AREAS] = {
-    {},
-    { .read_size = FLASH_MEMORY_BLOCK_SIZE,
-        .prog_size = FLASH_MEMORY_BLOCK_SIZE,
-        .erase_size = 4 * FLASH_MEMORY_BLOCK_SIZE,
-        .erase_count = FLASH_MEMORY_SIZE / (4 * FLASH_MEMORY_BLOCK_SIZE) },
-    { .read_size = SD_CARD_BLOCK_SIZE,
-        .prog_size = SD_CARD_BLOCK_SIZE,
-        .erase_size = 4 * SD_CARD_BLOCK_SIZE,
-        .erase_count = SD_CARD_SIZE / (4 * SD_CARD_BLOCK_SIZE) },
-};
-
-/**
- * @brief Block devices for the simulated storage devices.
- */
-static lfs_filebd_t filebds[NUM_STORAGE_AREAS];
-
-/**
  * @brief Filesystem configuration objects for the simulated storage devices.
  */
 static std::unique_ptr<FilesystemConfig> cfg[NUM_STORAGE_AREAS];
-
-/**
- * @brief Filenames of the simulated storage devices.
- */
-static const char* filenames[NUM_STORAGE_AREAS] = {
-    nullptr,
-    "flash.bin",
-    "sdcard.bin"
-};
 
 static bool initArea(storage_area_t area_to_init);
 static void destroyArea(storage_area_t area_to_destroy);
@@ -101,8 +56,18 @@ FilesystemConfig* getFilesystemConfig(storage_area_t area)
 void removeAllFiles(void)
 {
     for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
-        if (filenames[i] && std::ifstream(filenames[i]).good()) {
-            std::remove(filenames[i]);
+        const char* filename;
+
+        if (i == STORAGE_AREA_FLASH_MEMORY) {
+            filename = flashmem::getFilename();
+        } else if (i == STORAGE_AREA_SD_CARD) {
+            filename = sdcard::getFilename();
+        } else {
+            filename = nullptr;
+        }
+
+        if (filename && std::ifstream(filename).good()) {
+            std::remove(filename);
         }
     }
 }
@@ -111,39 +76,27 @@ void removeAllFiles(void)
 
 bool initArea(storage_area_t area_to_init)
 {
-    bool result;
+    std::unique_ptr<FilesystemConfig> this_cfg;
 
-    try {
-        auto new_config = std::make_unique<FilesystemConfig>(
-            lfs_filebd_read,
-            lfs_filebd_prog,
-            lfs_filebd_erase,
-            lfs_filebd_sync,
-            filebd_configs[area_to_init].read_size,
-            filebd_configs[area_to_init].prog_size,
-            filebd_configs[area_to_init].erase_size,
-            filebd_configs[area_to_init].erase_count,
-            500,
-            filebd_configs[area_to_init].read_size,
-            filebd_configs[area_to_init].read_size);
+    switch (area_to_init) {
+    case STORAGE_AREA_FLASH_MEMORY:
+        this_cfg = teller::hal::flashmem::createFilesystemConfiguration();
+        break;
 
-        new_config->raw_cfg().context = &filebds[area_to_init];
-        result = lfs_filebd_create(
-                     &new_config->raw_cfg(),
-                     filenames[area_to_init],
-                     &filebd_configs[area_to_init])
-            == LFS_ERR_OK;
+    case STORAGE_AREA_SD_CARD:
+        this_cfg = teller::hal::sdcard::createFilesystemConfiguration();
+        break;
 
-        if (result) {
-            cfg[area_to_init] = std::move(new_config);
-        }
-        /* LCOV_EXCL_START */
-    } catch (std::bad_alloc&) {
-        result = false;
+    default:
+        break;
     }
-    /* LCOV_EXCL_STOP */
 
-    return result;
+    if (this_cfg) {
+        cfg[area_to_init] = std::move(this_cfg);
+        return true;
+    } else {
+        return false;
+    }
 }
 
 void destroyArea(storage_area_t area_to_destroy)

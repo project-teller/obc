@@ -76,12 +76,12 @@ static const flashmem_w25qxx_cfg_t known_devices[] = {
 static bool eraseSector(uint32_t sector);
 static const flashmem_w25qxx_cfg_t* identify(void);
 static bool isWriteEnabled(void);
-static bool readData(uint32_t offset, uint8_t* buf, uint16_t length);
+static bool readIntoBuffer(uint32_t offset, uint8_t* buf, uint16_t length);
 static uint32_t readJEDECId(void);
 static std::optional<uint8_t> readStatusRegister(uint8_t index);
 static uint32_t sectorToAddress(uint32_t sector, uint32_t off = 0);
 static bool waitWhileBusy(void);
-static bool writePage(uint32_t offset, const uint8_t* buf, uint16_t length);
+static bool writeFromBuffer(uint32_t offset, const uint8_t* buf, uint16_t length);
 
 /** The logger used by the driver */
 static Logger* logger;
@@ -198,6 +198,17 @@ bool setup(void)
         logger->error("Flash: not found");
     }
 
+    return true;
+}
+
+uint32_t getTotalSize()
+{
+    return cfg->block_count * BLOCK_SIZE;
+}
+
+bool readData(uint8_t* buf, uint32_t address, size_t length)
+{
+    memset(buf, 0, length);
     return true;
 }
 
@@ -336,7 +347,7 @@ static uint8_t* fillBufferWithAddress(uint8_t* buf, uint32_t address)
  */
 static bool eraseSector(uint32_t sector)
 {
-    if (!cfg || sector >= cfg->block_count) {
+    if (!cfg || sector >= cfg->block_count * SECTORS_IN_BLOCK) {
         return false;
     }
 
@@ -357,7 +368,7 @@ static bool eraseSector(uint32_t sector)
     return success;
 }
 
-static bool readData(uint32_t offset, uint8_t* buf, uint16_t length)
+static bool readIntoBuffer(uint32_t offset, uint8_t* buf, uint16_t length)
 {
     uint8_t header[6] = { CMD_FAST_READ };
     uint8_t* end = fillBufferWithAddress(header + 1, offset);
@@ -373,7 +384,7 @@ static bool readData(uint32_t offset, uint8_t* buf, uint16_t length)
     return waitWhileBusy() && spi::transfer(address, xfer, 0);
 }
 
-static bool writePage(uint32_t offset, const uint8_t* buf, uint16_t length)
+static bool writeFromBuffer(uint32_t offset, const uint8_t* buf, uint16_t length)
 {
     uint8_t header[6] = { CMD_PAGE_PROGRAM };
     uint8_t* end = fillBufferWithAddress(header + 1, offset);
@@ -391,7 +402,7 @@ static bool writePage(uint32_t offset, const uint8_t* buf, uint16_t length)
 
         if (!success) {
             code = spi::getLastErrorCode();
-            logger->error("writePage: HAL error %d", code);
+            logger->error("writeFromBuffer: HAL error %d", code);
         }
 
         if (!waitWhileBusy()) {
@@ -417,7 +428,7 @@ static int flashmem_read(
 
     while (size > 0) {
         toRead = size > maxToRead ? maxToRead : size;
-        if (!readData(address, ptr, toRead)) {
+        if (!readIntoBuffer(address, ptr, toRead)) {
             return LFS_ERR_IO;
         }
         address += toRead;
@@ -438,7 +449,7 @@ static int flashmem_write(
 
     while (size > 0) {
         toWrite = size > PAGE_SIZE ? PAGE_SIZE : size;
-        if (!writePage(address, ptr, toWrite)) {
+        if (!writeFromBuffer(address, ptr, toWrite)) {
             return LFS_ERR_IO;
         }
         address += toWrite;

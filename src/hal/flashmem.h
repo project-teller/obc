@@ -40,4 +40,18 @@ bool setup(void);
  */
 std::unique_ptr<littlefs::FilesystemConfig> createFilesystemConfiguration(void);
 
+/**
+ * @brief Returns the total size of the flash memory, in bytes.
+ */
+uint32_t getTotalSize(void);
+
+/**
+ * @brief Reads a given number of bytes from the flash memory.
+ *
+ * @param buf     the buffer to read into
+ * @param address the address to read from
+ * @param length  the numebr of bytes to read
+ */
+bool readData(uint8_t* buf, uint32_t address, size_t length);
+
 }

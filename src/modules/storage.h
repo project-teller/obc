@@ -86,4 +86,24 @@ littlefs::Filesystem* waitUntilUnmounted(teller::telem::storage_area_t area);
  */
 int convertLittleFSErrorCode(std::optional<littlefs::Error> code);
 
+/**
+ * @brief Initiates a background task that starts streaming the raw contents of
+ *        the storage area from a given address.
+ *
+ * @param  area     the storage area to read
+ * @param  address  the address to read from
+ * @param  length   number of bytes to read
+ * @param  seq_no   sequence number of the message that initiated the request
+ * @return POSIX error code; zero if the operation was successful
+ */
+int startReadingStorage(
+    teller::telem::storage_area_t area, uint32_t address, uint16_t length,
+    uint8_t seq_no = 0);
+
+/**
+ * @brief Runs a a background task that reads the raw contents of the storage
+ * area when a request is posted to do so.
+ */
+[[noreturn]] void runStorageReader(void);
+
 }

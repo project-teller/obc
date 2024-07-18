@@ -2,11 +2,15 @@
 #include <iostream>
 #include <memory>
 
+#include "core/telem/binary_data.h"
 #include "hal/event_flags.hpp"
+#include "hal/flashmem.h"
+#include "hal/sdcard.h"
 #include "hal/storage.h"
 #include "hal/system.h"
 #include "modules/log.h"
 #include "modules/storage.h"
+#include "modules/telem.h"
 
 using namespace teller::hal::storage;
 using namespace teller::hal::system;
@@ -331,7 +335,100 @@ private:
     std::shared_ptr<FilesystemState> _filesystems[NUM_STORAGE_AREAS];
 };
 
+class StorageReaderState {
+public:
+    enum Events {
+        EVT_STARTED = 1,
+    };
+
+    bool startReading(storage_area_t area, uint32_t address, uint16_t length, uint8_t seq_no)
+    {
+        if (running() || length == 0) {
+            return false;
+        }
+
+        _area = area;
+        _address = address;
+        _bytesLeft = length;
+
+        memset(&_binaryData, 0, sizeof(_binaryData));
+
+        _binaryData.frame_type = frames::BINARY_DATA;
+        _binaryData.seq_no = seq_no;
+        _binaryData.fragment_index = 0;
+        _binaryData.max_fragment_index = (length / MAX_BINARY_DATA_FRAGMENT_LENGTH);
+
+        if (length % MAX_BINARY_DATA_FRAGMENT_LENGTH == 0) {
+            _binaryData.max_fragment_index--;
+        }
+
+        _events.set(EVT_STARTED);
+
+        return true;
+    }
+
+    bool running() const
+    {
+        return _bytesLeft > 0;
+    }
+
+    bool iterate()
+    {
+        const uint8_t limit = MAX_BINARY_DATA_FRAGMENT_LENGTH;
+
+        while (!running()) {
+            _events.waitAny(EVT_STARTED);
+        }
+
+        while (_bytesLeft > 0) {
+            bool success;
+
+            _binaryData.data_length = _bytesLeft > limit ? limit : _bytesLeft;
+
+            switch (_area) {
+            case STORAGE_AREA_FLASH_MEMORY:
+                success = teller::hal::flashmem::readData(
+                    _binaryData.data, _address, _binaryData.data_length);
+                break;
+
+            case STORAGE_AREA_SD_CARD:
+                success = teller::hal::sdcard::readData(
+                    _binaryData.data, _address, _binaryData.data_length);
+                break;
+
+            default:
+                success = false;
+                break;
+            }
+
+            if (!success) {
+                break;
+            }
+
+            uint8_t length = frames::encodeBinaryDataFrame(&_binaryData, _buf);
+            if (!teller::telem::send(frames::BINARY_DATA, _buf, length)) {
+                return false;
+            }
+
+            _address += _binaryData.data_length;
+            _bytesLeft -= _binaryData.data_length;
+            _binaryData.fragment_index++;
+        }
+
+        return _bytesLeft == 0;
+    }
+
+private:
+    storage_area_t _area;
+    uint32_t _address;
+    uint16_t _bytesLeft;
+    teller::hal::EventFlags _events;
+    frames::binary_data_t _binaryData;
+    uint8_t _buf[MAX_PAYLOAD_LENGTH];
+};
+
 static Filesystems fs;
+static StorageReaderState storageReader;
 
 namespace teller::storage {
 
@@ -525,6 +622,25 @@ int convertLittleFSErrorCode(std::optional<littlefs::Error> code)
 
     default:
         return EIO;
+    }
+}
+
+int startReadingStorage(
+    teller::telem::storage_area_t area, uint32_t address, uint16_t length,
+    uint8_t seq_no)
+{
+    if (!storageReader.running()) {
+        storageReader.startReading(area, address, length, seq_no);
+        return 0;
+    } else {
+        return EBUSY;
+    }
+}
+
+void runStorageReader()
+{
+    while (true) {
+        while (storageReader.iterate()) { };
     }
 }
 
