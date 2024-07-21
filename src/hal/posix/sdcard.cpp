@@ -84,15 +84,38 @@ uint32_t getTotalSize()
 
 bool readData(uint8_t* buf, uint32_t address, size_t length)
 {
-    if (address > getTotalSize() - length) {
-        length = getTotalSize() - address;
+    bool result = false;
+
+    /* Do not reuse filefd.fd here -- we do not want to mess around with the
+     * internals of LittleFS behind its back.
+     *
+     * Also, the image file on the disk is sparse and may be smaller than the
+     * logical size of the volume. We need to account for that; if the address
+     * is beyond the end of the physical image file, we fill the rest of the
+     * buffer with zeros.
+     */
+    memset(buf, 0, length);
+
+    FILE* fp = fopen(getFilename(), "rb");
+    if (!fp) {
+        goto cleanup;
     }
 
-    if (lseek(filebd.fd, address, SEEK_SET) < 0) {
-        return false;
+    if (fseek(fp, address, SEEK_SET)) {
+        goto cleanup;
     }
 
-    return read(filebd.fd, buf, length) >= 0;
+    if (fread(buf, sizeof(uint8_t), length, fp) < length) {
+        result = feof(fp) ? true : false;
+    } else {
+        result = true;
+    }
+
+cleanup:
+    if (fp != nullptr) {
+        fclose(fp);
+    }
+    return result;
 }
 
 }
