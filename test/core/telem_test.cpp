@@ -203,12 +203,14 @@ TEST(TelemetryTest, ackFrameEncoding)
         .frame_type = frames::CLOCK_STATUS,
         .seq_no = 64,
         .result = frames::NAK_FAILED,
-        .error = 42
+        .error = 42,
+        .value = 1234,
     };
     uint8_t encoded[MAX_MESSAGE_LENGTH];
-    uint8_t expectedBytes[] = { 3, 64, 2, 42, 0 };
+    uint8_t expectedBytes[] = { 3, 64, 2, 42, 0, 0, 0 };
     frames::ack_data_t decoded;
 
+    /* Negative acknowledgment */
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeAckFrame(&message, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
 
@@ -218,9 +220,30 @@ TEST(TelemetryTest, ackFrameEncoding)
     EXPECT_EQ(decoded.seq_no, message.seq_no);
     EXPECT_EQ(decoded.result, message.result);
     EXPECT_EQ(decoded.error, message.error);
+    EXPECT_EQ(decoded.value, 0);
 
+    /* Positive acknowledgment */
+    message.result = frames::ACK_ACCEPTED;
+    expectedBytes[2] = frames::ACK_ACCEPTED;
+    expectedBytes[3] = 0xd2;
+    expectedBytes[4] = 0x04;
+
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeAckFrame(&message, encoded));
+    EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
+
+    frames::decodeAckFrame(encoded, &decoded);
+
+    EXPECT_EQ(decoded.frame_type, message.frame_type);
+    EXPECT_EQ(decoded.seq_no, message.seq_no);
+    EXPECT_EQ(decoded.result, message.result);
+    EXPECT_EQ(decoded.error, 0);
+    EXPECT_EQ(decoded.value, message.value);
+
+    /* Invalid ACK result code */
     message.result = frames::NUM_ACK_RESULT_CODES;
     expectedBytes[2] = frames::NAK_INVALID;
+    expectedBytes[3] = 0;
+    expectedBytes[4] = 0;
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeAckFrame(&message, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
 
@@ -229,7 +252,7 @@ TEST(TelemetryTest, ackFrameEncoding)
     EXPECT_EQ(decoded.frame_type, message.frame_type);
     EXPECT_EQ(decoded.seq_no, message.seq_no);
     EXPECT_EQ(decoded.result, frames::NAK_INVALID);
-    EXPECT_EQ(decoded.error, message.error);
+    EXPECT_EQ(decoded.error, 0);
 }
 
 TEST(TelemetryTest, storageCommandFrameEncoding)

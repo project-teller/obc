@@ -43,8 +43,17 @@ typedef struct {
     /** Result of the command that was executed */
     ack_result_t result;
 
-    /** Optional POSIX-style error code for negative acknowledgments */
+    /**
+     * Optional POSIX-style error code for negative acknowledgments. Used only
+     * when the acknowledgment result is not ACK_ACCEPTED.
+     */
     int error;
+
+    /**
+     * Optional 32-bit value to return for positive acknowledgments. Used only
+     * when the acknowledgment result is ACK_ACCEPTED.
+     */
+    uint32_t value;
 } ack_data_t;
 
 /**
