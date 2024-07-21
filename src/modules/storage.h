@@ -41,6 +41,11 @@ teller::telem::subsystem_status_t getSubsystemStatus(void);
 [[nodiscard]] int eraseStorage(teller::telem::storage_area_t area);
 
 /**
+ * @brief Returns the total size of the storage area, in bytes.
+ */
+int getStorageSize(teller::telem::storage_area_t area);
+
+/**
  * @brief Returns whether a storage area is mounted in the storage subsystem.
  */
 bool isStorageMounted(teller::telem::storage_area_t area);

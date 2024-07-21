@@ -28,16 +28,18 @@ class Response {
 public:
     frames::ack_result_t result;
     int error;
+    uint32_t value;
 
-    Response(frames::ack_result_t _result = frames::ACK_ACCEPTED, int _error = 0)
+    Response(frames::ack_result_t _result = frames::ACK_ACCEPTED, int _error = 0, uint32_t _value = 0)
         : result(_result)
         , error(_error)
+        , value(_value)
     {
     }
 
-    static Response ok()
+    static Response ok(uint32_t _value = 0)
     {
-        return Response();
+        return Response(frames::ACK_ACCEPTED, 0, _value);
     }
 
     static Response denied(int _error = 0)
@@ -164,7 +166,8 @@ bool sendResponse(const envelope_t& envelope, Response response, uint8_t* buf)
         .frame_type = static_cast<frames::frame_type_t>(envelope.frame_type),
         .seq_no = envelope.seq_no,
         .result = response.result,
-        .error = response.error
+        .error = response.error,
+        .value = response.value
     };
     uint8_t length = frames::encodeAckFrame(&data, buf);
     return teller::telem::send(frames::ACK, buf, length);
@@ -233,6 +236,9 @@ optional<Response> processStoragePacket(const envelope_t& envelope, const uint8_
         retval = teller::storage::startReadingStorage(
             data.area, data.offset, data.length, envelope.seq_no);
         break;
+
+    case frames::STORAGE_COMMAND_GET_SIZE:
+        return Response::ok(teller::storage::getStorageSize(data.area));
 
     default:
         return Response::invalid();

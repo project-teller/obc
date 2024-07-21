@@ -98,6 +98,24 @@ public:
     }
 
     /**
+     * @brief Returns the size of the filesystem, in bytes.
+     *
+     * @returns The size of the filesystem, or zero if the size cannot be
+     *          determined.
+     */
+    size_t getSize()
+    {
+        switch (_area) {
+        case STORAGE_AREA_FLASH_MEMORY:
+            return teller::hal::flashmem::getTotalSize();
+        case STORAGE_AREA_SD_CARD:
+            return teller::hal::sdcard::getTotalSize();
+        default:
+            return 0;
+        }
+    }
+
+    /**
      * @brief Marks the filesystem as having encountered an error.
      *
      * Filesystems with errors are unmounted and no attempts will be made to
@@ -353,11 +371,10 @@ public:
 
         memset(&_binaryData, 0, sizeof(_binaryData));
 
-        _binaryData.frame_type = frames::BINARY_DATA;
+        _binaryData.frame_type = frames::STORAGE;
         _binaryData.seq_no = seq_no;
         _binaryData.fragment_index = 0;
         _binaryData.max_fragment_index = (length / MAX_BINARY_DATA_FRAGMENT_LENGTH);
-
         if (length % MAX_BINARY_DATA_FRAGMENT_LENGTH == 0) {
             _binaryData.max_fragment_index--;
         }
@@ -623,6 +640,12 @@ int convertLittleFSErrorCode(std::optional<littlefs::Error> code)
     default:
         return EIO;
     }
+}
+
+int getStorageSize(teller::telem::storage_area_t area)
+{
+    auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
+    return _filesystem ? _filesystem->getSize() : 0;
 }
 
 int startReadingStorage(
