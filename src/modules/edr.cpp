@@ -243,9 +243,10 @@ void ExperimentDataRecorder::run(littlefs::Filesystem* fs, storage_area_t area)
     assert(!running() && !_queue.closed());
 
     this->_fs = fs;
+    _queue.clear();
     try {
         _run(area);
-    } catch (const exception& e) {
+    } catch (...) {
         this->_fs = nullptr;
         throw;
     }
