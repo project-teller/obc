@@ -25,9 +25,9 @@ const led_config_t led_config[NUM_LEDS] = {
 #elif defined TELLER_BOARD_NUCLEO144
 // STM32H743ZI Nucleo-144 dev board, for testing purposes
 const led_config_t led_config[NUM_LEDS] = {
-    { GPIOE, GPIO_PIN_1 }, /* Heartbeat LED */
+    { GPIOB, GPIO_PIN_0 }, /* Heartbeat LED */
     { GPIOB, GPIO_PIN_14 }, /* Error LED */
-    { GPIOB, GPIO_PIN_0 }, /* Debug LED */
+    { GPIOE, GPIO_PIN_1 }, /* Debug LED */
 };
 #elif defined STM32F1
 // STM32VL-Discovery green led - PC9
