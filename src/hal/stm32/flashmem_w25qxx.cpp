@@ -211,8 +211,7 @@ uint32_t getTotalSize()
 
 bool readData(uint8_t* buf, uint32_t address, size_t length)
 {
-    memset(buf, 0, length);
-    return true;
+    return readIntoBuffer(address, buf, length);
 }
 
 }
