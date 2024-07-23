@@ -528,6 +528,18 @@ int eraseStorage(storage_area_t area)
     }
 }
 
+bool isStorageConfigured(teller::telem::storage_area_t area)
+{
+    auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
+    return static_cast<bool>(_filesystem);
+}
+
+bool isStorageErrored(storage_area_t area)
+{
+    auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
+    return _filesystem && _filesystem->isErrored();
+}
+
 bool isStorageMounted(storage_area_t area)
 {
     auto _filesystem = fs.getState(area, /* ensureMounted = */ false);

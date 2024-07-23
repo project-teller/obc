@@ -240,6 +240,15 @@ optional<Response> processStoragePacket(const envelope_t& envelope, const uint8_
     case frames::STORAGE_COMMAND_GET_SIZE:
         return Response::ok(teller::storage::getStorageSize(data.area));
 
+    case frames::STORAGE_COMMAND_GET_STATUS:
+        return Response::ok(
+            /* clang-format off */
+            (teller::storage::isStorageConfigured(data.area) ? 1 : 0) |
+            (teller::storage::isStorageMounted(data.area) ? 2 : 0) |
+            (teller::storage::isStorageErrored(data.area) ? 4 : 0)
+            /* clang-format on */
+        );
+
     default:
         return Response::invalid();
     }

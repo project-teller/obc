@@ -46,6 +46,18 @@ teller::telem::subsystem_status_t getSubsystemStatus(void);
 int getStorageSize(teller::telem::storage_area_t area);
 
 /**
+ * @brief Returns whether a storage area is expected to exist in the storage
+ * subsystem.
+ */
+bool isStorageConfigured(teller::telem::storage_area_t area);
+
+/**
+ * @brief Returns whether a storage area is marked as errored in the storage
+ * subsystem.
+ */
+bool isStorageErrored(teller::telem::storage_area_t area);
+
+/**
  * @brief Returns whether a storage area is mounted in the storage subsystem.
  */
 bool isStorageMounted(teller::telem::storage_area_t area);
