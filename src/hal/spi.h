@@ -20,6 +20,14 @@ typedef struct {
     std::uint16_t size;
 } transfer_t;
 
+typedef enum {
+    /** Do not pull CS to low during transfer. Used when initializing an SD card */
+    NO_CHIP_SELECT = 1
+} transfer_flags_t;
+
+/** Dummy address that is used for devices that are not configured or present */
+extern const address_t NO_ADDRESS;
+
 /** Guard element that denotes that there are no more transfers */
 extern const transfer_t NO_MORE_TRANSFERS;
 
@@ -40,6 +48,14 @@ extern const transfer_t NO_MORE_TRANSFERS;
 void destroy(void);
 
 /**
+ * @brief Selects the SPI device with the given address.
+ *
+ * Normally you should not need to use this function as transfer() takes care of
+ * this for you -- unless you use the NO_CHIP_SELECT flag.
+ */
+void select(address_t address, bool value = true);
+
+/**
  * @brief Runs a simultaneous transmit-receive cycle on an SPI device.
  *
  * The function will block and yield to other tasks until the entire buffer was
@@ -48,9 +64,11 @@ void destroy(void);
  * @param address the SPI address to use
  * @param buf the buffer to use
  * @param size the common length of the buffers
+ * @param flags flags to modify the behaviour of the transfer in special cases
  * @return whether the operation was successful
  */
-bool transfer(address_t address, std::uint8_t* buf, std::uint16_t size);
+bool transfer(
+    address_t address, std::uint8_t* buf, std::uint16_t size, std::uint8_t flags = 0);
 
 /**
  * @brief Runs a simultaneous transmit-receive cycle on an SPI device, using separate buffers.
@@ -62,9 +80,12 @@ bool transfer(address_t address, std::uint8_t* buf, std::uint16_t size);
  * @param txBuf the transmit buffer to use
  * @param rxBuf the receive buffer to use
  * @param size the common length of the buffers
+ * @param flags flags to modify the behaviour of the transfer in special cases
  * @return whether the operation was successful
  */
-bool transfer(address_t address, std::uint8_t* txBuf, std::uint8_t* rxBuf, std::uint16_t size);
+bool transfer(
+    address_t address, std::uint8_t* txBuf, std::uint8_t* rxBuf,
+    std::uint16_t size, std::uint8_t flags = 0);
 
 /**
  * @brief Runs a possibly multi-transaction transmit-receive cycle on an SPI device.
@@ -84,8 +105,19 @@ bool transfer(address_t address, std::uint8_t* txBuf, std::uint8_t* rxBuf, std::
  * @param count     the maximum number of transfers to perform; zero means an
  *        infinite amount of transfers until the \c NO_MORE_TRANSFERS guard
  *        element is reached
+ * @param flags flags to modify the behaviour of the transfer in special cases
  */
-bool transfer(address_t address, const transfer_t* transfers, std::uint16_t count);
+bool transfer(
+    address_t address, const transfer_t* transfers, std::uint16_t count,
+    std::uint8_t flags = 0);
+
+/**
+ * @brief Unselects the SPI device with the given address.
+ *
+ * Normally you should not need to use this function as transfer() takes care of
+ * this for you -- unless you use the NO_CHIP_SELECT flag.
+ */
+void unselect(address_t address);
 
 int getLastErrorCode(void);
 

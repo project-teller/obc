@@ -52,8 +52,6 @@ static std::list<event_callback_t*> callbacks;
     teller::log::Logger* log = teller::log::getLogger(MODULE_ID_EDR);
     const char* name = getStorageAreaName(area);
 
-    log->info("%s: started", name);
-
     for (;;) {
         littlefs::Filesystem* fs;
         int retval;

@@ -2,6 +2,9 @@
 
 namespace teller::hal::spi {
 
+const address_t NO_ADDRESS = { 0xFF, 0xFF };
+const transfer_t NO_MORE_TRANSFERS = { 0, 0, 0 };
+
 bool init()
 {
     return true;
@@ -11,14 +14,28 @@ void destroy()
 {
 }
 
-bool transfer(address_t address, std::uint8_t* buf, std::uint16_t size)
+void select(address_t address, bool value) { }
+
+bool transfer(
+    address_t address, std::uint8_t* buf, std::uint16_t size, std::uint8_t flags)
 {
     return transfer(address, buf, buf, size);
 }
 
-bool transfer(address_t address, std::uint8_t* txBuf, std::uint8_t* rxBuf, std::uint16_t size)
+bool transfer(
+    address_t address, std::uint8_t* txBuf, std::uint8_t* rxBuf, std::uint16_t size,
+    std::uint8_t flags)
 {
     return false;
 }
+
+bool transfer(
+    address_t address, const transfer_t* transfers, std::uint16_t count,
+    std::uint8_t flags)
+{
+    return false;
+}
+
+void unselect(address_t address) { }
 
 }

@@ -98,6 +98,7 @@ static HAL_StatusTypeDef last_hal_status;
 
 namespace teller::hal::spi {
 
+const address_t NO_ADDRESS = { 0xFF, 0xFF };
 const transfer_t NO_MORE_TRANSFERS = { 0, 0, 0 };
 
 bool init()
@@ -117,12 +118,24 @@ void destroy()
 {
 }
 
-bool transfer(address_t address, std::uint8_t* buf, std::uint16_t size)
+void select(address_t address, bool value)
 {
-    return transfer(address, buf, buf, size);
+    const spi_bus_config_t* pCfg;
+    if (is_spi_address_valid(address)) {
+        pCfg = &spi_config[address.bus];
+        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, value ? GPIO_PIN_RESET : GPIO_PIN_SET);
+    }
 }
 
-bool transfer(address_t address, std::uint8_t* txBuf, std::uint8_t* rxBuf, std::uint16_t size)
+bool transfer(
+    address_t address, std::uint8_t* buf, std::uint16_t size, std::uint8_t flags)
+{
+    return transfer(address, buf, buf, size, flags);
+}
+
+bool transfer(
+    address_t address, std::uint8_t* txBuf, std::uint8_t* rxBuf, std::uint16_t size,
+    std::uint8_t flags)
 {
     const spi_bus_config_t* pCfg;
     spi_bus_state_t* pState;
@@ -139,26 +152,36 @@ bool transfer(address_t address, std::uint8_t* txBuf, std::uint8_t* rxBuf, std::
         // RTOS kernel is running so we can use event flags
         lock_guard lock(pState->in_use);
 
-        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+        if ((flags & NO_CHIP_SELECT) == 0) {
+            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+        }
         if (HAL_SPI_TransmitReceive_IT(&pState->handle, txBuf, rxBuf, size) == HAL_OK) {
             success = true;
             osEventFlagsWait(pState->event, EVT_DONE, osFlagsWaitAny, osWaitForever);
         }
-        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+        if ((flags & NO_CHIP_SELECT) == 0) {
+            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+        }
     } else {
         // Simplified implementation for the initialization where we cannot
         // use RTOS primitives yet
-        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+        if ((flags & NO_CHIP_SELECT) == 0) {
+            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+        }
         if (HAL_SPI_TransmitReceive(&pState->handle, txBuf, rxBuf, size, SPI_TIMEOUT_MSEC) == HAL_OK) {
             success = true;
         }
-        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+        if ((flags & NO_CHIP_SELECT) == 0) {
+            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+        }
     }
 
     return success;
 }
 
-bool transfer(address_t address, const transfer_t* transfers, std::uint16_t count)
+bool transfer(
+    address_t address, const transfer_t* transfers, std::uint16_t count,
+    std::uint8_t flags)
 {
     const transfer_t* transfer;
     const spi_bus_config_t* pCfg;
@@ -181,7 +204,9 @@ bool transfer(address_t address, const transfer_t* transfers, std::uint16_t coun
         // RTOS kernel is running so we can use event flags
         lock_guard lock(pState->in_use);
 
-        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+        if ((flags & NO_CHIP_SELECT) == 0) {
+            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+        }
 
         transfer = transfers;
         while (count > 0 && transfer->tx_buf != nullptr) {
@@ -199,11 +224,15 @@ bool transfer(address_t address, const transfer_t* transfers, std::uint16_t coun
             transfer++;
         }
 
-        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+        if ((flags & NO_CHIP_SELECT) == 0) {
+            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+        }
     } else {
         // Simplified implementation for the initialization where we cannot
         // use RTOS primitives yet
-        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+        if ((flags & NO_CHIP_SELECT) == 0) {
+            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+        }
 
         transfer = transfers;
         while (count > 0 && transfer->tx_buf != nullptr) {
@@ -220,12 +249,19 @@ bool transfer(address_t address, const transfer_t* transfers, std::uint16_t coun
             transfer++;
         }
 
-        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+        if ((flags & NO_CHIP_SELECT) == 0) {
+            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+        }
     }
 
     last_hal_status = hal_status;
 
     return hal_status == HAL_OK;
+}
+
+void unselect(address_t address)
+{
+    select(address, false);
 }
 
 int getLastErrorCode(void)

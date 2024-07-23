@@ -15,6 +15,7 @@ static const spi::address_t address = {
     .bus = 0,
     .device = 0
 };
+// static const spi::address_t address = spi::NO_ADDRESS;
 
 /* Constants for size conversions */
 #define BLOCK_SIZE_IN_KB 64
@@ -188,14 +189,16 @@ std::unique_ptr<FilesystemConfig> createFilesystemConfiguration(void)
 
 bool setup(void)
 {
+    const char* name = getStorageAreaName(STORAGE_AREA_FLASH_MEMORY);
+
     if (!logger) {
         return false;
     }
 
     if (cfg) {
-        logger->info("Flash: %s (%dKB)", cfg->name, cfg->block_count * BLOCK_SIZE_IN_KB);
+        logger->info("%s: %s (%dKB)", name, cfg->name, cfg->block_count * BLOCK_SIZE_IN_KB);
     } else {
-        logger->error("Flash: not found");
+        logger->error("%s: not found", name);
     }
 
     return true;
