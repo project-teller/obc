@@ -45,7 +45,8 @@ typedef struct {
 // STM32H743ZI Nucleo-144 dev board, for testing purposes
 #define NUM_PHY_UARTS 1
 const uart_phy_config_t uart_phy_config[] = {
-    { USART3, { GPIOD, GPIO_PIN_8 | GPIO_PIN_9 }, USART3_IRQn },
+    // { LPUART1, { GPIOB, GPIO_PIN_6 | GPIO_PIN_7 }, LPUART1_IRQn, 38400 },
+    { USART3, { GPIOD, GPIO_PIN_8 | GPIO_PIN_9 }, USART3_IRQn, 38400 }, /* 115200 is the max that seems to work */
     NO_MORE_UARTS
 };
 const int8_t uart_map[NUM_UARTS] = { 0, 0, 0 };
