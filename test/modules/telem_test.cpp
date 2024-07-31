@@ -40,7 +40,7 @@ TEST_F(TelemetryModuleTest, sendRawMessage)
     EXPECT_EQ(test_string, redirect.getAndClear());
 
     /* Sending null pointer -- we should not crash */
-    ASSERT_TRUE(telem::send(nullptr, 12));
+    ASSERT_TRUE(telem::send(nullptr, 12, telem::DEFAULT_TIMEOUT));
 }
 
 TEST_F(TelemetryModuleTest, sendWithEnvelope)

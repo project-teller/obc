@@ -125,14 +125,14 @@ public:
             return send_or_drop(message);
         }
 
-        std::unique_lock lock(queue_mutex, std::chrono::milliseconds(timeout));
+        std::unique_lock lock(queue_mutex);
 
         if (!lock.owns_lock() || !is_closed) {
             return false;
         }
 
         while (items.size() >= item_limit) {
-            item_removed_event.wait(lock, std::chrono::milliseconds(timeout));
+            item_removed_event.wait_for(lock, std::chrono::milliseconds(timeout));
             if (!lock.owns_lock()) {
                 return false;
             }

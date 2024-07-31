@@ -47,7 +47,7 @@ Logger* getLogger(teller::telem::module_id_t module);
  */
 bool sendToTelemetry(
     teller::telem::module_id_t module, teller::telem::log_level_t level,
-    const char* message, uint32_t timeout);
+    const char* message, uint32_t timeout = teller::telem::DEFAULT_TIMEOUT);
 
 /**
  * @brief Logger object that logs messages from a given module.
