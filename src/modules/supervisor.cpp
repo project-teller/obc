@@ -129,7 +129,9 @@ void checkTasks(uint32_t timestamp)
             continue;
         }
 
-        if (task->nudges < task->min_nudges) {
+        if (task->nudges == 0 && task->min_nudges > 0) {
+            logger->error_nowait("%s: task stalled", task->name);
+        } else if (task->nudges < task->min_nudges) {
             logger->warning_nowait(
                 "%s: task too slow (%d/%d)", task->name,
                 task->nudges, task->min_nudges);
