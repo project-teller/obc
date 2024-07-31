@@ -1,7 +1,7 @@
-#include "tasks/supervisor.h"
-#include "hal/led.h"
+#include "modules/supervisor.h"
 #include "hal/system.h"
 #include "hal/watchdog.h"
+#include "tasks/supervisor.h"
 
 using namespace teller::hal;
 
@@ -17,6 +17,7 @@ using namespace teller::hal;
     // for the time being
     for (;;) {
         system::delayMsec(1000);
+        supervisor::checkTasks();
         watchdog::reset();
     }
 }

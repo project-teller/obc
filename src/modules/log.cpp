@@ -68,7 +68,7 @@ Logger* getLogger(teller::telem::module_id_t module)
 
 bool sendToTelemetry(
     teller::telem::module_id_t module, teller::telem::log_level_t level,
-    const char* message)
+    const char* message, uint32_t timeout)
 {
     frames::text_message_data_t data;
 
@@ -79,7 +79,8 @@ bool sendToTelemetry(
 
     teller::telem::send(
         frames::TEXT_MESSAGE, payload,
-        frames::encodeTextMessageFrame(&data, payload));
+        frames::encodeTextMessageFrame(&data, payload),
+        timeout);
 
     return true;
 }

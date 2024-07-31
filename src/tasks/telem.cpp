@@ -1,9 +1,11 @@
 #include "tasks/telem.h"
 
 #include "hal/system.h"
+#include "modules/supervisor.h"
 #include "modules/telem.h"
 
 using namespace teller::hal;
+using namespace teller::supervisor;
 using namespace teller::telem;
 
 /**
@@ -15,8 +17,11 @@ using namespace teller::telem;
 [[noreturn]] void teller::tasks::telemetryTask(void* arg)
 {
     uint8_t payload[MAX_PAYLOAD_LENGTH];
+    TaskRegistration task("telem");
+    task.expect(BASE_TELEMETRY_FREQ_HZ - 2, BASE_TELEMETRY_FREQ_HZ + 1);
 
     while (true) {
+        task.nudge();
         runSingleIteration(payload);
         system::delayMsec(1000 / BASE_TELEMETRY_FREQ_HZ);
     }

@@ -59,11 +59,21 @@ public:
 
     bool send(const T& message)
     {
+        return send_with_timeout(message, osWaitForever);
+    }
+
+    bool send_or_drop(const T& message)
+    {
+        return send_with_timeout(message, 0);
+    }
+
+    bool send_with_timeout(const T& message, uint32_t timeout)
+    {
         if (is_closed) {
             return false;
         }
 
-        return osMessageQueuePut(handle, &message, 0, osWaitForever) == osOK;
+        return osMessageQueuePut(handle, &message, 0, timeout) == osOK;
     }
 
 private:

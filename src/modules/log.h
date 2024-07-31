@@ -47,7 +47,7 @@ Logger* getLogger(teller::telem::module_id_t module);
  */
 bool sendToTelemetry(
     teller::telem::module_id_t module, teller::telem::log_level_t level,
-    const char* message);
+    const char* message, uint32_t timeout);
 
 /**
  * @brief Logger object that logs messages from a given module.
@@ -60,39 +60,52 @@ public:
     Logger& operator=(const Logger&) = delete;
 
 public:
-    bool send(teller::telem::log_level_t level, const char* message) const
+    bool send(
+        teller::telem::log_level_t level, const char* message,
+        std::uint32_t timeout) const
     {
-        return teller::log::sendToTelemetry(_module, level, message);
+        return teller::log::sendToTelemetry(_module, level, message, timeout);
     }
 
-    bool vsend(teller::telem::log_level_t level, const char* format, std::va_list args)
+    bool vsend(
+        teller::telem::log_level_t level, const char* format, std::va_list args,
+        std::uint32_t timeout)
     {
         teller::hal::lock_guard<teller::hal::mutex> lock(_mutex);
         std::vsnprintf(_buf, sizeof(_buf), format, args);
-        return send(level, _buf);
+        return send(level, _buf, timeout);
     }
 
-#define LOGGER_FUNC(func_name, log_level)                       \
-    bool func_name(const char* format, ...)                     \
-    {                                                           \
-        std::va_list args;                                      \
-        bool result;                                            \
-                                                                \
-        va_start(args, format);                                 \
-        result = vsend(teller::telem::log_level, format, args); \
-        va_end(args);                                           \
-                                                                \
-        return result;                                          \
+#define LOGGER_FUNC(func_name, log_level, timeout)                       \
+    bool func_name(const char* format, ...)                              \
+    {                                                                    \
+        std::va_list args;                                               \
+        bool result;                                                     \
+                                                                         \
+        va_start(args, format);                                          \
+        result = vsend(teller::telem::log_level, format, args, timeout); \
+        va_end(args);                                                    \
+                                                                         \
+        return result;                                                   \
     }
 
-    LOGGER_FUNC(alert, LOG_LEVEL_ALERT);
-    LOGGER_FUNC(critical, LOG_LEVEL_CRITICAL);
-    LOGGER_FUNC(debug, LOG_LEVEL_DEBUG);
-    LOGGER_FUNC(emergency, LOG_LEVEL_EMERGENCY);
-    LOGGER_FUNC(error, LOG_LEVEL_ERROR);
-    LOGGER_FUNC(info, LOG_LEVEL_INFO);
-    LOGGER_FUNC(notice, LOG_LEVEL_NOTICE);
-    LOGGER_FUNC(warning, LOG_LEVEL_WARNING);
+    LOGGER_FUNC(alert, LOG_LEVEL_ALERT, teller::telem::DEFAULT_TIMEOUT);
+    LOGGER_FUNC(critical, LOG_LEVEL_CRITICAL, teller::telem::DEFAULT_TIMEOUT);
+    LOGGER_FUNC(debug, LOG_LEVEL_DEBUG, teller::telem::DEFAULT_TIMEOUT);
+    LOGGER_FUNC(emergency, LOG_LEVEL_EMERGENCY, teller::telem::DEFAULT_TIMEOUT);
+    LOGGER_FUNC(error, LOG_LEVEL_ERROR, teller::telem::DEFAULT_TIMEOUT);
+    LOGGER_FUNC(info, LOG_LEVEL_INFO, teller::telem::DEFAULT_TIMEOUT);
+    LOGGER_FUNC(notice, LOG_LEVEL_NOTICE, teller::telem::DEFAULT_TIMEOUT);
+    LOGGER_FUNC(warning, LOG_LEVEL_WARNING, teller::telem::DEFAULT_TIMEOUT);
+
+    LOGGER_FUNC(alert_nowait, LOG_LEVEL_ALERT, 0);
+    LOGGER_FUNC(critical_nowait, LOG_LEVEL_CRITICAL, 0);
+    LOGGER_FUNC(debug_nowait, LOG_LEVEL_DEBUG, 0);
+    LOGGER_FUNC(emergency_nowait, LOG_LEVEL_EMERGENCY, 0);
+    LOGGER_FUNC(error_nowait, LOG_LEVEL_ERROR, 0);
+    LOGGER_FUNC(info_nowait, LOG_LEVEL_INFO, 0);
+    LOGGER_FUNC(notice_nowait, LOG_LEVEL_NOTICE, 0);
+    LOGGER_FUNC(warning_nowait, LOG_LEVEL_WARNING, 0);
 
 public:
     /** ID of the module associated to the logger. This cannot be private as

@@ -53,7 +53,7 @@ static void sendHeartbeat(uint8_t* payload);
 static void sendClockStatus(uint8_t* payload);
 static void sendIMUMeasurement(uint8_t* payload);
 
-static bool sendLowLevel(uint8_t* buf, uint8_t length);
+static bool sendLowLevel(uint8_t* buf, uint8_t length, uint32_t timeout);
 
 #define NO_MORE_TASKS \
     {                 \
@@ -140,7 +140,7 @@ void runSingleIteration(uint8_t* payload)
     }
 }
 
-bool send(const uint8_t* data, uint8_t length)
+bool send(const uint8_t* data, uint8_t length, uint32_t timeout)
 {
     if (data == nullptr) {
         return true;
@@ -150,15 +150,15 @@ bool send(const uint8_t* data, uint8_t length)
     TELLER_CHECK_OOM(buf);
 
     memcpy(buf, data, length);
-    return sendLowLevel(buf, length);
+    return sendLowLevel(buf, length, timeout);
 }
 
-bool send(const char* data)
+bool send(const char* data, uint32_t timeout)
 {
-    return send(reinterpret_cast<uint8_t*>(const_cast<char*>(data)), strlen(data));
+    return send(reinterpret_cast<uint8_t*>(const_cast<char*>(data)), strlen(data), timeout);
 }
 
-bool send(envelope_t envelope, const uint8_t* payload, uint8_t length)
+bool send(envelope_t envelope, const uint8_t* payload, uint8_t length, uint32_t timeout)
 {
     uint8_t* buf;
     uint8_t buf_length;
@@ -184,18 +184,18 @@ bool send(envelope_t envelope, const uint8_t* payload, uint8_t length)
         /* LCOV_EXCL_STOP */
     }
 
-    return sendLowLevel(buf, length + 8);
+    return sendLowLevel(buf, length + 8, timeout);
 }
 
 bool send(
     teller::telem::frames::frame_type_t type, const uint8_t* payload,
-    uint8_t length)
+    uint8_t length, uint32_t timeout)
 {
     envelope_t envelope;
     envelope.frame_type = static_cast<uint8_t>(type);
     envelope.source = ONBOARD_COMPUTER;
     envelope.target = GROUND_STATION;
-    return send(envelope, payload, length);
+    return send(envelope, payload, length, timeout);
 }
 
 void stopTelemetry(uart::uart_t index)
@@ -207,14 +207,14 @@ void stopTelemetry(uart::uart_t index)
 
 /* ************************************************************************* */
 
-bool sendLowLevel(uint8_t* buf, uint8_t length)
+bool sendLowLevel(uint8_t* buf, uint8_t length, uint32_t timeout)
 {
     message_t message = {
         .targets = telemetry_channel_mask,
         .data = buf,
         .length = length
     };
-    return out_queue.send(message);
+    return out_queue.send_with_timeout(message, timeout);
 }
 
 /* ************************************************************************* */

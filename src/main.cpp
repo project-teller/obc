@@ -14,6 +14,7 @@
 #include "modules/mode.h"
 #include "modules/rxsm.h"
 #include "modules/storage.h"
+#include "modules/supervisor.h"
 #include "modules/telem.h"
 
 #include "tasks/blinker.h"
@@ -70,7 +71,7 @@ static const task_definition_t tasks[] = {
     { .func = blinkTask, .name = "blinker", .priority = LOW },
     { .func = pinsTask, .name = "pins", .priority = NORMAL, .stack_size = 1024 },
     { .func = serialTask, .name = "serial", .priority = HIGH, .stack_size = 1024 },
-    { .func = supervisorTask, .name = "supervisor", .priority = LOW },
+    { .func = supervisorTask, .name = "supervisor", .priority = LOW, .stack_size = 1024 },
     { .func = telemetryTask, .name = "telem", .priority = NORMAL, .stack_size = 1024 },
     { .func = commandTask, .name = "cmd", .priority = LOW, .stack_size = 4096, .context = &cmd_task_args },
     { .func = flashMemoryTask, .name = "flashmem", .priority = HIGH, .stack_size = 4096 },
@@ -113,6 +114,7 @@ void bootSystem(void)
     /* The remaining modules are initialized only if the HAL initialization
      * was successful */
     inited &= teller::log::init();
+    inited &= teller::supervisor::init();
     inited &= teller::lcl::init();
     inited &= teller::mode::init();
     inited &= teller::rxsm::init();

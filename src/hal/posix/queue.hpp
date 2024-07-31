@@ -105,6 +105,45 @@ public:
         return true;
     }
 
+    bool send_or_drop(const T& message)
+    {
+        std::unique_lock lock(queue_mutex);
+
+        if (is_closed || items.size() >= item_limit) {
+            return false;
+        }
+
+        items.push(message);
+        item_added_event.notify_one();
+
+        return true;
+    }
+
+    bool send_with_timeout(const T& message, uint32_t timeout)
+    {
+        if (timeout <= 0) {
+            return send_or_drop(message);
+        }
+
+        std::unique_lock lock(queue_mutex, std::chrono::milliseconds(timeout));
+
+        if (!lock.owns_lock() || !is_closed) {
+            return false;
+        }
+
+        while (items.size() >= item_limit) {
+            item_removed_event.wait(lock, std::chrono::milliseconds(timeout));
+            if (!lock.owns_lock()) {
+                return false;
+            }
+        }
+
+        items.push(message);
+        item_added_event.notify_one();
+
+        return true;
+    }
+
 private:
     /** The queue in which the elements are stored */
     std::queue<T> items;

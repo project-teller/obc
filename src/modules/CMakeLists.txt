@@ -12,6 +12,7 @@ add_library(
     mode.cpp
     rxsm.cpp
     storage.cpp
+    supervisor.cpp
     telem.cpp
 )
 target_include_directories(
