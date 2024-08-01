@@ -154,7 +154,6 @@ bool send(const uint8_t* data, uint8_t length, uint32_t timeout)
     memcpy(buf, data, length);
     success = sendLowLevel(buf, length, timeout);
 
-cleanup:
     if (!success) {
         free(buf);
     }
