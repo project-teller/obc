@@ -16,6 +16,7 @@ using namespace teller::hal::utils;
 
 static const uint32_t EVT_READ = 0x00000001U;
 static const uint32_t EVT_WRITTEN = 0x00000002U;
+static const uint32_t EVT_ERROR = 0x00000004U;
 
 typedef struct {
     USART_TypeDef* instance;
@@ -102,6 +103,8 @@ bool teller::hal::uart::isConnected(uart_t index)
 
 bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_t* bytes_read)
 {
+    uint32_t flags;
+
     if (size == 0) {
         if (bytes_read) {
             *bytes_read = 0;
@@ -117,7 +120,12 @@ bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_
             return false;
         }
 
-        osEventFlagsWait(pState->event, EVT_READ, osFlagsWaitAny, osWaitForever);
+        flags = osEventFlagsWait(pState->event, EVT_READ | EVT_ERROR, osFlagsWaitAny, osWaitForever);
+
+        if (flags & (osFlagsError | EVT_ERROR)) {
+            HAL_UART_AbortReceive(pHandle);
+            return false;
+        }
 
         if (bytes_read) {
             *bytes_read = size;
@@ -135,6 +143,9 @@ bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
 {
     uart_phy_state_t* pState = find_phy_for_uart(index);
     UART_HandleTypeDef* pHandle = pState ? &pState->handle : nullptr;
+    uint32_t flags;
+    bool shouldAbort;
+
     if (!pHandle) {
         return false;
     }
@@ -143,7 +154,19 @@ bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
         return false;
     }
 
-    return osEventFlagsWait(pState->event, EVT_READ, osFlagsWaitAny, timeout) == EVT_READ;
+    flags = osEventFlagsWait(pState->event, EVT_READ | EVT_ERROR, osFlagsWaitAny, timeout);
+
+    /* If the read timed out, we need to reset the UART by aborting the receive
+     * operation. Since we are not using DMA, we can safely use the blocking
+     * variant as the operation takes effect immediately.
+     *
+     * If there was an error, we need to abort the operation as well. */
+    shouldAbort = flags & (osFlagsError | EVT_ERROR);
+    if (shouldAbort) {
+        HAL_UART_AbortReceive(pHandle);
+    }
+
+    return flags & EVT_READ;
 }
 
 void teller::hal::uart::waitUntilConnected(uart_t index)
@@ -170,7 +193,9 @@ void teller::hal::uart::waitUntilDisconnected(uart_t index)
 
 bool teller::hal::uart::write(uart_t index, uint8_t* data, uint16_t size)
 {
+    uint32_t flags;
     uart_phy_state_t* pState = find_phy_for_uart(index);
+
     if (pState) {
         UART_HandleTypeDef* pHandle = &pState->handle;
 
@@ -178,7 +203,12 @@ bool teller::hal::uart::write(uart_t index, uint8_t* data, uint16_t size)
             return false;
         }
 
-        osEventFlagsWait(pState->event, EVT_WRITTEN, osFlagsWaitAny, osWaitForever);
+        flags = osEventFlagsWait(pState->event, EVT_WRITTEN | EVT_ERROR, osFlagsWaitAny, osWaitForever);
+
+        if (flags & (osFlagsError | EVT_ERROR)) {
+            HAL_UART_AbortTransmit(pHandle);
+            return false;
+        }
     }
 
     return true;
@@ -405,6 +435,14 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef* uart)
     uart_phy_state_t* state = find_uart_phy_state(uart);
     if (state) {
         osEventFlagsSet(state->event, EVT_READ);
+    }
+}
+
+void HAL_UART_ErrorCallback(UART_HandleTypeDef* uart)
+{
+    uart_phy_state_t* state = find_uart_phy_state(uart);
+    if (state) {
+        osEventFlagsSet(state->event, EVT_ERROR);
     }
 }
 
