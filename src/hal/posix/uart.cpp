@@ -4,6 +4,8 @@
 #include <map>
 #include <memory>
 
+#include <sys/select.h>
+
 #include "hal/system.h"
 #include "hal/uart.h"
 #include "lib/socketstream/socketstream.hh"
@@ -33,11 +35,15 @@ static std::unique_ptr<socketstream> debugServerSocket;
 static std::unique_ptr<socketstream> debugClientSocket;
 
 static void handleDebugPort(void);
+static int uartToInputFileDescriptor(uart_t index);
 static istream& uartToInputStream(uart_t index);
 static ostream& uartToOutputStream(uart_t index);
 
 static map<uart_t, stringstream> uartInputOverrides;
 static map<uart_t, stringstream> uartOutputOverrides;
+
+#define NEVER_READABLE_FILE_DESCRIPTOR -2
+#define ALWAYS_READABLE_FILE_DESCRIPTOR -1
 
 namespace teller::hal::uart {
 void setDebugPort(const std::string& service);
@@ -91,6 +97,56 @@ bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_
         }
 
         result = stream.gcount() > 0 || !(stream.rdstate() & (stream.failbit | stream.eofbit));
+    }
+
+    if (!result) {
+        // Read error. If this was the debug socket, close it. TODO(ntamas)
+    }
+
+    return result;
+}
+
+bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
+{
+    istream& stream = uartToInputStream(index);
+    bool result = false;
+
+    if ((stream.rdstate() & (stream.failbit | stream.eofbit)) == 0) {
+        int fd = uartToInputFileDescriptor(index);
+        int activity;
+        fd_set fds;
+        bool has_timeout = timeout < std::numeric_limits<uint32_t>::max();
+        struct timeval timeout_timeval;
+
+        if (has_timeout) {
+            timeout_timeval.tv_sec = timeout / 1000;
+            timeout_timeval.tv_usec = (timeout % 1000) * 1000;
+        }
+
+        if (fd == NEVER_READABLE_FILE_DESCRIPTOR) {
+            // Pretend that the timeout has expired, then return with an error
+            activity = 0;
+        } else if (fd == ALWAYS_READABLE_FILE_DESCRIPTOR) {
+            // Bypass the call to select(), fd is always readable
+            activity = 1;
+        } else {
+            FD_ZERO(&fds);
+            FD_SET(fd, &fds);
+            activity = select(fd + 1, &fds, nullptr, &fds, has_timeout ? &timeout_timeval : nullptr);
+        }
+
+        if (activity < 0) {
+            // Error while calling select()
+            perror("select");
+        } else if (activity == 0) {
+            // Timeout
+        } else if (!FD_ISSET(fd, &fds)) {
+            // Exceptional condition on fd
+        } else {
+            // This should now return immediately
+            stream.read(reinterpret_cast<char*>(data), 1);
+            result = stream.gcount() > 0 || !(stream.rdstate() & (stream.failbit | stream.eofbit));
+        }
     }
 
     if (!result) {
@@ -209,6 +265,24 @@ static ostream& uartToOutputStream(uart_t index)
         return debugClientSocket ? *debugClientSocket : nullStream;
     default:
         return nullStream;
+    }
+}
+
+static int uartToInputFileDescriptor(uart_t index)
+{
+    auto it = uartInputOverrides.find(index);
+    if (it != uartInputOverrides.end()) {
+        // UART input is overridden. We just assume that it is always readable.
+        return ALWAYS_READABLE_FILE_DESCRIPTOR;
+    }
+
+    switch (index) {
+    case TELEMETRY:
+        return STDIN_FILENO;
+    case DEBUG:
+        return debugClientSocket ? debugClientSocket->rdbuf()->socket() : NEVER_READABLE_FILE_DESCRIPTOR;
+    default:
+        return NEVER_READABLE_FILE_DESCRIPTOR;
     }
 }
 

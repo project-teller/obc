@@ -131,6 +131,21 @@ bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_
     return true;
 }
 
+bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
+{
+    uart_phy_state_t* pState = find_phy_for_uart(index);
+    UART_HandleTypeDef* pHandle = pState ? &pState->handle : nullptr;
+    if (!pHandle) {
+        return false;
+    }
+
+    if (HAL_UART_Receive_IT(pHandle, data, 1) != HAL_OK) {
+        return false;
+    }
+
+    return osEventFlagsWait(pState->event, EVT_READ, osFlagsWaitAny, timeout) == EVT_READ;
+}
+
 void teller::hal::uart::waitUntilConnected(uart_t index)
 {
     if (isUARTAlwaysConnected(index)) {

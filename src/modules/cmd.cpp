@@ -85,13 +85,13 @@ void destroy()
     logger = nullptr;
 }
 
-bool handleCommands(teller::hal::uart::uart_t index, uint8_t* buf)
+bool handleCommands(teller::hal::uart::uart_t index, uint8_t* buf, uint32_t timeout)
 {
     uint8_t ch;
     uint16_t read;
     optional<Response> response;
 
-    if (!uart::read(index, &ch, 1, &read) || read <= 0) {
+    if (!uart::read1(index, &ch, timeout) || read <= 0) {
         return false;
     }
 
