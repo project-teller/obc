@@ -142,6 +142,8 @@ void runSingleIteration(uint8_t* payload)
 
 bool send(const uint8_t* data, uint8_t length, uint32_t timeout)
 {
+    bool success = false;
+
     if (data == nullptr) {
         return true;
     }
@@ -150,7 +152,14 @@ bool send(const uint8_t* data, uint8_t length, uint32_t timeout)
     TELLER_CHECK_OOM(buf);
 
     memcpy(buf, data, length);
-    return sendLowLevel(buf, length, timeout);
+    success = sendLowLevel(buf, length, timeout);
+
+cleanup:
+    if (!success) {
+        free(buf);
+    }
+
+    return success;
 }
 
 bool send(const char* data, uint32_t timeout)
