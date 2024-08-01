@@ -19,7 +19,7 @@ namespace teller::tasks {
 [[noreturn]] void commandTask(void* args_)
 {
     TaskRegistration task("cmd");
-    task.expect(UPDATE_FREQ_HZ - 1, UPDATE_FREQ_HZ + 1);
+    task.expect(UPDATE_FREQ_HZ - 1, 1000);
 
     cmd_task_args_t* args = static_cast<cmd_task_args_t*>(args_);
     uint8_t responseBuffer[MAX_PAYLOAD_LENGTH];
