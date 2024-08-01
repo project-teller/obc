@@ -162,6 +162,7 @@ bool send(envelope_t envelope, const uint8_t* payload, uint8_t length, uint32_t 
 {
     uint8_t* buf;
     uint8_t buf_length;
+    bool success = false;
 
     if (payload == nullptr) {
         length = 0;
@@ -178,13 +179,17 @@ bool send(envelope_t envelope, const uint8_t* payload, uint8_t length, uint32_t 
     envelope.seq_no = seq_no++;
 
     if (!serialize(buf, buf_length, envelope, payload, length)) {
-        /* LCOV_EXCL_START */
-        free(buf);
-        return false;
-        /* LCOV_EXCL_STOP */
+        goto cleanup;
     }
 
-    return sendLowLevel(buf, length + 8, timeout);
+    success = sendLowLevel(buf, length + 8, timeout);
+
+cleanup:
+    if (!success) {
+        free(buf);
+    }
+
+    return success;
 }
 
 bool send(
