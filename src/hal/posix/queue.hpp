@@ -127,7 +127,7 @@ public:
 
         std::unique_lock lock(queue_mutex);
 
-        if (!lock.owns_lock() || !is_closed) {
+        if (is_closed) {
             return false;
         }
 
