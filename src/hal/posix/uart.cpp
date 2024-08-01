@@ -140,7 +140,7 @@ bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
             perror("select");
         } else if (activity == 0) {
             // Timeout
-        } else if (!FD_ISSET(fd, &fds)) {
+        } else if (fd >= 0 && !FD_ISSET(fd, &fds)) {
             // Exceptional condition on fd
         } else {
             // This should now return immediately
