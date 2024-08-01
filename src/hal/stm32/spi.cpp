@@ -11,6 +11,7 @@ using namespace teller::hal::utils;
 #define SPI_TIMEOUT_MSEC 500
 
 static const uint32_t EVT_DONE = 0x00000001U;
+static const uint32_t EVT_ERROR = 0x00000002U;
 
 #define NUM_GPIO_PINS_PER_BUS 3
 #define NUM_CS_PINS_PER_BUS 4
@@ -140,6 +141,7 @@ bool transfer(
     const spi_bus_config_t* pCfg;
     spi_bus_state_t* pState;
     bool success = false;
+    std::uint32_t events;
 
     if (!is_spi_address_valid(address)) {
         return false;
@@ -156,8 +158,12 @@ bool transfer(
             HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
         }
         if (HAL_SPI_TransmitReceive_IT(&pState->handle, txBuf, rxBuf, size) == HAL_OK) {
-            success = true;
-            osEventFlagsWait(pState->event, EVT_DONE, osFlagsWaitAny, osWaitForever);
+            events = osEventFlagsWait(pState->event, EVT_DONE | EVT_ERROR, osFlagsWaitAny, osWaitForever);
+            if (events & (osFlagsError | EVT_ERROR)) {
+                HAL_SPI_Abort(&pState->handle);
+            } else {
+                success = events & EVT_DONE;
+            }
         }
         if ((flags & NO_CHIP_SELECT) == 0) {
             HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
@@ -187,6 +193,7 @@ bool transfer(
     const spi_bus_config_t* pCfg;
     spi_bus_state_t* pState;
     HAL_StatusTypeDef hal_status;
+    std::uint32_t events;
 
     if (!is_spi_address_valid(address)) {
         return false;
@@ -219,7 +226,12 @@ bool transfer(
             if (hal_status != HAL_OK) {
                 break;
             }
-            osEventFlagsWait(pState->event, EVT_DONE, osFlagsWaitAny, osWaitForever);
+
+            events = osEventFlagsWait(pState->event, EVT_DONE | EVT_ERROR, osFlagsWaitAny, osWaitForever);
+            if (events & (osFlagsError | EVT_ERROR)) {
+                HAL_SPI_Abort(&pState->handle);
+                break;
+            }
 
             transfer++;
         }
@@ -557,6 +569,14 @@ void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef* spi)
     spi_bus_state_t* state = find_spi_bus_state(spi);
     if (state) {
         osEventFlagsSet(state->event, EVT_DONE);
+    }
+}
+
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef* spi)
+{
+    spi_bus_state_t* state = find_spi_bus_state(spi);
+    if (state) {
+        osEventFlagsSet(state->event, EVT_ERROR);
     }
 }
 }

@@ -77,7 +77,7 @@ static const task_definition_t tasks[] = {
     { .func = flashMemoryTask, .name = "flashmem", .priority = HIGH, .stack_size = 4096 },
     { .func = sdCardTask, .name = "sdcard", .priority = HIGH, .stack_size = 1024 },
     { .func = imuTask, .name = "imu", .priority = NORMAL, .stack_size = 1024 },
-    { .func = loggerTask, .name = "log", .priority = NORMAL, .stack_size = 1024 },
+    { .func = loggerTask, .name = "log", .priority = NORMAL, .stack_size = 2048 },
     { .func = modeManagerTask, .name = "mode", .priority = NORMAL, .stack_size = 1024 },
     { .func = debugTask, .name = "debug", .priority = NORMAL, .stack_size = 1024 },
     { .func = storageReaderTask, .name = "storage", .priority = LOW, .stack_size = 1024 },

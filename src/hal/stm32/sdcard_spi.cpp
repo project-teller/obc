@@ -77,7 +77,7 @@ std::unique_ptr<littlefs::FilesystemConfig> createFilesystemConfiguration(void)
 
 bool setup(void)
 {
-    const char* name = getStorageAreaName(STORAGE_AREA_FLASH_MEMORY);
+    const char* name = getStorageAreaName(STORAGE_AREA_SD_CARD);
 
     if (!logger) {
         return false;
