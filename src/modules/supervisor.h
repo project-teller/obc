@@ -58,6 +58,11 @@ private:
 void destroy(void);
 
 /**
+ * @brief Configures the watchdog before entering the main loop of the supervisor task.
+ */
+void setup(void);
+
+/**
  * @brief Checks the status of each registered task to detect deadlocks.
  *
  * @param  timestamp  the current timestamp; zero if it should be queried from the HAL

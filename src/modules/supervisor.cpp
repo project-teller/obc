@@ -1,5 +1,6 @@
 #include "modules/supervisor.h"
 #include "hal/system.h"
+#include "hal/watchdog.h"
 #include "modules/log.h"
 #include <cstring>
 
@@ -109,6 +110,12 @@ void destroy()
     logger = nullptr;
 }
 
+void setup()
+{
+    teller::hal::watchdog::configureAndStart();
+    logger->info("TELLER OBC booted");
+}
+
 void checkTasks(uint32_t timestamp)
 {
     uint8_t i;
@@ -144,7 +151,10 @@ void checkTasks(uint32_t timestamp)
         task->time_until_next_check_sec = task->interval_sec;
         task->nudges = 0;
     }
+
+    teller::hal::watchdog::reset();
 }
+
 }
 
 static task_stats_t* getTaskFromToken(teller::supervisor::task_token_t token)
