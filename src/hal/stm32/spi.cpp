@@ -65,7 +65,7 @@ const spi_bus_config_t spi_config[] = {
             }
         },
         .cs = {
-            // Device 0: ICM-20649 accelerometer
+            // Device 0
             { GPIOD, GPIO_PIN_14 },
             NO_MORE_GPIO_CFG
         },
@@ -158,7 +158,7 @@ bool transfer(
             HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
         }
         if (HAL_SPI_TransmitReceive_IT(&pState->handle, txBuf, rxBuf, size) == HAL_OK) {
-            events = osEventFlagsWait(pState->event, EVT_DONE | EVT_ERROR, osFlagsWaitAny, osWaitForever);
+            events = osEventFlagsWait(pState->event, EVT_DONE | EVT_ERROR, osFlagsWaitAny, SPI_TIMEOUT_MSEC);
             if (events & (osFlagsError | EVT_ERROR)) {
                 HAL_SPI_Abort(&pState->handle);
             } else {
@@ -227,7 +227,7 @@ bool transfer(
                 break;
             }
 
-            events = osEventFlagsWait(pState->event, EVT_DONE | EVT_ERROR, osFlagsWaitAny, osWaitForever);
+            events = osEventFlagsWait(pState->event, EVT_DONE | EVT_ERROR, osFlagsWaitAny, SPI_TIMEOUT_MSEC);
             if (events & (osFlagsError | EVT_ERROR)) {
                 HAL_SPI_Abort(&pState->handle);
                 break;
