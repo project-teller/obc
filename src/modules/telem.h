@@ -56,7 +56,7 @@ void runSingleIteration(std::uint8_t* payload);
  * @param timeout timeout to use when writing data to the telemetry queue
  * @return whether the data was sent successfully to the telemetry module
  */
-bool send(const std::uint8_t* data, std::uint8_t length, std::uint32_t timeout = DEFAULT_TIMEOUT);
+bool send(const std::uint8_t* data, std::uint8_t length, std::uint32_t timeout = DEFAULT_TELEMETRY_TIMEOUT);
 
 /**
  * @brief Sends a string to the telemetry module.
@@ -69,7 +69,7 @@ bool send(const std::uint8_t* data, std::uint8_t length, std::uint32_t timeout =
  * @param timeout timeout to use when writing data to the telemetry queue
  * @return whether the data was sent successfully to the telemetry module
  */
-bool send(const char* data, std::uint32_t timeout = DEFAULT_TIMEOUT);
+bool send(const char* data, std::uint32_t timeout = DEFAULT_TELEMETRY_TIMEOUT);
 
 /**
  * @brief Sends a telemetry message to the telemetry module, using the given envelope.
@@ -92,7 +92,7 @@ bool send(const char* data, std::uint32_t timeout = DEFAULT_TIMEOUT);
  */
 bool send(
     envelope_t envelope, const std::uint8_t* payload, std::uint8_t length,
-    std::uint32_t timeout = DEFAULT_TIMEOUT);
+    std::uint32_t timeout = DEFAULT_TELEMETRY_TIMEOUT);
 
 /**
  * @brief Sends a telemetry message of a given type to the telemetry module.
@@ -108,7 +108,7 @@ bool send(
  */
 bool send(
     frames::frame_type_t type, const std::uint8_t* payload, std::uint8_t length,
-    std::uint32_t timeout = DEFAULT_TIMEOUT);
+    std::uint32_t timeout = DEFAULT_TELEMETRY_TIMEOUT);
 
 /**
  * @brief Stops the telemetry stream onthe UART with the given index.

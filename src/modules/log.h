@@ -47,7 +47,7 @@ Logger* getLogger(teller::telem::module_id_t module);
  */
 bool sendToTelemetry(
     teller::telem::module_id_t module, teller::telem::log_level_t level,
-    const char* message, uint32_t timeout = teller::telem::DEFAULT_TIMEOUT);
+    const char* message, uint32_t timeout = teller::telem::DEFAULT_TELEMETRY_TIMEOUT);
 
 /**
  * @brief Logger object that logs messages from a given module.
@@ -89,14 +89,14 @@ public:
         return result;                                                   \
     }
 
-    LOGGER_FUNC(alert, LOG_LEVEL_ALERT, teller::telem::DEFAULT_TIMEOUT);
-    LOGGER_FUNC(critical, LOG_LEVEL_CRITICAL, teller::telem::DEFAULT_TIMEOUT);
-    LOGGER_FUNC(debug, LOG_LEVEL_DEBUG, teller::telem::DEFAULT_TIMEOUT);
-    LOGGER_FUNC(emergency, LOG_LEVEL_EMERGENCY, teller::telem::DEFAULT_TIMEOUT);
-    LOGGER_FUNC(error, LOG_LEVEL_ERROR, teller::telem::DEFAULT_TIMEOUT);
-    LOGGER_FUNC(info, LOG_LEVEL_INFO, teller::telem::DEFAULT_TIMEOUT);
-    LOGGER_FUNC(notice, LOG_LEVEL_NOTICE, teller::telem::DEFAULT_TIMEOUT);
-    LOGGER_FUNC(warning, LOG_LEVEL_WARNING, teller::telem::DEFAULT_TIMEOUT);
+    LOGGER_FUNC(alert, LOG_LEVEL_ALERT, teller::telem::DEFAULT_TELEMETRY_TIMEOUT);
+    LOGGER_FUNC(critical, LOG_LEVEL_CRITICAL, teller::telem::DEFAULT_TELEMETRY_TIMEOUT);
+    LOGGER_FUNC(debug, LOG_LEVEL_DEBUG, teller::telem::DEFAULT_TELEMETRY_TIMEOUT);
+    LOGGER_FUNC(emergency, LOG_LEVEL_EMERGENCY, teller::telem::DEFAULT_TELEMETRY_TIMEOUT);
+    LOGGER_FUNC(error, LOG_LEVEL_ERROR, teller::telem::DEFAULT_TELEMETRY_TIMEOUT);
+    LOGGER_FUNC(info, LOG_LEVEL_INFO, teller::telem::DEFAULT_TELEMETRY_TIMEOUT);
+    LOGGER_FUNC(notice, LOG_LEVEL_NOTICE, teller::telem::DEFAULT_TELEMETRY_TIMEOUT);
+    LOGGER_FUNC(warning, LOG_LEVEL_WARNING, teller::telem::DEFAULT_TELEMETRY_TIMEOUT);
 
     LOGGER_FUNC(alert_nowait, LOG_LEVEL_ALERT, 0);
     LOGGER_FUNC(critical_nowait, LOG_LEVEL_CRITICAL, 0);

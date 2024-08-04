@@ -17,7 +17,7 @@ const int MAX_PAYLOAD_LENGTH = 63;
 const int MAX_MESSAGE_LENGTH = MAX_PAYLOAD_LENGTH + HEADER_LENGTH + 2;
 
 /** Default timeout to use when sending telemetry messages */
-const std::uint32_t DEFAULT_TIMEOUT = 250;
+const std::uint32_t DEFAULT_TELEMETRY_TIMEOUT = 250;
 
 /**
  * Enum representing the possible components that can be addressed by a
