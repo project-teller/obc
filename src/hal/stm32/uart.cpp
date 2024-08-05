@@ -18,9 +18,17 @@ static const uint32_t EVT_READ = 0x00000001U;
 static const uint32_t EVT_WRITTEN = 0x00000002U;
 static const uint32_t EVT_ERROR = 0x00000004U;
 
+#define NUM_GPIO_PINS_PER_UART 2
+
 typedef struct {
     USART_TypeDef* instance;
-    gpio_port_and_pins_t gpio;
+    union {
+        gpio_port_and_pins_t by_index[NUM_GPIO_PINS_PER_UART];
+        struct {
+            gpio_port_and_pins_t tx;
+            gpio_port_and_pins_t rx;
+        } by_name;
+    } gpio;
     IRQn_Type irq;
 
     uint32_t baud_rate;
@@ -42,15 +50,42 @@ typedef struct {
         0             \
     }
 
+/* clang-format off */
 #if defined TELLER_BOARD_NUCLEO144
 // STM32H743ZI Nucleo-144 dev board, for testing purposes
 #define NUM_PHY_UARTS 1
 const uart_phy_config_t uart_phy_config[] = {
-    // { LPUART1, { GPIOB, GPIO_PIN_6 | GPIO_PIN_7 }, LPUART1_IRQn, 38400 },
-    { USART3, { GPIOD, GPIO_PIN_8 | GPIO_PIN_9 }, USART3_IRQn, 38400 }, /* 115200 is the max that seems to work */
+    /*
+    {
+        .instance = USART2,
+        .gpio = {
+            .by_name = {
+                .tx = { GPIOD, GPIO_PIN_5 },
+                .rx = { GPIOA, GPIO_PIN_3 }
+            },
+        },
+        .irq = USART2_IRQn,
+        .baud_rate = 38400
+    },
+    */
+    {
+        .instance = USART3,
+        .gpio = {
+            .by_name = {
+                .tx = { GPIOD, GPIO_PIN_8 },
+                .rx = { GPIOD, GPIO_PIN_9 }
+            },
+        },
+        .irq = USART3_IRQn,
+        .baud_rate = 38400  /* 115200 is the max that seems to work */
+    },
     NO_MORE_UARTS
 };
-const int8_t uart_map[NUM_UARTS] = { 0, 0, 0 };
+const int8_t uart_map[NUM_UARTS] = {
+    0,  /* TELEMETRY --> USART3 */
+    -1,
+    -1
+};
 #elif defined STM32F4
 // STM32F4-Discovery
 #define NUM_PHY_UARTS 0
@@ -66,6 +101,7 @@ const uart_phy_config_t uart_phy_config[NUM_UARTS] = {
 };
 const int8_t uart_map[NUM_UARTS] = { -1, -1, -1 };
 #endif
+/* clang-format on */
 
 static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t* cfg);
 static uart_phy_state_t* find_phy_for_uart(int8_t index);
@@ -327,6 +363,7 @@ extern "C" {
 void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 {
     GPIO_InitTypeDef GPIO_InitStruct = { 0 };
+    uint8_t gpioFunc = 0;
 
     uart_phy_state_t* state = find_uart_phy_state(huart);
     const uart_phy_config_t* cfg = state ? state->cfg : nullptr;
@@ -334,7 +371,41 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
         return;
     }
 
-    if (huart->Instance == USART3) {
+    if (huart->Instance == USART1) {
+        gpioFunc = GPIO_AF7_USART1;
+
+#ifdef STM32H7
+        RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = { 0 };
+
+        /* Initializes the peripherals clock */
+        PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART1;
+        PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
+        if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
+            return;
+        }
+#endif
+
+        /* Peripheral clock enable */
+        __HAL_RCC_USART1_CLK_ENABLE();
+    } else if (huart->Instance == USART2) {
+        gpioFunc = GPIO_AF7_USART2;
+
+#ifdef STM32H7
+        RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = { 0 };
+
+        /* Initializes the peripherals clock */
+        PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART2;
+        PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
+        if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
+            return;
+        }
+#endif
+
+        /* Peripheral clock enable */
+        __HAL_RCC_USART2_CLK_ENABLE();
+    } else if (huart->Instance == USART3) {
+        gpioFunc = GPIO_AF7_USART3;
+
 #ifdef STM32H7
         RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = { 0 };
 
@@ -351,14 +422,16 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     }
 
     /* GPIO configuration */
-    if (cfg->gpio.port && cfg->gpio.pins) {
-        enableGPIOClocksForPort(cfg->gpio.port);
-        GPIO_InitStruct.Pin = cfg->gpio.pins;
-        GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-        GPIO_InitStruct.Alternate = GPIO_AF7_USART3;
-        HAL_GPIO_Init(cfg->gpio.port, &GPIO_InitStruct);
+    for (int i = 0; i < NUM_GPIO_PINS_PER_UART; i++) {
+        if (cfg->gpio.by_index[i].port && cfg->gpio.by_index[i].pins) {
+            enableGPIOClocksForPort(cfg->gpio.by_index[i].port);
+            GPIO_InitStruct.Pin = cfg->gpio.by_index[i].pins;
+            GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+            GPIO_InitStruct.Pull = GPIO_NOPULL;
+            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+            GPIO_InitStruct.Alternate = gpioFunc;
+            HAL_GPIO_Init(cfg->gpio.by_index[i].port, &GPIO_InitStruct);
+        }
     }
 
     /* IRQ configuration */
@@ -371,7 +444,11 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
 
     state->initialized = true;
 
-    if (huart->Instance == USART3) {
+    if (huart->Instance == USART1) {
+        uart_handle_ptrs[1] = huart;
+    } else if (huart->Instance == USART2) {
+        uart_handle_ptrs[2] = huart;
+    } else if (huart->Instance == USART3) {
         uart_handle_ptrs[3] = huart;
     }
 }
@@ -387,12 +464,18 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
         return;
     }
 
-    if (huart->Instance == USART3) {
+    if (huart->Instance == USART1) {
+        __HAL_RCC_USART1_CLK_DISABLE();
+    } else if (huart->Instance == USART2) {
+        __HAL_RCC_USART2_CLK_DISABLE();
+    } else if (huart->Instance == USART3) {
         __HAL_RCC_USART3_CLK_DISABLE();
     }
 
-    if (cfg->gpio.port && cfg->gpio.pins) {
-        HAL_GPIO_DeInit(cfg->gpio.port, cfg->gpio.pins);
+    for (int i = NUM_GPIO_PINS_PER_UART - 1; i >= 0; i--) {
+        if (cfg->gpio.by_index[i].port && cfg->gpio.by_index[i].pins) {
+            HAL_GPIO_DeInit(cfg->gpio.by_index[i].port, cfg->gpio.by_index[i].pins);
+        }
     }
 
     if (cfg->irq) {
@@ -404,7 +487,11 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
         state->initialized = false;
     }
 
-    if (huart->Instance == USART3) {
+    if (huart->Instance == USART1) {
+        uart_handle_ptrs[1] = nullptr;
+    } else if (huart->Instance == USART2) {
+        uart_handle_ptrs[2] = nullptr;
+    } else if (huart->Instance == USART3) {
         uart_handle_ptrs[3] = nullptr;
     }
 }
