@@ -52,8 +52,10 @@ void destroy(void);
  *
  * Normally you should not need to use this function as transfer() takes care of
  * this for you -- unless you use the NO_CHIP_SELECT flag.
+ *
+ * @return whether the operation was successful
  */
-void select(address_t address, bool value = true);
+bool select(address_t address, bool value = true);
 
 /**
  * @brief Runs a simultaneous transmit-receive cycle on an SPI device.
@@ -116,8 +118,10 @@ bool transfer(
  *
  * Normally you should not need to use this function as transfer() takes care of
  * this for you -- unless you use the NO_CHIP_SELECT flag.
+ *
+ * @return whether the operation was successful
  */
-void unselect(address_t address);
+bool unselect(address_t address);
 
 int getLastErrorCode(void);
 

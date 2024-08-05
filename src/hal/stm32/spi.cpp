@@ -119,12 +119,15 @@ void destroy()
 {
 }
 
-void select(address_t address, bool value)
+bool select(address_t address, bool value)
 {
     const spi_bus_config_t* pCfg;
     if (is_spi_address_valid(address)) {
         pCfg = &spi_config[address.bus];
         HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, value ? GPIO_PIN_RESET : GPIO_PIN_SET);
+        return true;
+    } else {
+        return false;
     }
 }
 
@@ -271,9 +274,9 @@ bool transfer(
     return hal_status == HAL_OK;
 }
 
-void unselect(address_t address)
+bool unselect(address_t address)
 {
-    select(address, false);
+    return select(address, false);
 }
 
 int getLastErrorCode(void)
