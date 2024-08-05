@@ -10,7 +10,8 @@ using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::telem;
 
-// static const spi::address_t address = spi::NO_ADDRESS;
+// static const spi::address_t address = { .bus = 0, .device = 0 };
+static const spi::address_t address = spi::NO_ADDRESS;
 
 /** Default timeout to use when sending SD card commands */
 static const uint32_t DEFAULT_SD_CARD_TIMEOUT = 250;
