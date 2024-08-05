@@ -53,9 +53,8 @@ typedef struct {
 /* clang-format off */
 #if defined TELLER_BOARD_NUCLEO144
 // STM32H743ZI Nucleo-144 dev board, for testing purposes
-#define NUM_PHY_UARTS 1
+#define NUM_PHY_UARTS 2
 const uart_phy_config_t uart_phy_config[] = {
-    /*
     {
         .instance = USART2,
         .gpio = {
@@ -67,7 +66,6 @@ const uart_phy_config_t uart_phy_config[] = {
         .irq = USART2_IRQn,
         .baud_rate = 38400
     },
-    */
     {
         .instance = USART3,
         .gpio = {
@@ -82,8 +80,8 @@ const uart_phy_config_t uart_phy_config[] = {
     NO_MORE_UARTS
 };
 const int8_t uart_map[NUM_UARTS] = {
-    0,  /* TELEMETRY --> USART3 */
-    -1,
+    0,  /* TELEMETRY --> USART2 */
+    1,  /* DEBUG --> USART3 */
     -1
 };
 #elif defined STM32F4
@@ -338,7 +336,7 @@ static uart_phy_state_t* find_phy_for_uart(int8_t index)
 
 static bool isUARTAlwaysConnected(uart_t index)
 {
-    return index != DEBUG;
+    return true; // index != DEBUG;
 }
 
 /* Finds the UART configuration corresponding to the given physical UART */
@@ -500,6 +498,22 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
 /* ************************************************************************** */
 
 extern "C" {
+
+void USART1_IRQHandler(void)
+{
+    UART_HandleTypeDef* ptr = uart_handle_ptrs[1];
+    if (ptr) {
+        HAL_UART_IRQHandler(ptr);
+    }
+}
+
+void USART2_IRQHandler(void)
+{
+    UART_HandleTypeDef* ptr = uart_handle_ptrs[2];
+    if (ptr) {
+        HAL_UART_IRQHandler(ptr);
+    }
+}
 
 void USART3_IRQHandler(void)
 {
