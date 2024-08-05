@@ -1,4 +1,5 @@
 #include "modules/supervisor.h"
+#include "hal/queue.hpp"
 #include "hal/system.h"
 #include "hal/watchdog.h"
 #include "modules/log.h"
@@ -6,10 +7,12 @@
 
 using namespace teller::hal::system;
 using namespace teller::telem;
+using teller::hal::BlockingQueueBase;
 
 static teller::log::Logger* logger = nullptr;
 
 #define MAX_TASKS 32
+#define MAX_QUEUES 8
 #define INVALID_TOKEN std::numeric_limits<uint8_t>::max()
 #define UNLIMITED_NUDGES std::numeric_limits<uint16_t>::max()
 
@@ -42,9 +45,27 @@ typedef struct {
     uint8_t time_until_next_check_sec;
 } task_stats_t;
 
+/**
+ * @brief Structure in which the status and configuration of a registered queue is stored.
+ */
+typedef struct {
+    /** Human-readable name of the queue; null if the slot is unused */
+    const char* name;
+
+    /** Pointer to the queue; null if the slot is unused */
+    BlockingQueueBase* queue;
+
+    /** High water mark: maximum number of items that we have seen in the queue */
+    size_t high_water_mark;
+} queue_stats_t;
+
 static_assert(MAX_TASKS < INVALID_TOKEN);
 static_assert(MAX_TASKS <= 32);
 static task_stats_t task_stats[MAX_TASKS];
+
+static_assert(MAX_QUEUES < INVALID_TOKEN);
+static_assert(MAX_QUEUES <= 32);
+static queue_stats_t queue_stats[MAX_QUEUES];
 
 static task_stats_t* getTaskFromToken(teller::supervisor::task_token_t token);
 static bool isValidTask(const task_stats_t* stat);
@@ -52,7 +73,14 @@ static teller::supervisor::task_token_t registerTask(const char* name);
 static void unregisterTask(teller::supervisor::task_token_t token);
 static void nudgeTask(teller::supervisor::task_token_t token);
 
+static bool isValidQueue(const queue_stats_t* stat);
+static queue_stats_t* getQueueFromToken(teller::supervisor::queue_token_t token);
+static teller::supervisor::queue_token_t registerQueue(const char* name, BlockingQueueBase* queue);
+static void unregisterQueue(teller::supervisor::queue_token_t token);
+
 namespace teller::supervisor {
+
+/* ************************************************************************** */
 
 TaskRegistration::TaskRegistration(const char* name)
     : m_token(INVALID_TOKEN)
@@ -92,6 +120,21 @@ TaskRegistration& TaskRegistration::expect(uint16_t min, uint16_t max)
     return (*this);
 }
 
+/* ************************************************************************** */
+
+QueueRegistration::QueueRegistration(const char* name, BlockingQueueBase* queue)
+    : m_token(INVALID_TOKEN)
+{
+    m_token = registerQueue(name, queue);
+}
+
+QueueRegistration::~QueueRegistration()
+{
+    unregisterQueue(m_token);
+}
+
+/* ************************************************************************** */
+
 bool init()
 {
     logger = teller::log::getLogger(MODULE_ID_OBC);
@@ -116,46 +159,81 @@ void setup()
     logger->info("TELLER OBC booted");
 }
 
-void checkTasks(uint32_t timestamp)
+bool checkQueues(void)
 {
     uint8_t i;
-    task_stats_t* task;
+    uint8_t size;
+    queue_stats_t* stats;
+    bool result = true;
+
+    for (i = 0; i < MAX_QUEUES; i++) {
+        stats = &queue_stats[i];
+        if (!isValidQueue(stats) || !stats->queue) {
+            continue;
+        }
+
+        size = stats->queue->size();
+        if (size > stats->high_water_mark) {
+            stats->high_water_mark = size;
+        }
+
+        if (size >= stats->queue->limit()) {
+            logger->error_nowait("%s: queue full", stats->name);
+            result = false;
+        }
+    }
+
+    return result;
+}
+
+bool checkTasks(uint32_t timestamp)
+{
+    uint8_t i;
+    task_stats_t* stats;
+    bool result = true;
 
     if (timestamp == 0) {
         timestamp = getTimeSinceBootMsec();
     }
 
     for (i = 0; i < MAX_TASKS; i++) {
-        task = &task_stats[i];
-        if (!isValidTask(task)) {
+        stats = &task_stats[i];
+        if (!isValidTask(stats)) {
             continue;
         }
 
-        task->time_until_next_check_sec--;
-        if (task->time_until_next_check_sec) {
+        stats->time_until_next_check_sec--;
+        if (stats->time_until_next_check_sec) {
             continue;
         }
 
-        if (task->nudges == 0 && task->min_nudges > 0) {
-            logger->error_nowait("%s: task stalled", task->name);
-        } else if (task->nudges < task->min_nudges) {
+        if (stats->nudges == 0 && stats->min_nudges > 0) {
+            logger->error_nowait("%s: task stalled", stats->name);
+            result = false;
+        } else if (stats->nudges < stats->min_nudges) {
             logger->warning_nowait(
-                "%s: task too slow (%d/%d)", task->name,
-                task->nudges, task->min_nudges);
-        } else if (task->max_nudges < UNLIMITED_NUDGES && task->nudges > task->max_nudges) {
+                "%s: task too slow (%d/%d)", stats->name,
+                stats->nudges, stats->min_nudges);
+            result = false;
+        } else if (stats->max_nudges < UNLIMITED_NUDGES && stats->nudges > stats->max_nudges) {
             logger->warning_nowait(
-                "%s: task too fast (%d/%d)", task->name,
-                task->nudges, task->max_nudges);
+                "%s: task too fast (%d/%d)", stats->name,
+                stats->nudges, stats->max_nudges);
+            result = false;
         }
 
-        task->time_until_next_check_sec = task->interval_sec;
-        task->nudges = 0;
+        stats->time_until_next_check_sec = stats->interval_sec;
+        stats->nudges = 0;
     }
 
     teller::hal::watchdog::reset();
+
+    return result;
 }
 
 }
+
+/* ************************************************************************** */
 
 static task_stats_t* getTaskFromToken(teller::supervisor::task_token_t token)
 {
@@ -166,27 +244,27 @@ static task_stats_t* getTaskFromToken(teller::supervisor::task_token_t token)
     }
 }
 
-static bool isValidTask(const task_stats_t* stat)
+static bool isValidTask(const task_stats_t* stats)
 {
-    return stat->name != nullptr && stat->interval_sec > 0;
+    return stats->name != nullptr && stats->interval_sec > 0;
 }
 
 static teller::supervisor::task_token_t registerTask(const char* name)
 {
-    task_stats_t* task;
+    task_stats_t* stats;
 
     if (!name) {
         return INVALID_TOKEN;
     }
 
     for (uint8_t i = 0; i < MAX_TASKS; i++) {
-        task = &task_stats[i];
-        if (!isValidTask(task)) {
-            task->name = name;
-            task->interval_sec = 1;
-            task->time_until_next_check_sec = 1;
-            task->min_nudges = 0;
-            task->max_nudges = std::numeric_limits<uint16_t>::max();
+        stats = &task_stats[i];
+        if (!isValidTask(stats)) {
+            stats->name = name;
+            stats->interval_sec = 1;
+            stats->time_until_next_check_sec = 1;
+            stats->min_nudges = 0;
+            stats->max_nudges = std::numeric_limits<uint16_t>::max();
             return static_cast<teller::supervisor::task_token_t>(i);
         }
     }
@@ -196,16 +274,61 @@ static teller::supervisor::task_token_t registerTask(const char* name)
 
 static void unregisterTask(teller::supervisor::task_token_t token)
 {
-    task_stats_t* task = getTaskFromToken(token);
-    if (task) {
-        memset(task, 0, sizeof(task_stats_t));
+    task_stats_t* stats = getTaskFromToken(token);
+    if (stats) {
+        memset(stats, 0, sizeof(task_stats_t));
     }
 }
 
 static void nudgeTask(teller::supervisor::task_token_t token)
 {
-    task_stats_t* task = getTaskFromToken(token);
-    if (task) {
-        task->nudges++;
+    task_stats_t* stats = getTaskFromToken(token);
+    if (stats) {
+        stats->nudges++;
     }
 }
+
+/* ************************************************************************** */
+
+static queue_stats_t* getQueueFromToken(teller::supervisor::queue_token_t token)
+{
+    if (token >= 0 && token < MAX_QUEUES) {
+        return &queue_stats[token];
+    } else {
+        return nullptr;
+    }
+}
+
+static bool isValidQueue(const queue_stats_t* stat)
+{
+    return stat->name != nullptr;
+}
+
+static teller::supervisor::queue_token_t registerQueue(const char* name, BlockingQueueBase* queue)
+{
+    queue_stats_t* stats;
+
+    if (!name || !queue) {
+        return INVALID_TOKEN;
+    }
+
+    for (uint8_t i = 0; i < MAX_TASKS; i++) {
+        stats = &queue_stats[i];
+        if (!isValidQueue(stats)) {
+            stats->name = name;
+            stats->queue = queue;
+        }
+    }
+
+    return INVALID_TOKEN;
+}
+
+static void unregisterQueue(teller::supervisor::queue_token_t token)
+{
+    queue_stats_t* stats = getQueueFromToken(token);
+    if (stats) {
+        memset(stats, 0, sizeof(queue_stats_t));
+    }
+}
+
+/* ************************************************************************** */

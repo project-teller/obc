@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/telem/generic.h"
+#include "hal/queue.hpp"
 #include "hal/uart.h"
 
 namespace teller::telem {
@@ -26,6 +27,11 @@ void destroy(void);
  * @return whether a message was received successfully
  */
 bool flushNext(void);
+
+/**
+ * @brief Returns a pointer to the outbound queue of the telemetry subsystem.
+ */
+teller::hal::BlockingQueueBase* getQueue(void);
 
 /**
  * @brief Requests the telemetry stream to be forwarded to the UART with the given index.

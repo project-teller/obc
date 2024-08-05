@@ -11,11 +11,11 @@ namespace teller::hal {
  * On FreeRTOS, the implementation uses the CMSIS queue API.
  */
 template <typename T>
-class BlockingQueue {
+class BlockingQueue : public BlockingQueueBase {
 
 public:
     BlockingQueue(size_t size)
-        : is_closed(false)
+        : BlockingQueueBase(size)
     {
         handle = osMessageQueueNew(size, sizeof(T), nullptr);
         assert(handle != nullptr);
@@ -43,10 +43,7 @@ public:
         return osMessageQueueDelete(handle) == osOK;
     }
 
-    bool closed() const { return is_closed; }
-    bool empty() const { return osMessageQueueGetCount(handle) == 0; }
     size_t size() const { return osMessageQueueGetCount(handle); }
-    size_t limit() const { return osMessageQueueGetCapacity(handle); }
 
     bool receive(T& message)
     {
@@ -79,9 +76,6 @@ public:
 private:
     /** FreeRTOS handle to the underlying queue */
     osMessageQueueId_t handle;
-
-    /** Whether the queue is closed */
-    bool is_closed;
 };
 
 }

@@ -13,16 +13,12 @@ namespace teller::hal {
  * On POSIX, the implementation uses an in-memory buffer protected by a mutex.
  */
 template <typename T>
-class BlockingQueue {
+class BlockingQueue : public BlockingQueueBase {
 
 public:
     BlockingQueue(size_t size)
-        : item_limit(size)
-        , is_closed(false)
+        : BlockingQueueBase(size)
     {
-        if (size == 0) {
-            throw std::runtime_error("zero-length queues are not allowed");
-        }
     }
 
     ~BlockingQueue()
@@ -55,7 +51,6 @@ public:
         return true;
     }
 
-    bool closed() const { return is_closed; }
     bool empty() const
     {
         std::unique_lock lock(queue_mutex);
@@ -66,7 +61,6 @@ public:
         std::unique_lock lock(queue_mutex);
         return items.size();
     }
-    size_t limit() const { return item_limit; }
 
     bool receive(T& message)
     {
@@ -150,12 +144,6 @@ private:
 
     /** Mutex for synchronization */
     mutable std::mutex queue_mutex;
-
-    /** Size limit of the queue */
-    const size_t item_limit;
-
-    /** Whether the queue is closed */
-    bool is_closed;
 
     std::condition_variable item_added_event;
     std::condition_variable item_removed_event;

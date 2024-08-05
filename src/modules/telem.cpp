@@ -101,6 +101,11 @@ void destroy()
     telemetry_channel_mask = 0;
 }
 
+BlockingQueueBase* getQueue()
+{
+    return &out_queue;
+}
+
 bool flushNext()
 {
     message_t message;

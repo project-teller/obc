@@ -6,6 +6,7 @@ typedef enum {
     NO_ERROR = 0,
     SYSTEM_INIT_ERROR = 1,
     NOT_ENOUGH_MEMORY = 2,
+    QUEUE_FULL = 3,
 } error_t;
 
 void init(void);
