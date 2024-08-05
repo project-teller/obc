@@ -14,6 +14,18 @@ typedef enum {
 } internal_error_t;
 
 /**
+ * @brief Common blink patterns to use on the heartbeat LED.
+ */
+typedef enum {
+    BLINK_OFF = 0,
+    BLINK_HEARTBEAT = 0b10100000,
+    BLINK_FAST = 0b10101010,
+    BLINK_MEDIUM = 0b11001100,
+    BLINK_SLOW = 0b11110000,
+    BLINK_SOLID = 0b11111111,
+} blink_pattern_t;
+
+/**
  * @brief Struct used to store debugging information that should survive a
  * soft reboot.
  */
@@ -46,6 +58,11 @@ void init(void);
 void destroy(void);
 
 /**
+ * @brief Returns the current blink pattern to show on the heartbeat LED.
+ */
+uint8_t getBlinkPattern(void);
+
+/**
  * @brief Returns a pointer to the debug data structure.
  */
 debug_info_t* getDebugInfo(void);
@@ -62,5 +79,10 @@ uint32_t getAndClearErrorFlags(void);
  * telemetry streams are up and running.
  */
 void reportErrorsDuringPreviousBoot(void);
+
+/**
+ * @brief Sets the current blink pattern to show on the heartbeat LED.
+ */
+void setBlinkPattern(uint8_t pattern);
 
 }

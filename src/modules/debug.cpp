@@ -20,6 +20,11 @@ using namespace teller::telem;
  */
 static teller::debug::debug_info_t debug_info NOINIT_SECTION;
 
+/**
+ * The current blink pattern of the heartbeat LED of the board.
+ */
+static uint8_t blinkPattern;
+
 namespace teller::debug {
 
 void init()
@@ -30,6 +35,8 @@ void init()
         debug_info.errors = 0;
         memset(&debug_info.task, 0, sizeof(debug_info.task));
     }
+
+    blinkPattern = BLINK_HEARTBEAT;
 }
 
 void destroy()
@@ -49,6 +56,11 @@ uint32_t getAndClearErrorFlags(void)
     return result;
 }
 
+uint8_t getBlinkPattern(void)
+{
+    return blinkPattern;
+}
+
 void reportErrorsDuringPreviousBoot(void)
 {
     uint32_t errors = getAndClearErrorFlags();
@@ -59,6 +71,11 @@ void reportErrorsDuringPreviousBoot(void)
     } else if (errors & ERROR_MALLOC_FAILED) {
         logger->error("%s: malloc failed", debug_info.task);
     }
+}
+
+void setBlinkPattern(uint8_t pattern)
+{
+    blinkPattern = pattern;
 }
 
 }
