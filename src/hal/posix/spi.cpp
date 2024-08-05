@@ -14,7 +14,10 @@ void destroy()
 {
 }
 
-void select(address_t address, bool value) { }
+bool select(address_t address, bool value)
+{
+    return false;
+}
 
 bool transfer(
     address_t address, std::uint8_t* buf, std::uint16_t size, std::uint8_t flags)
@@ -36,6 +39,9 @@ bool transfer(
     return false;
 }
 
-void unselect(address_t address) { }
+bool unselect(address_t address)
+{
+    return false;
+}
 
 }
