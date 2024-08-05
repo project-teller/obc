@@ -303,13 +303,18 @@ static bool configure_spi_bus(spi_bus_state_t* state, const spi_bus_config_t* cf
 
     pHandle->Instance = cfg->instance;
 
+    /* Prescaler = 256 --> 187.5 KBit/s */
+    /* Prescaler = 128 --> 375 KBit/s */
+    /* Prescaler = 64 --> 750 KBit/s */
+    /* Prescaler = 32 --> 1.5 MBit/s */
+
     pHandle->Init.Mode = SPI_MODE_MASTER;
     pHandle->Init.Direction = SPI_DIRECTION_2LINES;
     pHandle->Init.DataSize = SPI_DATASIZE_8BIT;
     pHandle->Init.CLKPolarity = SPI_POLARITY_LOW;
     pHandle->Init.CLKPhase = SPI_PHASE_1EDGE;
     pHandle->Init.NSS = SPI_NSS_SOFT;
-    pHandle->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64;
+    pHandle->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
     pHandle->Init.FirstBit = SPI_FIRSTBIT_MSB;
     pHandle->Init.TIMode = SPI_TIMODE_DISABLE;
     pHandle->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;

@@ -2,19 +2,18 @@
 #include "core/utils/crc.h"
 #include "hal/sdcard.h"
 #include "hal/spi.h"
+#include "hal/system.h"
+#include "modules/debug.h"
 #include "modules/log.h"
 
 using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::telem;
 
-/*
-static const spi::address_t address = {
-    .bus = 0,
-    .device = 0
-};
-*/
-static const spi::address_t address = spi::NO_ADDRESS;
+// static const spi::address_t address = spi::NO_ADDRESS;
+
+/** Default timeout to use when sending SD card commands */
+static const uint32_t DEFAULT_SD_CARD_TIMEOUT = 250;
 
 /* SD card command set */
 #define CMD_GO_IDLE_STATE 0
@@ -36,9 +35,9 @@ static const spi::address_t address = spi::NO_ADDRESS;
 
 static bool tryInitialization(void);
 static void prepareCommand(uint8_t* buf, uint8_t cmd, uint32_t arg);
-static uint8_t sendCommand(uint8_t cmd, uint32_t arg = 0);
-static bool readR4Response(uint8_t* buf);
-static bool waitUntilIdle(void);
+static uint8_t sendCommand(uint8_t cmd, uint32_t arg = 0, uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
+static bool readR4Response(uint8_t* buf, uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
+static bool waitUntilIdle(uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
 
 /** The logger used by the driver */
 static Logger* logger;
@@ -54,7 +53,12 @@ bool init()
 
     /* TODO: ensure that the clock frequency is between 100 kHz and 400 kHz */
     logger = getLogger(MODULE_ID_EDR);
-    cardFound = tryInitialization();
+
+    /* We cannot call tryInitialization() here because we do not have the
+     * facilities of FreeRTOS at our disposal yet. It will be called later
+     * in setup()
+     */
+    cardFound = false;
 
     /* cardFound == false is okay, we still want to report that we did not find
      * the card in setup() */
@@ -82,6 +86,8 @@ bool setup(void)
     if (!logger) {
         return false;
     }
+
+    cardFound = tryInitialization();
 
     if (cardFound) {
         logger->info("%s: found", name);
@@ -127,14 +133,16 @@ static void prepareCommand(uint8_t* buf, uint8_t cmd, uint32_t arg)
  *
  * @param cmd  the command code between 0 and 63, inclusive
  * @param arg  the argument of the command
+ * @param timeout  maximum number of milliseconds to wait for the SD card to
+ *        become ready
  * @return the response byte; 0xFF if the command failed
  */
-static uint8_t sendCommand(uint8_t cmd, uint32_t arg)
+static uint8_t sendCommand(uint8_t cmd, uint32_t arg, uint32_t timeout)
 {
     uint8_t buf[10];
     uint8_t i;
 
-    if (!waitUntilIdle()) {
+    if (!waitUntilIdle(timeout)) {
         return 0xFF;
     }
 
@@ -180,7 +188,7 @@ static uint8_t sendAppCommand(uint8_t cmd, uint32_t arg)
  *
  * @param buf  the buffer to read the response into. It must be at least 4 bytes long.
  */
-static bool readR4Response(uint8_t* buf)
+static bool readR4Response(uint8_t* buf, uint32_t timeout)
 {
     memset(buf, 0xff, 4);
     return spi::transfer(address, buf, 4, spi::NO_CHIP_SELECT);
@@ -190,8 +198,9 @@ static bool tryInitialization(void)
 {
     uint8_t buf[10];
     bool success = false;
+    const char* name = getStorageAreaName(STORAGE_AREA_SD_CARD);
 
-    spi::select(address);
+    spi::unselect(address);
 
     /* Step 1: set MOSI and CS to high and apply 74 or more clock pulses to
      * SCLK */
@@ -200,8 +209,11 @@ static bool tryInitialization(void)
         goto cleanup;
     }
 
+    spi::select(address);
+
     /* Step 2: send reset command and read response */
     if (sendCommand(CMD_GO_IDLE_STATE) != RESPONSE_IDLE) {
+        logger->error("%s: reset failed", name);
         goto cleanup;
     }
 
@@ -209,9 +221,11 @@ static bool tryInitialization(void)
      * illegal command response, the card is SDC v1 or MMC v3 so it is not an
      * SDHC/SDXC card */
     if (sendCommand(CMD_SEND_IF_COND, 0x1aa) != RESPONSE_IDLE) {
+        logger->error("%s: not an SD card", name);
         goto cleanup;
     }
     if (!readR4Response(buf) || (buf[2] & 0x01) != 1 || buf[3] != 0xaa) {
+        logger->error("%s: not an SD card", name);
         goto cleanup;
     }
 
@@ -237,16 +251,21 @@ cleanup:
     return success;
 }
 
-static bool waitUntilIdle()
+static bool waitUntilIdle(uint32_t timeout)
 {
     uint8_t busy;
+    uint32_t now = system::getTimeSinceBootMsec();
+    uint32_t deadline = (timeout < std::numeric_limits<uint32_t>::max())
+        ? now + timeout
+        : std::numeric_limits<uint32_t>::max();
 
     do {
-        busy = 0xFF;
-        if (!spi::transfer(address, &busy, sizeof(busy))) {
+        busy = 0xff;
+        if (!spi::transfer(address, &busy, sizeof(busy), spi::NO_CHIP_SELECT)) {
             return false;
         }
-    } while (busy != 0xff);
+        now = system::getTimeSinceBootMsec();
+    } while (busy != 0xff && now < deadline);
 
-    return true;
+    return busy == 0xff;
 }
