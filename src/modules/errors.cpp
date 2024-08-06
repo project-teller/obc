@@ -26,6 +26,10 @@ static void updateSingleError();
 void teller::errors::init()
 {
     clearAllErrors();
+
+    // Make sure that the error LED is cleared even if the previous boot left
+    // it in a state where it was lit
+    updateErrorLED();
 }
 
 void teller::errors::destroy()
