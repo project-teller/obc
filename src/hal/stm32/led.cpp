@@ -29,6 +29,13 @@ const led_config_t led_config[NUM_LEDS] = {
     { GPIOB, GPIO_PIN_14 }, /* Error LED */
     { GPIOE, GPIO_PIN_1 }, /* Debug LED */
 };
+#elif defined TELLER_BOARD_STM32F4
+// STM32F415RG TELLER OBC
+const led_config_t led_config[NUM_LEDS] = {
+    { GPIOA, GPIO_PIN_6 }, /* Heartbeat LED */
+    { GPIOA, GPIO_PIN_2 }, /* Error LED */
+    { 0 }, /* Debug LED */
+};
 #elif defined STM32F1
 // STM32VL-Discovery green led - PC9
 const led_config_t led_config[NUM_LEDS] = {
