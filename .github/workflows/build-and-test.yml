@@ -26,9 +26,14 @@ jobs:
           cmake --build build
           ctest --timeout 5 --test-dir build --output-junit report.xml --output-on-failure
 
-      - name: Build firmware
+      - name: Build firmware (dev board)
         run: |
-          cmake . --preset default -B build-stm32
+          cmake . --preset devboard -B build-devboard
+          cmake --build build-stm32
+
+      - name: Build firmware (OBC board)
+        run: |
+          cmake . --preset default -B build-prod
           cmake --build build-stm32
 
       - uses: test-summary/action@v2
@@ -39,7 +44,10 @@ jobs:
         with:
           name: firmware
           path: |
-            build-stm32/src/teller-obc.bin
-            build-stm32/src/teller-obc.elf
-            build-stm32/src/teller-obc.hex
+            build-devboard/src/teller-obc.bin
+            build-devboard/src/teller-obc.elf
+            build-devboard/src/teller-obc.hex
+            build-prod/src/teller-obc.bin
+            build-prod/src/teller-obc.elf
+            build-prod/src/teller-obc.hex
           if-no-files-found: error

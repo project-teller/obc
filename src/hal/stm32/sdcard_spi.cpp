@@ -10,8 +10,8 @@ using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::telem;
 
-// static const spi::address_t address = { .bus = 0, .device = 0 };
-static const spi::address_t address = spi::NO_ADDRESS;
+static const spi::address_t address = { .bus = 0, .device = 0 };
+// static const spi::address_t address = spi::NO_ADDRESS;
 
 /** Default timeout to use when sending SD card commands */
 static const uint32_t DEFAULT_SD_CARD_TIMEOUT = 250;
@@ -201,7 +201,9 @@ static bool tryInitialization(void)
     bool success = false;
     const char* name = getStorageAreaName(STORAGE_AREA_SD_CARD);
 
-    spi::unselect(address);
+    if (!spi::unselect(address)) {
+        return false;
+    }
 
     /* Step 1: set MOSI and CS to high and apply 74 or more clock pulses to
      * SCLK */
@@ -210,7 +212,10 @@ static bool tryInitialization(void)
         goto cleanup;
     }
 
-    spi::select(address);
+    if (!spi::select(address)) {
+        goto cleanup;
+        return false;
+    }
 
     /* Step 2: send reset command and read response */
     if (sendCommand(CMD_GO_IDLE_STATE) != RESPONSE_IDLE) {

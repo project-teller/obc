@@ -17,7 +17,7 @@ function(add_programming_target)
         return()
     endif()
 
-    if(NOT OPENOCD_BOARD)
+    if(NOT OPENOCD_BOARD AND NOT OPENOCD_INTERFACE AND NOT OPENOCD_TARGET)
         return()
     endif()
 
@@ -27,9 +27,26 @@ function(add_programming_target)
 	set(FIRMWARE_HEX_FILE ${CMAKE_CURRENT_BINARY_DIR}/${FIRMWARE_HEX_FILE})
 
 	set(OPENOCD_ARGS
-		-f board/${OPENOCD_BOARD}.cfg
 		-c "program ${FIRMWARE_HEX_FILE} verify reset exit"
 	)
+    if(OPENOCD_BOARD)
+        set(OPENOCD_ARGS
+            -f board/${OPENOCD_BOARD}.cfg
+            ${OPENOCD_ARGS}
+        )
+    endif()
+    if(OPENOCD_TARGET)
+        set(OPENOCD_TARGET
+            -f target/${OPENOCD_TARGET}.cfg
+            ${OPENOCD_ARGS}
+        )
+    endif()
+    if(OPENOCD_INTERFACE)
+        set(OPENOCD_INTERFACE
+            -f interface/${OPENOCD_INTERFACE}.cfg
+            ${OPENOCD_ARGS}
+        )
+    endif()
 
     get_target_property(TARGET_OUTPUT_NAME ${TARGET_NAME} OUTPUT_NAME)
     if(TARGET_OUTPUT_NAME)

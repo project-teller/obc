@@ -1,6 +1,8 @@
 #include "stm32_hal.h"
 #include <cmsis_os2.h>
 
+#include <limits>
+
 #include "hal/mutex.hpp"
 #include "hal/spi.h"
 #include "hal/stm32/utils.h"
@@ -71,6 +73,12 @@ const spi_bus_config_t spi_config[] = {
         },
         .irq = SPI1_IRQn,
     },
+    NO_MORE_SPI_BUSES
+};
+#elif defined TELLER_BOARD_STM32F4
+// TELLER OBC board
+#define NUM_SPI_BUSES 0
+const spi_bus_config_t spi_config[] = {
     NO_MORE_SPI_BUSES
 };
 #elif defined STM32F4
@@ -322,6 +330,7 @@ static bool configure_spi_bus(spi_bus_state_t* state, const spi_bus_config_t* cf
     pHandle->Init.TIMode = SPI_TIMODE_DISABLE;
     pHandle->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
     pHandle->Init.CRCPolynomial = 0x0;
+#if defined(STM32H7)
     pHandle->Init.NSSPMode = SPI_NSS_PULSE_ENABLE;
     pHandle->Init.NSSPolarity = SPI_NSS_POLARITY_LOW;
     pHandle->Init.FifoThreshold = SPI_FIFO_THRESHOLD_01DATA;
@@ -332,6 +341,7 @@ static bool configure_spi_bus(spi_bus_state_t* state, const spi_bus_config_t* cf
     pHandle->Init.MasterReceiverAutoSusp = SPI_MASTER_RX_AUTOSUSP_DISABLE;
     pHandle->Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_DISABLE;
     pHandle->Init.IOSwap = SPI_IO_SWAP_DISABLE;
+#endif
 
     if (HAL_SPI_Init(pHandle) != HAL_OK) {
         goto cleanup;

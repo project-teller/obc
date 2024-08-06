@@ -7,12 +7,12 @@
   },
   "configurePresets": [
     {
-      "name": "default",
-      "displayName": "Build (STM32-H743ZI Nucleo-144)",
-      "description": "Build the firmware for STM32-H743ZI Nucleo-144",
+      "name": "devboard",
+      "displayName": "Build (STM32-H743ZI Nucleo-144 dev board)",
+      "description": "Build the firmware for STM32-H743ZI (Nucleo-144 dev board)",
       "generator": "Ninja",
       "toolchainFile": "etc/cmake/stm32_gcc.cmake",
-      "binaryDir": "${sourceDir}/build/default",
+      "binaryDir": "${sourceDir}/build/dev",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": {
           "type": "string",
@@ -29,12 +29,12 @@
       }
     },
     {
-      "name": "simulate",
-      "displayName": "Build (STM32-F405RG)",
-      "description": "Build the firmware for STM32-F405RG",
+      "name": "default",
+      "displayName": "Build (STM32-F415RG TELLER OBC board)",
+      "description": "Build the firmware for STM32-F415RG (TELLER OBC board)",
       "generator": "Ninja",
       "toolchainFile": "etc/cmake/stm32_gcc.cmake",
-      "binaryDir": "${sourceDir}/build/simulate",
+      "binaryDir": "${sourceDir}/build/prod",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": {
           "type": "string",
@@ -78,8 +78,17 @@
   ],
   "buildPresets": [
     {
-      "name": "build",
+      "name": "build-dev",
       "displayName": "Build firmware (STM32-H743ZI Nucleo-144)",
+      "description": "Build firmware without uploading it",
+      "configurePreset": "devboard",
+      "targets": [
+        "teller-obc"
+      ]
+    },
+    {
+      "name": "build-prod",
+      "displayName": "Build firmware (STM32-F415RG TELLER OBC board)",
       "description": "Build firmware without uploading it",
       "configurePreset": "default",
       "targets": [
@@ -87,17 +96,17 @@
       ]
     },
     {
-      "name": "simulate",
-      "displayName": "Simulate firmware (STM32-F405RG)",
-      "description": "Simulate firmware in QEMU",
-      "configurePreset": "simulate",
+      "name": "upload-dev",
+      "displayName": "Upload firmware (STM32-H743ZI Nucleo-144)",
+      "description": "Upload built firmware with openocd",
+      "configurePreset": "devboard",
       "targets": [
-        "teller-obc"
+        "upload"
       ]
     },
     {
-      "name": "upload",
-      "displayName": "Upload firmware (STM32-H743ZI Nucleo-144)",
+      "name": "upload-prod",
+      "displayName": "Upload firmware (STM32-F415RG TELLER OBC board)",
       "description": "Upload built firmware with openocd",
       "configurePreset": "default",
       "targets": [
