@@ -24,18 +24,18 @@ jobs:
 
       - name: Build and run tests
         run: |
-          cmake . --preset host -B build
+          cmake . --preset host -B build -G Ninja
           cmake --build build
           ctest --timeout 5 --test-dir build --output-junit report.xml --output-on-failure
 
       - name: Build firmware (dev board)
         run: |
-          cmake . --preset devboard -B build-devboard
+          cmake . --preset devboard -B build-devboard -G Ninja
           cmake --build build-devboard
 
       - name: Build firmware (OBC board)
         run: |
-          cmake . --preset default -B build-prod
+          cmake . --preset default -B build-prod -G Ninja
           cmake --build build-prod
 
       - uses: test-summary/action@v2
