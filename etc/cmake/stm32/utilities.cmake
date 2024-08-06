@@ -54,6 +54,7 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/STMicroelectronics/cmsis_core/
     GIT_TAG        v5.6.0
     GIT_PROGRESS   TRUE
+	GIT_SHALLOW    TRUE
 )
 
 set(IDX 0)
@@ -68,6 +69,7 @@ foreach(FAMILY ${STM32_FETCH_FAMILIES})
 		GIT_REPOSITORY https://github.com/STMicroelectronics/STM32Cube${FAMILY}/
 		GIT_TAG        ${CUBE_VERSION}
 		GIT_PROGRESS   TRUE
+		GIT_SHALLOW    TRUE
 	)
 
     if(CMSIS_VERSION STREQUAL cube)
@@ -78,6 +80,7 @@ foreach(FAMILY ${STM32_FETCH_FAMILIES})
             GIT_REPOSITORY https://github.com/STMicroelectronics/cmsis_device_${FAMILY_L}/
             GIT_TAG        ${CMSIS_VERSION}
             GIT_PROGRESS   TRUE
+			GIT_SHALLOW    TRUE
         )
     endif()
 
@@ -89,6 +92,7 @@ foreach(FAMILY ${STM32_FETCH_FAMILIES})
             GIT_REPOSITORY https://github.com/STMicroelectronics/stm32${FAMILY_L}xx_hal_driver/
             GIT_TAG        ${HAL_VERSION}
             GIT_PROGRESS   TRUE
+			GIT_SHALLOW    TRUE
         )
     endif()
 
