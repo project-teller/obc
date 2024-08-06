@@ -312,7 +312,7 @@ static teller::supervisor::queue_token_t registerQueue(const char* name, Blockin
         return INVALID_TOKEN;
     }
 
-    for (uint8_t i = 0; i < MAX_TASKS; i++) {
+    for (uint8_t i = 0; i < MAX_QUEUES; i++) {
         stats = &queue_stats[i];
         if (!isValidQueue(stats)) {
             stats->name = name;
