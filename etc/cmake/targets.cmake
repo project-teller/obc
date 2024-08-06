@@ -47,7 +47,6 @@ function(add_programming_target)
             ${OPENOCD_ARGS}
         )
     endif()
-    message(STATUS "OpenOCD args: ${OPENOCD_ARGS}")
 
     get_target_property(TARGET_OUTPUT_NAME ${TARGET_NAME} OUTPUT_NAME)
     if(TARGET_OUTPUT_NAME)
