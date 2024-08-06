@@ -5,6 +5,7 @@
 #include <memory>
 
 #include <sys/select.h>
+#include <unistd.h>
 
 #include "hal/system.h"
 #include "hal/uart.h"
@@ -73,7 +74,7 @@ bool teller::hal::uart::isConnected(uart_t index)
     }
 }
 
-bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_t* bytes_read)
+bool teller::hal::uart::readInto(uart_t index, uint8_t* data, uint16_t size, uint16_t* bytes_read)
 {
     if (size == 0) {
         if (bytes_read) {
@@ -109,12 +110,16 @@ bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_
 bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
 {
     istream& stream = uartToInputStream(index);
+    int fd = uartToInputFileDescriptor(index);
+    bool hasRealFd = fd >= 0;
     bool result = false;
+    bool errored = false;
 
-    if ((stream.rdstate() & (stream.failbit | stream.eofbit)) == 0) {
-        int fd = uartToInputFileDescriptor(index);
+    errored = hasRealFd ? false : ((stream.rdstate() & (stream.failbit | stream.eofbit)) != 0);
+    if (!errored) {
         int activity;
-        fd_set fds;
+        fd_set read_fds;
+        fd_set except_fds;
         bool has_timeout = timeout < std::numeric_limits<uint32_t>::max();
         struct timeval timeout_timeval;
 
@@ -123,6 +128,9 @@ bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
             timeout_timeval.tv_usec = (timeout % 1000) * 1000;
         }
 
+        FD_ZERO(&read_fds);
+        FD_ZERO(&except_fds);
+
         if (fd == NEVER_READABLE_FILE_DESCRIPTOR) {
             // Pretend that the timeout has expired, then return with an error
             activity = 0;
@@ -130,9 +138,10 @@ bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
             // Bypass the call to select(), fd is always readable
             activity = 1;
         } else {
-            FD_ZERO(&fds);
-            FD_SET(fd, &fds);
-            activity = select(fd + 1, &fds, nullptr, &fds, has_timeout ? &timeout_timeval : nullptr);
+            // Use select()
+            FD_SET(fd, &read_fds);
+            FD_SET(fd, &except_fds);
+            activity = select(fd + 1, &read_fds, nullptr, &except_fds, has_timeout ? &timeout_timeval : nullptr);
         }
 
         if (activity < 0) {
@@ -140,10 +149,15 @@ bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
             perror("select");
         } else if (activity == 0) {
             // Timeout
-        } else if (fd >= 0 && !FD_ISSET(fd, &fds)) {
-            // Exceptional condition on fd
+        } else if (hasRealFd) {
+            if (FD_ISSET(fd, &except_fds)) {
+                // Exceptional condition on fd
+                result = false;
+            } else {
+                result = read(fd, data, 1) > 0;
+            }
         } else {
-            // This should now return immediately
+            // Use the stream
             stream.read(reinterpret_cast<char*>(data), 1);
             result = stream.gcount() > 0 || !(stream.rdstate() & (stream.failbit | stream.eofbit));
         }

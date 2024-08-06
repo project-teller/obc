@@ -135,7 +135,7 @@ bool teller::hal::uart::isConnected(uart_t index)
     return index != DEBUG;
 }
 
-bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_t* bytes_read)
+bool teller::hal::uart::readInto(uart_t index, uint8_t* data, uint16_t size, uint16_t* bytes_read)
 {
     uint32_t flags;
 

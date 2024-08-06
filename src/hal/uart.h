@@ -52,7 +52,7 @@ bool isConnected(uart_t index);
  *        size when EOF is reached or when an IO error occurred.
  * @return whether the read was successful
  */
-bool read(uart_t index, std::uint8_t* data, std::uint16_t size, std::uint16_t* bytes_read);
+bool readInto(uart_t index, std::uint8_t* data, std::uint16_t size, std::uint16_t* bytes_read);
 
 /**
  * @brief Reads a single byte from a UART, with a timeout.

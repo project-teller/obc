@@ -24,36 +24,36 @@ TEST_F(UARTTest, read)
     uint8_t buf[512];
     uint16_t bytes_read;
 
-    EXPECT_TRUE(teller::hal::uart::read(DEBUG, buf, 0, nullptr));
-    EXPECT_TRUE(teller::hal::uart::read(DEBUG, buf, 0, &bytes_read));
+    EXPECT_TRUE(teller::hal::uart::readInto(DEBUG, buf, 0, nullptr));
+    EXPECT_TRUE(teller::hal::uart::readInto(DEBUG, buf, 0, &bytes_read));
     EXPECT_EQ(0, bytes_read);
 
     redirect.feed("spam spam spam 42");
 
-    EXPECT_TRUE(teller::hal::uart::read(DEBUG, buf, 6, &bytes_read));
+    EXPECT_TRUE(teller::hal::uart::readInto(DEBUG, buf, 6, &bytes_read));
     EXPECT_EQ(6, bytes_read);
     EXPECT_EQ(0, strncmp("spam s", reinterpret_cast<char*>(buf), bytes_read));
 
-    EXPECT_TRUE(teller::hal::uart::read(DEBUG, buf, 6, nullptr));
+    EXPECT_TRUE(teller::hal::uart::readInto(DEBUG, buf, 6, nullptr));
     EXPECT_EQ(0, strncmp("pam sp", reinterpret_cast<char*>(buf), 6));
 
-    EXPECT_TRUE(teller::hal::uart::read(DEBUG, buf, 16, &bytes_read));
+    EXPECT_TRUE(teller::hal::uart::readInto(DEBUG, buf, 16, &bytes_read));
     EXPECT_EQ(5, bytes_read);
     EXPECT_EQ(0, strncmp("am 42", reinterpret_cast<char*>(buf), bytes_read));
 
-    EXPECT_FALSE(teller::hal::uart::read(DEBUG, buf, 16, nullptr));
-    EXPECT_FALSE(teller::hal::uart::read(DEBUG, buf, 16, &bytes_read));
+    EXPECT_FALSE(teller::hal::uart::readInto(DEBUG, buf, 16, nullptr));
+    EXPECT_FALSE(teller::hal::uart::readInto(DEBUG, buf, 16, &bytes_read));
     EXPECT_EQ(0, bytes_read);
 
     redirect.feed("spam spam spam 42");
 
-    EXPECT_TRUE(teller::hal::uart::read(DEBUG, buf, 6, &bytes_read));
+    EXPECT_TRUE(teller::hal::uart::readInto(DEBUG, buf, 6, &bytes_read));
     EXPECT_EQ(6, bytes_read);
     EXPECT_EQ(0, strncmp("spam s", reinterpret_cast<char*>(buf), bytes_read));
 
     redirect.clear();
 
-    EXPECT_FALSE(teller::hal::uart::read(DEBUG, buf, 16, &bytes_read));
+    EXPECT_FALSE(teller::hal::uart::readInto(DEBUG, buf, 16, &bytes_read));
     EXPECT_EQ(0, bytes_read);
 }
 
@@ -62,11 +62,11 @@ TEST_F(UARTTest, readFromSink)
     uint8_t buf[512];
     uint16_t bytes_read;
 
-    EXPECT_TRUE(teller::hal::uart::read(SINK, buf, 0, nullptr));
-    EXPECT_TRUE(teller::hal::uart::read(SINK, buf, 0, &bytes_read));
+    EXPECT_TRUE(teller::hal::uart::readInto(SINK, buf, 0, nullptr));
+    EXPECT_TRUE(teller::hal::uart::readInto(SINK, buf, 0, &bytes_read));
     EXPECT_EQ(0, bytes_read);
 
-    EXPECT_FALSE(read(SINK, buf, 4, &bytes_read));
+    EXPECT_FALSE(teller::hal::uart::readInto(SINK, buf, 4, &bytes_read));
     EXPECT_EQ(0, bytes_read);
 }
 
