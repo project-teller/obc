@@ -31,12 +31,12 @@ jobs:
       - name: Build firmware (dev board)
         run: |
           cmake . --preset devboard -B build-devboard
-          cmake --build build-stm32
+          cmake --build build-devboard
 
       - name: Build firmware (OBC board)
         run: |
           cmake . --preset default -B build-prod
-          cmake --build build-stm32
+          cmake --build build-prod
 
       - uses: test-summary/action@v2
         with:
