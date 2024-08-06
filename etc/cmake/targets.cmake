@@ -17,7 +17,7 @@ function(add_programming_target)
         return()
     endif()
 
-    if(NOT OPENOCD_BOARD AND NOT OPENOCD_INTERFACE AND NOT OPENOCD_TARGET)
+    if(NOT OPENOCD_BOARD AND NOT OPENOCD_INTERFACE AND NOT OPENOCD_TARGET_CFG)
         return()
     endif()
 
@@ -35,18 +35,19 @@ function(add_programming_target)
             ${OPENOCD_ARGS}
         )
     endif()
-    if(OPENOCD_TARGET)
-        set(OPENOCD_TARGET
-            -f target/${OPENOCD_TARGET}.cfg
+    if(OPENOCD_TARGET_CFG)
+        set(OPENOCD_ARGS
+            -f target/${OPENOCD_TARGET_CFG}.cfg
             ${OPENOCD_ARGS}
         )
     endif()
     if(OPENOCD_INTERFACE)
-        set(OPENOCD_INTERFACE
+        set(OPENOCD_ARGS
             -f interface/${OPENOCD_INTERFACE}.cfg
             ${OPENOCD_ARGS}
         )
     endif()
+    message(STATUS "OpenOCD args: ${OPENOCD_ARGS}")
 
     get_target_property(TARGET_OUTPUT_NAME ${TARGET_NAME} OUTPUT_NAME)
     if(TARGET_OUTPUT_NAME)
