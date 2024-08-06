@@ -73,10 +73,10 @@ static bool configureSystemClock()
 
 #if defined(STM32H7)
     /* Supply configuration update enable */
-    HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
+    // HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
 
-    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
-    while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) { };
+    // __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
+    // while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) { };
 #elif defined(STM32F4)
     /* Configure the main internal regulator output voltage */
     __HAL_RCC_PWR_CLK_ENABLE();
