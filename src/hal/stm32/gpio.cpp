@@ -22,7 +22,7 @@ const gpio_config_t gpio_configs[NUM_GPIO_PINS] = {
 #if defined(TELLER_BOARD_NUCLEO144)
     /* RXSM signals */
     /* SODS: User button */
-    { GPIOC, GPIO_PIN_13, { .Mode = GPIO_MODE_INPUT, .Pull = GPIO_PULLDOWN, .Speed = GPIO_SPEED_FREQ_HIGH } },
+    { GPIOC, GPIO_PIN_13, { .Mode = GPIO_MODE_INPUT, .Pull = GPIO_PULLDOWN, .Speed = GPIO_SPEED_FREQ_LOW } },
     UNMAPPED,
     UNMAPPED,
 
@@ -42,8 +42,8 @@ const gpio_config_t gpio_configs[NUM_GPIO_PINS] = {
     UNMAPPED,
     UNMAPPED,
 
-#elif defined(STM32F4)
-    // STM32F4-Discovery
+#elif defined(TELLER_BOARD_STM32F4)
+    // TELLER OBC board
 
     /* RXSM signals */
     UNMAPPED,
