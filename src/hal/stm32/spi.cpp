@@ -469,7 +469,11 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
             enableGPIOClocksForPort(cfg->gpio.by_index[i].port);
             GPIO_InitStruct.Pin = cfg->gpio.by_index[i].pins;
             GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-            GPIO_InitStruct.Pull = GPIO_NOPULL;
+            /* For SD cards, we enable pull-up on the MISO pin. According to
+             * http://elm-chan.org/docs/mmc/mmc_e.html, "[a] pull-up on the DO
+             * cannot be omited, or some cards will fail initialization
+             * process." */
+            GPIO_InitStruct.Pull = (&cfg->gpio.by_index[i] == &cfg->gpio.by_name.miso) ? GPIO_PULLDOWN : GPIO_NOPULL;
             GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
             GPIO_InitStruct.Alternate = gpioFunc;
             HAL_GPIO_Init(cfg->gpio.by_index[i].port, &GPIO_InitStruct);
