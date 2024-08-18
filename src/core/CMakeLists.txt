@@ -2,6 +2,8 @@
 add_library(
     obc-core
 
+    gmm/parser.cpp
+
     telem/ack.cpp
     telem/binary_data.cpp
     telem/calibration.cpp
@@ -20,7 +22,7 @@ add_library(
     utils/time.c
 )
 target_link_libraries(
-    obc-core PUBLIC lfs
+    obc-core PUBLIC lfs minmea
 )
 target_include_directories(
 	obc-core PUBLIC

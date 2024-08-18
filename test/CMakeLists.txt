@@ -7,6 +7,7 @@ set(TARGET_NAME teller-obc-test)
 add_executable(
     ${TARGET_NAME}
     core/crc_test.cpp
+    core/gmm_test.cpp
     core/majority_voter_test.cpp
     core/running_mean_test.cpp
     core/telem_test.cpp

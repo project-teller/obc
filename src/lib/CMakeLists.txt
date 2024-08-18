@@ -31,6 +31,18 @@ add_subdirectory(sdlog)
 
 #############################################################################
 
+# minmea library. Even though it's CMake-based, we cannot use its CMakeLists.txt
+# file directly because it insists on find_packege(Threads)
+add_library(
+    minmea
+    minmea/minmea.c
+)
+target_include_directories(
+    minmea PUBLIC minmea
+)
+
+#############################################################################
+
 # We need to make sure we are using the right compiler flags when compiling
 # for STM32 so let's depend on the appropriate target even if we don't need
 # any code from there

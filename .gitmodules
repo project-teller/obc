@@ -10,3 +10,6 @@
 [submodule "src/lib/socketstream"]
 	path = src/lib/socketstream
 	url = https://github.com/Protovision/socketstream
+[submodule "src/lib/minmea"]
+	path = src/lib/minmea
+	url = https://github.com/kosma/minmea/
