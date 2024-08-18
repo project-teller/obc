@@ -113,28 +113,6 @@ typedef struct {
     teller::math::Vector3f value;
 } measurement_3d_t;
 
-/**
- * @brief Struct encoding timestamped hit counts from the GMM.
- */
-typedef struct {
-    uint32_t timestampInMsec;
-    union {
-        uint8_t byIndex[10];
-        struct {
-            uint8_t c1;
-            uint8_t c2;
-            uint8_t c3;
-            uint8_t c4;
-            uint8_t c12;
-            uint8_t c13;
-            uint8_t c14;
-            uint8_t c23;
-            uint8_t c24;
-            uint8_t c34;
-        } byName;
-    } hitCounts;
-} measurement_gmm_t;
-
 namespace frames {
 
     /**

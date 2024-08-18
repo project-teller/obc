@@ -2,6 +2,7 @@
 #include <minmea.h>
 
 #include "core/gmm/parser.h"
+#include "core/telem/gmm.h"
 
 #include "hal/system.h"
 #include "hal/uart.h"
@@ -9,6 +10,7 @@
 #include "modules/edr.hpp"
 #include "modules/gmm.h"
 #include "modules/log.h"
+#include "modules/telem.h"
 
 using namespace teller::hal;
 using namespace teller::log;
@@ -17,7 +19,7 @@ using namespace teller::telem;
 
 static subsystem_status_t status = SUBSYSTEM_STATUS_CRITICAL;
 
-static measurement_gmm_t hitCounts;
+static frames::gmm_data_t measurement;
 
 static teller::edr::FormattedLogRecord<
     uint32_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t,
@@ -28,10 +30,13 @@ static teller::edr::FormattedLogRecord<
 
 static Logger* logger;
 static teller::gmm::Parser parser;
+static uint32_t lastMessageStartedAt;
 static uint32_t lastMessageReceivedAt;
 
+static void logGMMMeasurement(void);
 static bool parseReceivedMessage(const char* message);
-static bool updateStatus();
+static void sendGMMMeasurement(uint8_t* payload);
+static bool updateStatus(void);
 
 namespace teller::gmm {
 
@@ -41,6 +46,8 @@ bool init()
 
     status = SUBSYSTEM_STATUS_CRITICAL;
     logger = getLogger(MODULE_ID_GMM);
+
+    lastMessageStartedAt = 0;
     lastMessageReceivedAt = 0;
 
     return logger != nullptr;
@@ -50,11 +57,6 @@ void destroy()
 {
     logger = nullptr;
     status = SUBSYSTEM_STATUS_CRITICAL;
-}
-
-measurement_gmm_t getHitCounts(void)
-{
-    return hitCounts;
 }
 
 subsystem_status_t getSubsystemStatus()
@@ -69,33 +71,45 @@ bool setup()
     return updateStatus();
 }
 
-bool update()
+bool update(uint8_t* payload, bool& updated)
 {
     uint8_t ch;
 
-    if (
-        uart::read1(uart::GMM, &ch, 500) && parser.feed(ch) && parseReceivedMessage(parser.getMessage())) {
-        lastMessageReceivedAt = system::getTimeSinceBootMsec();
+    updated = false;
+    if (uart::read1(uart::GMM, &ch, 500)) {
+        if (ch == '$') {
+            lastMessageStartedAt = system::getTimeSinceBootMsec();
+        }
+        if (parser.feed(ch) && parseReceivedMessage(parser.getMessage())) {
+            lastMessageReceivedAt = system::getTimeSinceBootMsec();
+            logGMMMeasurement();
+            sendGMMMeasurement(payload);
+            updated = true;
+        }
     }
 
     return updateStatus();
 }
 
-void log()
+}
+
+/**
+ * @brief Stores a new GMM measurement in the log files.
+ */
+static void logGMMMeasurement()
 {
     logRecord.write(
-        hitCounts.timestampInMsec,
-        hitCounts.hitCounts.byIndex[0],
-        hitCounts.hitCounts.byIndex[1],
-        hitCounts.hitCounts.byIndex[2],
-        hitCounts.hitCounts.byIndex[3],
-        hitCounts.hitCounts.byIndex[4],
-        hitCounts.hitCounts.byIndex[5],
-        hitCounts.hitCounts.byIndex[6],
-        hitCounts.hitCounts.byIndex[7],
-        hitCounts.hitCounts.byIndex[8],
-        hitCounts.hitCounts.byIndex[9]);
-}
+        measurement.timestampInMsec,
+        measurement.hitCounts.byIndex[0],
+        measurement.hitCounts.byIndex[1],
+        measurement.hitCounts.byIndex[2],
+        measurement.hitCounts.byIndex[3],
+        measurement.hitCounts.byIndex[4],
+        measurement.hitCounts.byIndex[5],
+        measurement.hitCounts.byIndex[6],
+        measurement.hitCounts.byIndex[7],
+        measurement.hitCounts.byIndex[8],
+        measurement.hitCounts.byIndex[9]);
 }
 
 /**
@@ -107,8 +121,6 @@ static bool parseReceivedMessage(const char* message)
     char type[6];
     int counts[10];
 
-    return true;
-
     if (!minmea_scan(
             message, "tiiiiiiiiii", type,
             &counts[0], &counts[1], &counts[2], &counts[3], &counts[4],
@@ -116,15 +128,27 @@ static bool parseReceivedMessage(const char* message)
         return false;
     }
 
-    /* TODO: it would be more accurate to return the time when the last dollar
-     * sign was received as it is closer to the time when the measurement was
-     * taken */
-    hitCounts.timestampInMsec = system::getTimeSinceBootMsec();
+    measurement.timestampInMsec = lastMessageStartedAt;
     for (int i = 0; i < 10; i++) {
-        hitCounts.hitCounts.byIndex[i] = counts[i];
+        measurement.hitCounts.byIndex[i] = counts[i];
     }
 
     return true;
+}
+
+/**
+ * @brief Sends a new GMM telemetry message.
+ *
+ * @param payload   a buffer in which the message can be assembled
+ */
+static void sendGMMMeasurement(uint8_t* payload)
+{
+    /* We want to send the telemetry message as fast as possible so we can read
+     * the next message in time, hence the short timeout */
+    uint8_t length = frames::encodeGMMFrame(&measurement, payload);
+
+    /* TODO(ntamas): count how many messages are skipped */
+    send(frames::GMM, payload, length, 20);
 }
 
 /**

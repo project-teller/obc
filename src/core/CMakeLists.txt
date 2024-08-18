@@ -9,6 +9,7 @@ add_library(
     telem/calibration.cpp
     telem/clock_status.cpp
     telem/generic.cpp
+    telem/gmm.cpp
     telem/heartbeat.cpp
     telem/imu.cpp
     telem/parser.cpp

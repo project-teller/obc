@@ -5,6 +5,7 @@
 #include "core/telem/calibration.h"
 #include "core/telem/clock_status.h"
 #include "core/telem/generic.h"
+#include "core/telem/gmm.h"
 #include "core/telem/heartbeat.h"
 #include "core/telem/imu.h"
 #include "core/telem/parser.h"
@@ -346,6 +347,36 @@ TEST(TelemetryTest, calibrationRequestFrameEncoding)
     frames::decodeCalibrationRequestFrame(encoded, &decoded);
 
     EXPECT_EQ(decoded.procedure, message.procedure);
+}
+
+TEST(TelemetryTest, gmmFrameEncoding)
+{
+    /* clang-format off */
+    frames::gmm_data_t message = {
+        .timestampInMsec = 0x12345678,
+        .hitCounts = {
+            .byIndex = { 5, 4, 3, 2, 1, 9, 8, 7, 6, 5 }
+        }
+    };
+    uint8_t encoded[MAX_MESSAGE_LENGTH];
+    uint8_t expectedBytes[] = {
+        0x78, 0x56, 0x34, 0x12,
+        0x05, 0x04, 0x03, 0x02,
+        0x01, 0x09, 0x08, 0x07,
+        0x06, 0x05
+    };
+    frames::gmm_data_t decoded;
+    /* clang-format on */
+
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeGMMFrame(&message, encoded));
+    EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
+
+    frames::decodeGMMFrame(encoded, &decoded);
+
+    EXPECT_EQ(decoded.timestampInMsec, message.timestampInMsec);
+    for (int i = 0; i < 10; i++) {
+        EXPECT_EQ(decoded.hitCounts.byIndex[i], message.hitCounts.byIndex[i]);
+    }
 }
 
 const uint8_t clockStatusMessage[] = {

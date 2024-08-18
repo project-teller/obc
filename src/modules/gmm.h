@@ -15,11 +15,6 @@ namespace teller::gmm {
 void destroy(void);
 
 /**
- * @brief Returns the most recent GMM hit counts.
- */
-teller::telem::measurement_gmm_t getHitCounts(void);
-
-/**
  * @brief Returns the status of the GMM subsystem.
  */
 teller::telem::subsystem_status_t getSubsystemStatus(void);
@@ -33,15 +28,11 @@ bool setup(void);
 /**
  * @brief Updates the GMM measurements.
  *
- * Blocks until a new GMM measurement was received.
+ * @param payload  buffer in which the GMM telemetry message can be assembled
+ * @param updated  returns whether a new measurement was received
  *
- * @return Whether the GMM subsystem is healthy
+ * @return whether the GMM subsystem is healthy
  */
-bool update(void);
-
-/**
- * @brief Saves the most recent GMM measurement to the log.
- */
-void log(void);
+bool update(uint8_t* payload, bool& updated);
 
 }

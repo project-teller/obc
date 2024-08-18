@@ -61,7 +61,12 @@ static bool sendLowLevel(uint8_t* buf, uint8_t length, uint32_t timeout);
     }
 
 /**
- * @brief Table containing all the logging tasks that the system needs to execute periodically.
+ * @brief Table containing all the telemetry-related tasks that the system needs to execute periodically.
+ *
+ * Not all telemetry messages are handled here. For instance, IMU measurements
+ * are sent from here because they are decoupled from the sampling loop in the
+ * IMU module. However, GMM measurements are sent from the GMM subsystem because
+ * they have to match the messages received from the GMM unambiguously.
  */
 task_t tasks[] = {
     { 25, sendHeartbeat },

@@ -114,7 +114,12 @@ TaskRegistration& TaskRegistration::expect(uint16_t min, uint16_t max)
 {
     task_stats_t* task = getTaskFromToken(m_token);
     if (task) {
+#ifdef TELLER_BOARD_POSIX
+        /* This is not a realtime OS so expect deviations from the desired counts */
+        task->min_nudges = min * 0.8;
+#else
         task->min_nudges = min;
+#endif
         task->max_nudges = max;
     }
     return (*this);

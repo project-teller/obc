@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/telem/clock_status.h"
+#include "core/telem/gmm.h"
 #include "core/telem/heartbeat.h"
 #include "core/telem/imu.h"
 
@@ -17,7 +18,8 @@ void updateHeartbeatData(frames::heartbeat_data_t* data);
 void updateClockStatusData(frames::clock_status_data_t* data);
 
 /**
- * @brief Updates an IMU measurement data object from the IMU.
+ * @brief Updates an IMU measurement data object from the most recent measurement
+ * of the IMU.
  */
 void updateIMUMeasurement(frames::imu_data_t* data);
 
