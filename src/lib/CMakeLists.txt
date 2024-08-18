@@ -37,6 +37,9 @@ add_library(
     minmea
     minmea/minmea.c
 )
+if(NOT HAVE_TIMEGM)
+    add_compile_definitions(minmea timegm=mktime)
+endif()
 target_include_directories(
     minmea PUBLIC minmea
 )
@@ -49,5 +52,6 @@ target_include_directories(
 if(TARGET_MCU_CMSIS_MODULE)
     target_link_libraries(lfs PRIVATE CMSIS::${TARGET_MCU_CMSIS_MODULE})
     target_link_libraries(lfsbd PRIVATE CMSIS::${TARGET_MCU_CMSIS_MODULE})
+    target_link_libraries(minmea PRIVATE CMSIS::${TARGET_MCU_CMSIS_MODULE})
     target_link_libraries(sdlog PRIVATE CMSIS::${TARGET_MCU_CMSIS_MODULE})
 endif()
