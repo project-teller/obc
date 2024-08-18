@@ -50,7 +50,7 @@ void startGyroCalibration(void);
 bool update(void);
 
 /**
- * @brief Saves IMU measurements to the log and sends them via telemetry.
+ * @brief Saves the most recent IMU measurement to the log.
  */
 void log(void);
 
