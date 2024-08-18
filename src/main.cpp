@@ -8,6 +8,7 @@
 #include "modules/debug.h"
 #include "modules/edr.hpp"
 #include "modules/errors.h"
+#include "modules/gmm.h"
 #include "modules/imu.h"
 #include "modules/lcl.h"
 #include "modules/log.h"
@@ -21,6 +22,7 @@
 #include "tasks/cmd.h"
 #include "tasks/debug.h"
 #include "tasks/flashmem.h"
+#include "tasks/gmm.h"
 #include "tasks/imu.h"
 #include "tasks/logger.h"
 #include "tasks/mode.h"
@@ -81,6 +83,7 @@ static const task_definition_t tasks[] = {
     { .func = modeManagerTask, .name = "mode", .priority = NORMAL, .stack_size = 1024 },
     { .func = debugTask, .name = "debug", .priority = NORMAL, .stack_size = 1024 },
     { .func = storageReaderTask, .name = "storage", .priority = LOW, .stack_size = 1024 },
+    { .func = gmmTask, .name = "gmm", .priority = NORMAL, .stack_size = 1024 },
     NO_MORE_TASKS
 };
 
@@ -90,7 +93,8 @@ static void runScheduler(void);
 
 #ifdef TELLER_BOARD_POSIX
 namespace teller::hal::uart {
-void setDebugPort(const std::string&);
+void setDebugPort(const std::string& service);
+void setGMMFileDescriptor(int fd);
 }
 #endif
 
@@ -123,6 +127,7 @@ void bootSystem(void)
     inited &= teller::cmd::init();
     inited &= teller::edr::init();
     inited &= teller::imu::init();
+    inited &= teller::gmm::init();
 
     /* The remaining tasks are started only if the HAL and the module
      * initialization was successful */
@@ -138,6 +143,7 @@ void bootSystem(void)
 
 #ifdef TELLER_BOARD_POSIX
 
+#include <minmea.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -146,20 +152,39 @@ void bootSystem(void)
 #include <thread>
 
 static void parentPipeWatcher(int fd);
+static void generateFakeGMMReadings(int fd);
+
+typedef union {
+    int fds[2];
+    struct {
+        int rx;
+        int tx;
+    } by_role;
+} pipe_pair_t;
 
 int main(void)
 {
     pid_t pid;
     int result = 0;
-    int pipes[2];
+    struct {
+        pipe_pair_t keepalive;
+        pipe_pair_t gmm;
+    } pipes;
     bool shouldBoot = true;
 
     srand(time(NULL));
 
     /* Create a pipe that will be used to allow the child process to detect
      * when the parent died. When the parent dies, the pipe is closed, and
-     * this wil lbe detected by the child. */
-    if (pipe(pipes)) {
+     * this will be detected by the child. */
+    if (pipe(pipes.keepalive.fds)) {
+        perror("pipe");
+        return EXIT_FAILURE;
+    }
+
+    /* Create another pipe on which we will simulate fake readings from the
+     * GMM. */
+    if (pipe(pipes.gmm.fds)) {
         perror("pipe");
         return EXIT_FAILURE;
     }
@@ -179,19 +204,32 @@ int main(void)
 
             // Prevent broken sockets from causing SIGPIPE signals
             signal(SIGPIPE, SIG_IGN);
-            close(pipes[1]);
 
+            // Close the write ends of the pipes that we do not need
+            close(pipes.gmm.by_role.tx);
+            close(pipes.keepalive.by_role.tx);
+
+            // Connect the UART module in the HAL to the GMM
+            teller::hal::uart::setGMMFileDescriptor(pipes.gmm.by_role.rx);
+
+            // Start a new thread to read the keepalive pipe. This is how we
+            // will get notified if the parent dies.
             {
-                std::thread t(parentPipeWatcher, pipes[0]);
+                std::thread t(parentPipeWatcher, pipes.keepalive.by_role.rx);
                 t.detach();
                 bootSystem();
             }
             return EXIT_SUCCESS;
 
         default:
-            /* Parent process. Close the read end of the pipe, keep the write
-             * end open. */
-            close(pipes[0]);
+            /* Parent process. Close the read ends of the pipes, keep the write
+             * ends open. */
+            close(pipes.gmm.by_role.rx);
+            close(pipes.keepalive.by_role.rx);
+
+            /* Start a new thread to simulate readings for the GMM */
+            std::thread gmmThread(generateFakeGMMReadings, pipes.gmm.by_role.tx);
+            gmmThread.detach();
 
             /* Wait for the child and decide based on the return code. */
             if (waitpid(pid, &result, 0) < 0) {
@@ -220,6 +258,35 @@ static void parentPipeWatcher(int fd)
             kill(getpid(), SIGTERM);
             sleep(3);
             kill(getpid(), SIGKILL);
+        }
+    }
+}
+
+static void generateFakeGMMReadings(int fd)
+{
+    FILE* fp;
+    const float gmmReportFreq = 50;
+    int dt = 1000 / gmmReportFreq;
+    char message[128];
+
+    fp = fdopen(fd, "w");
+
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(dt));
+
+        /* Print the message... */
+        snprintf(
+            message, sizeof(message), "$GMCNT,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,*",
+            4, 1, 1, 2, 0, 1, 0, 0, 0, 1);
+
+        /* ...then update the checksum... */
+        snprintf(strrchr(message, '*') + 1, 5, "%02X\r\n", minmea_checksum(message));
+
+        /* ...and send the message */
+        if (fputs(message, fp) == EOF) {
+            fprintf(stderr, "Error while writing GMM message to child process\n");
+        } else {
+            fflush(fp);
         }
     }
 }

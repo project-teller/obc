@@ -5,6 +5,7 @@ add_library(
     debug.cpp
     edr.cpp
     errors.cpp
+    gmm.cpp
     imu.cpp
     lcl.cpp
     log.cpp

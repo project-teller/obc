@@ -11,6 +11,7 @@ typedef enum {
     WAITING_SYNC_BYTE_END,
     WAITING_NEWLINE,
     DONE,
+    ERROR,
 } ParserState;
 
 /**
@@ -37,9 +38,9 @@ public:
      * trailing newlines. When feed() returned false, a partial message is
      * returned.
      */
-    const uint8_t* getMessage() const
+    const char* getMessage() const
     {
-        return _message;
+        return reinterpret_cast<const char*>(_message);
     }
 
     /**

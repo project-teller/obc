@@ -17,7 +17,7 @@ TEST(GMMTest, parsingValidMessage)
     size_t i, n = strlen(validGMMMessage);
     const uint8_t junk[] = { 0xde, 0xad, 0xbe, 0xef, 0xca, 0xca, 0xca, 0xca, 0x0b, 0xad };
     const uint8_t asciiJunk[] = { 'd', 'e', 'a', 'd', 'b', 'e', 'e', 'f' };
-    const uint8_t* message;
+    const char* message;
 
     for (i = 0; i < n; i++) {
         ASSERT_EQ(i == n - 2, parser.feed(validGMMMessage[i]));
@@ -56,7 +56,7 @@ TEST(GMMTest, parsingDollarSignRestartsParsing)
 {
     Parser parser;
     size_t i, n = strlen(validGMMMessage);
-    const uint8_t* message;
+    const char* message;
 
     for (i = 0; i < 10; i++) {
         ASSERT_FALSE(parser.feed(validGMMMessage[i]));
@@ -75,7 +75,7 @@ TEST(GMMTest, parsingTooLongPayload)
 {
     Parser parser;
     size_t i, n = strlen(validGMMMessage);
-    const uint8_t* message;
+    const char* message;
 
     for (i = 0; i < n - 5; i++) {
         ASSERT_FALSE(parser.feed(validGMMMessage[i]));
@@ -100,7 +100,7 @@ TEST(GMMTest, parsingPayloadExactlyAtLimit)
     const char* dummyMessage = "$CNT,foo,bar,baz,frob,CN,foo,bar,baz,frob,CN,foo,bar,baz,frob*2E\r\n";
     Parser parser;
     size_t i, n = strlen(dummyMessage);
-    const uint8_t* message;
+    const char* message;
 
     for (i = 0; i < n; i++) {
         ASSERT_EQ(i == n - 2, parser.feed(dummyMessage[i]));
@@ -115,7 +115,7 @@ TEST(GMMTest, parsingInvalidCRC)
 {
     Parser parser;
     size_t i, n = sizeof(validGMMMessage);
-    const uint8_t* message;
+    const char* message;
 
     for (i = 0; i < n - 3; i++) {
         ASSERT_FALSE(parser.feed(validGMMMessage[i]));

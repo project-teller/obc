@@ -107,6 +107,7 @@ add_executable(
 	tasks/cmd.cpp
 	tasks/debug.cpp
 	tasks/flashmem.cpp
+	tasks/gmm.cpp
 	tasks/imu.cpp
 	tasks/logger.cpp
 	tasks/mode.cpp

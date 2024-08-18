@@ -29,9 +29,12 @@ bool Parser::feed(std::uint8_t ch)
 {
     _state = _feed(ch);
 
-    if (_state == DONE) {
+    if (_state == ERROR) {
         reset();
-        return minmea_check(reinterpret_cast<const char*>(getMessage()), /* strict = */ true);
+        return false;
+    } else if (_state == DONE) {
+        reset();
+        return minmea_check(getMessage(), /* strict = */ true);
     } else {
         return false;
     }
@@ -42,7 +45,9 @@ ParserState Parser::_feed(std::uint8_t ch)
     ParserState nextState = _state;
     bool toStore = false;
 
-    if (ch == SYNC_BYTE_START) {
+    if (!isprint(ch) && ch != '\n' && ch != '\r') {
+        return ERROR;
+    } else if (ch == SYNC_BYTE_START) {
         reset();
         toStore = true;
         nextState = WAITING_SYNC_BYTE_END;
