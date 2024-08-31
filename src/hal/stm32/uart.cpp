@@ -82,6 +82,7 @@ const uart_phy_config_t uart_phy_config[] = {
 const int8_t uart_map[NUM_UARTS] = {
     0,   /* TELEMETRY --> USART2 */
     -1,
+    -1,
     1,   /* DEBUG --> USART3 */
     -1
 };
@@ -91,14 +92,14 @@ const int8_t uart_map[NUM_UARTS] = {
 const uart_phy_config_t uart_phy_config[] = {
     NO_MORE_UARTS
 };
-const int8_t uart_map[NUM_UARTS] = { -1, -1, -1, -1 };
+const int8_t uart_map[NUM_UARTS] = { -1, -1, -1, -1, -1 };
 #else
 // No UART supported on this hardware
 #define NUM_PHY_UARTS 0
 const uart_phy_config_t uart_phy_config[NUM_UARTS] = {
     NO_MORE_UARTS
 };
-const int8_t uart_map[NUM_UARTS] = { -1, -1, -1, -1 };
+const int8_t uart_map[NUM_UARTS] = { -1, -1, -1, -1, -1 };
 #endif
 /* clang-format on */
 

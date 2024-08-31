@@ -21,7 +21,7 @@ teller::telem::subsystem_status_t getSubsystemStatus(void);
 
 /**
  * @brief Sets up the GMM subsystem before entering its main loop.
- * @return Whether the GMM subsystem is healthy
+ * @return whether the GMM subsystem is healthy
  */
 bool setup(void);
 

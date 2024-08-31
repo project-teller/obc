@@ -14,6 +14,7 @@
 #include "modules/log.h"
 #include "modules/mode.h"
 #include "modules/rxsm.h"
+#include "modules/scm.h"
 #include "modules/storage.h"
 #include "modules/supervisor.h"
 #include "modules/telem.h"
@@ -27,6 +28,7 @@
 #include "tasks/logger.h"
 #include "tasks/mode.h"
 #include "tasks/pins.h"
+#include "tasks/scm.h"
 #include "tasks/sdcard.h"
 #include "tasks/serial.h"
 #include "tasks/storage.h"
@@ -84,6 +86,7 @@ static const task_definition_t tasks[] = {
     { .func = debugTask, .name = "debug", .priority = NORMAL, .stack_size = 1024 },
     { .func = storageReaderTask, .name = "storage", .priority = LOW, .stack_size = 1024 },
     { .func = gmmTask, .name = "gmm", .priority = NORMAL, .stack_size = 1024 },
+    { .func = scmTask, .name = "scm", .priority = NORMAL, .stack_size = 1024 },
     NO_MORE_TASKS
 };
 
@@ -95,6 +98,7 @@ static void runScheduler(void);
 namespace teller::hal::uart {
 void setDebugPort(const std::string& service);
 void setGMMFileDescriptor(int fd);
+void setSCMFileDescriptor(int fd);
 }
 #endif
 
@@ -128,6 +132,7 @@ void bootSystem(void)
     inited &= teller::edr::init();
     inited &= teller::imu::init();
     inited &= teller::gmm::init();
+    inited &= teller::scm::init();
 
     /* The remaining tasks are started only if the HAL and the module
      * initialization was successful */
@@ -153,6 +158,7 @@ void bootSystem(void)
 
 static void parentPipeWatcher(int fd);
 static void generateFakeGMMReadings(int fd);
+static void generateFakeSCMReadings(int fd);
 
 typedef union {
     int fds[2];
@@ -169,6 +175,7 @@ int main(void)
     struct {
         pipe_pair_t keepalive;
         pipe_pair_t gmm;
+        pipe_pair_t scm;
     } pipes;
     bool shouldBoot = true;
 
@@ -185,6 +192,13 @@ int main(void)
     /* Create another pipe on which we will simulate fake readings from the
      * GMM. */
     if (pipe(pipes.gmm.fds)) {
+        perror("pipe");
+        return EXIT_FAILURE;
+    }
+
+    /* Create another pipe on which we will simulate fake readings from the
+     * SCM. */
+    if (pipe(pipes.scm.fds)) {
         perror("pipe");
         return EXIT_FAILURE;
     }
@@ -207,10 +221,14 @@ int main(void)
 
             // Close the write ends of the pipes that we do not need
             close(pipes.gmm.by_role.tx);
+            close(pipes.scm.by_role.tx);
             close(pipes.keepalive.by_role.tx);
 
             // Connect the UART module in the HAL to the GMM
             teller::hal::uart::setGMMFileDescriptor(pipes.gmm.by_role.rx);
+
+            // Connect the UART module in the HAL to the SCM
+            teller::hal::uart::setSCMFileDescriptor(pipes.scm.by_role.rx);
 
             // Start a new thread to read the keepalive pipe. This is how we
             // will get notified if the parent dies.
@@ -225,11 +243,16 @@ int main(void)
             /* Parent process. Close the read ends of the pipes, keep the write
              * ends open. */
             close(pipes.gmm.by_role.rx);
+            close(pipes.scm.by_role.rx);
             close(pipes.keepalive.by_role.rx);
 
             /* Start a new thread to simulate readings for the GMM */
             std::thread gmmThread(generateFakeGMMReadings, pipes.gmm.by_role.tx);
             gmmThread.detach();
+
+            /* Start a new thread to simulate readings for the SCM */
+            std::thread scmThread(generateFakeSCMReadings, pipes.scm.by_role.tx);
+            scmThread.detach();
 
             /* Wait for the child and decide based on the return code. */
             if (waitpid(pid, &result, 0) < 0) {
@@ -285,6 +308,35 @@ static void generateFakeGMMReadings(int fd)
         /* ...and send the message */
         if (fputs(message, fp) == EOF) {
             fprintf(stderr, "Error while writing GMM message to child process\n");
+        } else {
+            fflush(fp);
+        }
+    }
+}
+
+static void generateFakeSCMReadings(int fd)
+{
+    FILE* fp;
+    const float gmmReportFreq = 50;
+    int dt = 1000 / gmmReportFreq;
+    char message[128];
+
+    fp = fdopen(fd, "w");
+
+    while (true) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(dt));
+
+        /* Print the message... */
+        snprintf(
+            message, sizeof(message), "$SCCNT,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,*",
+            4, 1, 1, 2, 0, 1, 0, 0, 0, 1);
+
+        /* ...then update the checksum... */
+        snprintf(strrchr(message, '*') + 1, 5, "%02X\r\n", minmea_checksum(message));
+
+        /* ...and send the message */
+        if (fputs(message, fp) == EOF) {
+            fprintf(stderr, "Error while writing SCM message to child process\n");
         } else {
             fflush(fp);
         }

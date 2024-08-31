@@ -8,6 +8,7 @@ namespace teller::hal::uart {
 typedef enum {
     TELEMETRY,
     GMM,
+    SCM,
     DEBUG,
     SINK,
     NUM_UARTS,

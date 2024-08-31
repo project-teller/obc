@@ -2,6 +2,6 @@
 
 namespace teller::tasks {
 
-[[noreturn]] void gmmTask(void* args);
+[[noreturn]] void scmTask(void* args);
 
 }

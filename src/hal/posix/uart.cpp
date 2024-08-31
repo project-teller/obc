@@ -38,6 +38,9 @@ static std::unique_ptr<socketstream> debugClientSocket;
 /** File descriptor on which we can read the measurements from the GMM */
 static int gmmFileDescriptor = 0;
 
+/** File descriptor on which we can read the measurements from the SCM */
+static int scmFileDescriptor = 0;
+
 static void handleDebugPort(void);
 static int uartToInputFileDescriptor(uart_t index);
 static istream& uartToInputStream(uart_t index);
@@ -52,6 +55,7 @@ static map<uart_t, stringstream> uartOutputOverrides;
 namespace teller::hal::uart {
 void setDebugPort(const std::string& service);
 void setGMMFileDescriptor(int fd);
+void setSCMFileDescriptor(int fd);
 }
 
 bool teller::hal::uart::init()
@@ -203,6 +207,11 @@ void teller::hal::uart::setGMMFileDescriptor(int fd)
     gmmFileDescriptor = fd;
 }
 
+void teller::hal::uart::setSCMFileDescriptor(int fd)
+{
+    scmFileDescriptor = fd;
+}
+
 void teller::hal::uart::waitUntilConnected(uart_t index)
 {
     while (!isConnected(index)) {
@@ -304,6 +313,8 @@ static int uartToInputFileDescriptor(uart_t index)
         return STDIN_FILENO;
     case GMM:
         return gmmFileDescriptor > 0 ? gmmFileDescriptor : NEVER_READABLE_FILE_DESCRIPTOR;
+    case SCM:
+        return scmFileDescriptor > 0 ? scmFileDescriptor : NEVER_READABLE_FILE_DESCRIPTOR;
     case DEBUG:
         return debugClientSocket ? debugClientSocket->rdbuf()->socket() : NEVER_READABLE_FILE_DESCRIPTOR;
     default:

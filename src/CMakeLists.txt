@@ -112,6 +112,7 @@ add_executable(
 	tasks/logger.cpp
 	tasks/mode.cpp
 	tasks/pins.cpp
+	tasks/scm.cpp
 	tasks/sdcard.cpp
 	tasks/serial.cpp
 	tasks/storage.cpp
