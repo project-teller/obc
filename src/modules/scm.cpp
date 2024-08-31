@@ -1,6 +1,9 @@
 #include <algorithm>
 #include <minmea.h>
 
+#include "core/log_records.h"
+#include "core/nmea/parser.h"
+
 #include "hal/system.h"
 #include "hal/uart.h"
 
@@ -18,17 +21,15 @@ static subsystem_status_t status = SUBSYSTEM_STATUS_CRITICAL;
 
 // static frames::gmm_data_t measurement;
 
-/*
 static teller::edr::FormattedLogRecord<
-    uint32_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t,
-    uint8_t, uint8_t, uint8_t, uint8_t, uint8_t>
+    uint32_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t*>
     logRecord(
-        2, "GMM", "TimeMS,Cnt1,Cnt2,Cnt3,Cnt4,Cnt12,Cnt13,Cnt14,Cnt23,Cnt24,Cnt34",
-        "IBBBBBBBBBB", "s----------", "C0000000000");
-*/
+        LOG_RECORD_SCM, "SCM",
+        "TimeMS,I,NumFrags,Frag,Length,Histogram",
+        "IBBBBZ", "s-----", "C-----");
 
 static Logger* logger;
-// static teller::gmm::Parser parser;
+static teller::nmea::Parser parser;
 static uint32_t lastMessageStartedAt;
 static uint32_t lastMessageReceivedAt;
 
@@ -41,7 +42,7 @@ namespace teller::scm {
 
 bool init()
 {
-    // parser.reset();
+    parser.reset();
 
     status = SUBSYSTEM_STATUS_CRITICAL;
     logger = getLogger(MODULE_ID_SCM);
@@ -76,17 +77,15 @@ bool update(uint8_t* payload, bool& updated)
 
     updated = false;
     if (uart::read1(uart::SCM, &ch, 500)) {
-        /*
         if (ch == '$') {
             lastMessageStartedAt = system::getTimeSinceBootMsec();
         }
         if (parser.feed(ch) && parseReceivedMessage(parser.getMessage())) {
             lastMessageReceivedAt = system::getTimeSinceBootMsec();
-            logGMMMeasurement();
-            sendGMMMeasurement(payload);
+            logSCMMeasurement();
+            sendSCMMeasurement(payload);
             updated = true;
         }
-        */
     }
 
     return updateStatus();
@@ -97,9 +96,9 @@ bool update(uint8_t* payload, bool& updated)
 /**
  * @brief Stores a new SCM measurement in the log files.
  */
-/*
 static void logSCMMeasurement()
 {
+    /*
     logRecord.write(
         measurement.timestampInMsec,
         measurement.hitCounts.byIndex[0],
@@ -112,19 +111,45 @@ static void logSCMMeasurement()
         measurement.hitCounts.byIndex[7],
         measurement.hitCounts.byIndex[8],
         measurement.hitCounts.byIndex[9]);
+    */
 }
-*/
+
+/**
+ * Attempts to parse a received NMEA sentence to see if it contains an
+ * SCM histogram. Updates the current histogram in case of a match.
+ */
+static bool parseReceivedMessage(const char* message)
+{
+    return false;
+
+    /*
+    char type[6];
+    int counts[10];
+
+    if (!minmea_scan(
+            message, "tiiiiiiiiii", type,
+            &counts[0], &counts[1], &counts[2], &counts[3], &counts[4],
+            &counts[5], &counts[6], &counts[7], &counts[8], &counts[9])) {
+        return false;
+    }
+
+    measurement.timestampInMsec = lastMessageStartedAt;
+    for (int i = 0; i < 10; i++) {
+        measurement.hitCounts.byIndex[i] = counts[i];
+    }
+
+    return true;
+    */
+}
 
 /**
  * @brief Sends a new SCM telemetry message.
  *
  * @param payload   a buffer in which the message can be assembled
  */
-/*
 static void sendSCMMeasurement(uint8_t* payload)
 {
 }
-*/
 
 /**
  * Updates the subsystem status based on the timestamp of the last

@@ -1,6 +1,7 @@
 #include <cassert>
 #include <cstring>
 
+#include "core/log_records.h"
 #include "core/utils/crc.h"
 #include "hal/queue.hpp"
 #include "hal/uart.h"
@@ -11,6 +12,7 @@
 
 using namespace std;
 using namespace teller::hal;
+using namespace teller::log;
 using namespace teller::telem;
 
 using teller::edr::FormattedLogRecord;
@@ -77,7 +79,7 @@ task_t tasks[] = {
 
 /** Log message format for board voltage and temperature */
 static FormattedLogRecord<uint32_t, uint8_t, uint8_t> brdLogRecord(
-    3, "BRD", "TimeMS,Voltage,Temp", "IBb", "sOO", "CA0");
+    LOG_RECORD_BRD, "BRD", "TimeMS,Voltage,Temp", "IBb", "sOO", "CA0");
 
 namespace teller::telem {
 

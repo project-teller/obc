@@ -1,7 +1,8 @@
 #include <algorithm>
 #include <minmea.h>
 
-#include "core/gmm/parser.h"
+#include "core/log_records.h"
+#include "core/nmea/parser.h"
 #include "core/telem/gmm.h"
 
 #include "hal/system.h"
@@ -25,11 +26,12 @@ static teller::edr::FormattedLogRecord<
     uint32_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t,
     uint8_t, uint8_t, uint8_t, uint8_t, uint8_t>
     logRecord(
-        2, "GMM", "TimeMS,Cnt1,Cnt2,Cnt3,Cnt4,Cnt12,Cnt13,Cnt14,Cnt23,Cnt24,Cnt34",
+        LOG_RECORD_GMM, "GMM",
+        "TimeMS,Cnt1,Cnt2,Cnt3,Cnt4,Cnt12,Cnt13,Cnt14,Cnt23,Cnt24,Cnt34",
         "IBBBBBBBBBB", "s----------", "C0000000000");
 
 static Logger* logger;
-static teller::gmm::Parser parser;
+static teller::nmea::Parser parser;
 static uint32_t lastMessageStartedAt;
 static uint32_t lastMessageReceivedAt;
 

@@ -1,4 +1,4 @@
-#include "core/gmm/parser.h"
+#include "core/nmea/parser.h"
 
 #include <cstring>
 #include <minmea.h>
@@ -8,7 +8,7 @@ using namespace std;
 const uint8_t SYNC_BYTE_START = '$';
 const uint8_t SYNC_BYTE_END = '*';
 
-namespace teller::gmm {
+namespace teller::nmea {
 
 Parser::Parser()
 {

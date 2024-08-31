@@ -1,5 +1,6 @@
 #include <algorithm>
 
+#include "core/log_records.h"
 #include "core/math/running_mean.hpp"
 #include "core/math/vector.hpp"
 
@@ -26,7 +27,8 @@ static Vector3f gyroOffset;
 
 static teller::edr::FormattedLogRecord<uint32_t, uint8_t, float, float, float, float, float, float>
     logRecord(
-        2, "IMU", "TimeMS,I,AccX,AccY,AccZ,GyrX,GyrY,GyrZ",
+        LOG_RECORD_IMU, "IMU",
+        "TimeMS,I,AccX,AccY,AccZ,GyrX,GyrY,GyrZ",
         "IBffffff", "s#EEEooo", "C-000000");
 
 /**

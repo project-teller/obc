@@ -12,6 +12,7 @@ add_library(
     messages.cpp
     mode.cpp
     rxsm.cpp
+    scm.cpp
     storage.cpp
     supervisor.cpp
     telem.cpp

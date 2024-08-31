@@ -2,7 +2,7 @@
 add_library(
     obc-core
 
-    gmm/parser.cpp
+    nmea/parser.cpp
 
     telem/ack.cpp
     telem/binary_data.cpp

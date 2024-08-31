@@ -1,10 +1,10 @@
 #pragma once
 
-#include "core/gmm/generic.h"
+#include "core/nmea/generic.h"
 
 #include <cstdint>
 
-namespace teller::gmm {
+namespace teller::nmea {
 
 typedef enum {
     WAITING_SYNC_BYTE_START,
