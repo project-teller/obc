@@ -3,9 +3,10 @@
 #include "core/utils/varuint.h"
 
 /**
+ * @def MAX_LENGTH
  * @brief Maximum length of a variable-length integer, in bytes.
  */
-static const uint8_t MAX_LENGTH = 5;
+#define MAX_LENGTH 5
 
 typedef struct {
     uint8_t mask;
