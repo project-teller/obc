@@ -21,6 +21,7 @@ add_library(
     utils/random.c
     utils/smart_file_handle.cpp
     utils/time.c
+    utils/varuint.c
 )
 target_link_libraries(
     obc-core PUBLIC lfs minmea

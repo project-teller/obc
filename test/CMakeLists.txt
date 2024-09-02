@@ -12,6 +12,7 @@ add_executable(
     core/running_mean_test.cpp
     core/telem_test.cpp
     core/time_test.cpp
+    core/varuint_test.cpp
     core/vector_test.cpp
     hal/posix_board_test.cpp
     hal/posix_gpio_test.cpp
