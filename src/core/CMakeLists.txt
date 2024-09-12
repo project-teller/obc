@@ -17,6 +17,7 @@ add_library(
     telem/text_message.cpp
 
     utils/crc.c
+    utils/histogram.c
     utils/majority_voter.cpp
     utils/random.c
     utils/smart_file_handle.cpp
