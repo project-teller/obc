@@ -384,6 +384,22 @@ static bool startTasks()
 static osPriority_t convertPriorityToFreeRTOS(task_priority_t prio);
 static bool startTask(const task_definition_t* task);
 
+#define HANDLE_FATAL_ERROR(code)                                                \
+    {                                                                           \
+        /* Store the name of the current task that caused a malloc failed event \
+         * so we can report it at the next boot */                              \
+        teller::debug::getDebugInfo()->errors |= code;                          \
+        strncpy(teller::debug::getDebugInfo()->task, pcTaskName, 16);           \
+        teller::debug::getDebugInfo()->task[15] = 0;                            \
+                                                                                \
+        teller::hal::notifyFatalError();                                        \
+                                                                                \
+        taskDISABLE_INTERRUPTS();                                               \
+        for (;;)                                                                \
+            ;                                                                   \
+        /* The watchdog will take care of resetting the board */                \
+    }
+
 int main(void)
 {
     bootSystem();
@@ -449,38 +465,21 @@ extern "C" void vApplicationIdleHook(void)
 extern "C" void vApplicationMallocFailedHook(void)
 {
     char* pcTaskName = pcTaskGetName(nullptr);
-
-    /* Store the name of the current task that caused a malloc failed event
-     * so we can report it at the next boot */
-    teller::debug::getDebugInfo()->errors |= teller::debug::ERROR_MALLOC_FAILED;
-    strncpy(teller::debug::getDebugInfo()->task, pcTaskName, 16);
-    teller::debug::getDebugInfo()->task[15] = 0;
-
-    teller::hal::notifyFatalError();
-
-    taskDISABLE_INTERRUPTS();
-    for (;;)
-        ;
+    HANDLE_FATAL_ERROR(teller::debug::ERROR_MALLOC_FAILED);
 }
 
 extern "C" void vApplicationStackOverflowHook(TaskHandle_t pxTask, char* pcTaskName)
 {
-    (void)pcTaskName;
     (void)pxTask;
+    HANDLE_FATAL_ERROR(teller::debug::ERROR_STACK_OVERFLOW);
+}
 
-    /* Store the name of the task that caused a stack overflow so we can
-     * report it at the next boot */
-    teller::debug::getDebugInfo()->errors |= teller::debug::ERROR_STACK_OVERFLOW;
-    strncpy(teller::debug::getDebugInfo()->task, pcTaskName, 16);
-    teller::debug::getDebugInfo()->task[15] = 0;
+/* STM32-specific fault handlers */
 
-    teller::hal::notifyFatalError();
-
-    taskDISABLE_INTERRUPTS();
-    for (;;)
-        ;
-
-    /* The watchdog will take care of resetting the board */
+extern "C" void HardFault_Handler(void)
+{
+    char* pcTaskName = pcTaskGetName(nullptr);
+    HANDLE_FATAL_ERROR(teller::debug::ERROR_HARD_FAULT);
 }
 
 #endif

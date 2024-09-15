@@ -11,6 +11,7 @@ namespace teller::debug {
 typedef enum {
     ERROR_STACK_OVERFLOW = 1,
     ERROR_MALLOC_FAILED = 2,
+    ERROR_HARD_FAULT = 4,
 } internal_error_t;
 
 /**

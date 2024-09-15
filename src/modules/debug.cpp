@@ -70,6 +70,8 @@ void reportErrorsDuringPreviousBoot(void)
         logger->error("%s: stack overflow", debug_info.task);
     } else if (errors & ERROR_MALLOC_FAILED) {
         logger->error("%s: malloc failed", debug_info.task);
+    } else if (errors & ERROR_HARD_FAULT) {
+        logger->error("%s: hard fault", debug_info.task);
     }
 }
 
