@@ -69,13 +69,19 @@ static optional<Response> processStoragePacket(const envelope_t& envelope, const
 static bool sendResponse(const envelope_t& envelope, Response response, uint8_t* buf);
 
 static Logger* logger;
-static Parser parser;
+
+/* TODO(ntamas): this is wasteful, we are allocating parsers also for those
+ * UART channels where we will not have commands */
+static Parser parsers[teller::hal::uart::NUM_UARTS];
 
 namespace teller::cmd {
 
 bool init()
 {
-    parser.reset();
+    for (int i = 0; i < teller::hal::uart::NUM_UARTS; i++) {
+        parsers[i].reset();
+    }
+
     logger = getLogger(MODULE_ID_OBC);
     return logger != nullptr;
 }
@@ -89,16 +95,19 @@ bool handleCommands(teller::hal::uart::uart_t index, uint8_t* buf, uint32_t time
 {
     uint8_t ch;
     optional<Response> response;
+    Parser* parser;
 
     if (!uart::read1(index, &ch, timeout)) {
         return false;
     }
 
-    if (parser.feed(ch)) {
-        const envelope_t& envelope = parser.getEnvelope();
+    parser = &parsers[index];
+
+    if (parser->feed(ch)) {
+        const envelope_t& envelope = parser->getEnvelope();
         if (envelope.target == ONBOARD_COMPUTER) {
             /* This is a packet for us */
-            response = processPacket(envelope, parser.getPayload());
+            response = processPacket(envelope, parser->getPayload());
         } else {
             /* This is a packet for some other component */
             response.reset();

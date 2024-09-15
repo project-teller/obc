@@ -67,8 +67,14 @@ typedef struct {
         0             \
     }
 
-static cmd_task_args_t cmd_task_args = {
+static cmd_task_args_t cmd_telem_task_args = {
+    .task_name = "cmd_telem",
     .uart_index = teller::hal::uart::TELEMETRY
+};
+
+static cmd_task_args_t cmd_debug_task_args = {
+    .task_name = "cmd_debug",
+    .uart_index = teller::hal::uart::DEBUG
 };
 
 static const task_definition_t tasks[] = {
@@ -77,7 +83,8 @@ static const task_definition_t tasks[] = {
     { .func = serialTask, .name = "serial", .priority = HIGH, .stack_size = 2048 },
     { .func = supervisorTask, .name = "supervisor", .priority = LOW, .stack_size = 1024 },
     { .func = telemetryTask, .name = "telem", .priority = NORMAL, .stack_size = 2048 },
-    { .func = commandTask, .name = "cmd", .priority = LOW, .stack_size = 4096, .context = &cmd_task_args },
+    { .func = commandTask, .name = "cmd_telem", .priority = LOW, .stack_size = 4096, .context = &cmd_telem_task_args },
+    { .func = commandTask, .name = "cmd_debug", .priority = LOW, .stack_size = 4096, .context = &cmd_debug_task_args },
     { .func = flashMemoryTask, .name = "flashmem", .priority = HIGH, .stack_size = 4096 },
     { .func = sdCardTask, .name = "sdcard", .priority = HIGH, .stack_size = 1024 },
     { .func = imuTask, .name = "imu", .priority = NORMAL, .stack_size = 1024 },
