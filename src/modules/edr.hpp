@@ -152,7 +152,7 @@ public:
     /**
      * @brief Returns whether the experiment data recorder is currently running.
      */
-    bool running() { return _fs != nullptr; }
+    bool running() { return _running; }
 
     /**
      * @brief Closes the experiment data recorder.
@@ -164,6 +164,7 @@ public:
 
 private:
     littlefs::Filesystem* _fs;
+    bool _running;
     teller::hal::BlockingQueue<LogRequest> _queue;
 
     size_t _getLastLogIndex();

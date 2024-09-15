@@ -329,8 +329,14 @@ void ExperimentDataRecorder::_run(storage_area_t area)
     */
 
     /* Enter the main loop and start processing requests */
-    while (_queue.receive(request) && !IS_END_OF_QUEUE(request)) {
-        writer.write(request);
+    try {
+        _running = true;
+        while (_queue.receive(request) && !IS_END_OF_QUEUE(request)) {
+            writer.write(request);
+        }
+    } catch (...) {
+        _running = false;
+        throw;
     }
 }
 
