@@ -1,6 +1,7 @@
 #include "hal.h"
 
 #include "board.h"
+#include "dma.h"
 #include "flashmem.h"
 #include "gpio.h"
 #include "imu.h"
@@ -19,6 +20,7 @@ bool teller::hal::init()
 {
     bool success = true;
 
+    /* Base system */
     system::init();
     led::init();
 
@@ -26,6 +28,7 @@ bool teller::hal::init()
     success &= board::init();
     success &= watchdog::init();
     success &= rtc::init();
+    success &= dma::init();
 
     /* I/O devices and buses */
     success &= gpio::init();
@@ -46,15 +49,27 @@ bool teller::hal::init()
 void teller::hal::destroy()
 {
     /* Reverse order compared to ::init() */
+
+    /* Sensors */
+    imu::destroy();
+
+    /* Storage devices */
     storage::destroy();
+    sdcard::destroy();
+    flashmem::destroy();
+
+    /* I/O devices and buses */
     uart::destroy();
     spi::destroy();
     gpio::destroy();
+
+    /* Low-level stuff */
+    dma::destroy();
     rtc::destroy();
-    board::destroy();
     watchdog::destroy();
     board::destroy();
 
+    /* Base system */
     led::destroy();
     system::destroy();
 }

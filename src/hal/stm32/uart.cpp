@@ -6,6 +6,7 @@
 #include <cmsis_os2.h>
 
 #include "config.h"
+#include "hal/dma.h"
 #include "hal/stm32/utils.h"
 #include "hal/system.h"
 #include "hal/uart.h"
@@ -21,7 +22,10 @@ static const uint32_t EVT_ERROR = 0x00000004U;
 #define NUM_GPIO_PINS_PER_UART 2
 
 typedef struct {
+    /** The physical STM32 HAL UART instance being configured by this entry */
     USART_TypeDef* instance;
+
+    /** GPIO pins that the UART will use */
     union {
         gpio_port_and_pins_t by_index[NUM_GPIO_PINS_PER_UART];
         struct {
@@ -29,16 +33,52 @@ typedef struct {
             gpio_port_and_pins_t rx;
         } by_name;
     } gpio;
+
+    /**
+     * IRQ that the UART will use to notify us about incoming data. Zero if
+     * the UART is using DMA.
+     */
     IRQn_Type irq;
 
+    /**
+     * The DMA channel to use for TX operations. Null if the UART is not using
+     * DMA for TX.
+     */
+    DMA_Stream_TypeDef* dma_tx;
+
+    /**
+     * The DMA channel to use for RX operations. Null if the UART is not using
+     * DMA for TX.
+     */
+    DMA_Stream_TypeDef* dma_rx;
+
+    /** Baud rate to configure the UART for */
     uint32_t baud_rate;
+
+    /** Whether hardware flow control should be enabled on the UART */
     bool hw_flow_control;
 } uart_phy_config_t;
 
 typedef struct {
+    /** Handle to the configured STM32 UART instance */
     UART_HandleTypeDef handle;
+
+    /** Pointer to the physical UART configuration */
     const uart_phy_config_t* cfg;
+
+    /** DMA stream of the UART when it is using DMA for TX */
+    DMA_HandleTypeDef dma_tx_handle;
+
+    /** DMA stream of the UART when it is using DMA for RX */
+    DMA_HandleTypeDef dma_rx_handle;
+
+    /**
+     * Event flags to trigger when the UART is ready to read or write or if an
+     * error happened.
+     */
     osEventFlagsId_t event;
+
+    /** Whether this state object is initialized or not */
     bool initialized;
 } uart_phy_state_t;
 
@@ -55,6 +95,7 @@ typedef struct {
 // STM32H743ZI Nucleo-144 dev board, for testing purposes
 #define NUM_PHY_UARTS 2
 const uart_phy_config_t uart_phy_config[] = {
+    /* UART towards the RXSM */
     {
         .instance = USART2,
         .gpio = {
@@ -64,8 +105,12 @@ const uart_phy_config_t uart_phy_config[] = {
             },
         },
         .irq = USART2_IRQn,
+        .dma_tx = nullptr,
+        .dma_rx = nullptr,
         .baud_rate = 38400
     },
+
+    /* Debug UART */
     {
         .instance = USART3,
         .gpio = {
@@ -75,16 +120,18 @@ const uart_phy_config_t uart_phy_config[] = {
             },
         },
         .irq = USART3_IRQn,
-        .baud_rate = 38400  /* 115200 is the max that seems to work */
+        .dma_tx = nullptr,
+        .dma_rx = nullptr,
+        .baud_rate = 115200  /* 115200 is the max that seems to work; 230400 triggers the watchdog sometimes */
     },
     NO_MORE_UARTS
 };
 const int8_t uart_map[NUM_UARTS] = {
     0,   /* TELEMETRY --> USART2 */
-    -1,
-    -1,
+    -1,  /* GMM --> not connected */
+    -1,  /* SCM --> not connected */
     1,   /* DEBUG --> USART3 */
-    -1
+    -1   /* SINK --> not connected */
 };
 #elif defined STM32F4
 // STM32F4-Discovery
@@ -232,11 +279,21 @@ bool teller::hal::uart::write(uart_t index, uint8_t* data, uint16_t size)
     uint32_t flags;
     uart_phy_state_t* pState = find_phy_for_uart(index);
 
-    if (pState) {
+    if (pState && pState->cfg) {
         UART_HandleTypeDef* pHandle = &pState->handle;
 
-        if (HAL_UART_Transmit_IT(pHandle, data, size) != HAL_OK) {
-            return false;
+        if (pState->cfg->dma_tx) {
+            /* Transfer with DMA */
+            /* TODO(ntamas): this does not work yet; DMA needs a buffer that is
+             * guaranteed to be in DMA-accessible memory */
+            if (HAL_UART_Transmit_DMA(pHandle, data, size) != HAL_OK) {
+                return false;
+            }
+        } else {
+            /* Transfer with interrupts */
+            if (HAL_UART_Transmit_IT(pHandle, data, size) != HAL_OK) {
+                return false;
+            }
         }
 
         flags = osEventFlagsWait(pState->event, EVT_WRITTEN | EVT_ERROR, osFlagsWaitAny, osWaitForever);
@@ -353,7 +410,35 @@ static uart_phy_state_t* find_uart_phy_state(UART_HandleTypeDef* huart)
     return nullptr;
 }
 
+static void assignHandle(UART_HandleTypeDef* huart)
+{
+    if (huart->Instance == USART1) {
+        uart_handle_ptrs[1] = huart;
+    } else if (huart->Instance == USART2) {
+        uart_handle_ptrs[2] = huart;
+    } else if (huart->Instance == USART3) {
+        uart_handle_ptrs[3] = huart;
+    }
+}
+
+static void detachHandle(UART_HandleTypeDef* huart)
+{
+    int i = 0, n = sizeof(uart_handle_ptrs) / sizeof(uart_handle_ptrs[0]);
+    for (i = 0; i < n; i++) {
+        if (huart->Instance == uart_handle_ptrs[i]->Instance) {
+            uart_handle_ptrs[i] = nullptr;
+        }
+    }
+}
+
 /* ************************************************************************** */
+
+namespace teller::hal::dma {
+
+void assignHandle(DMA_HandleTypeDef* handle);
+void detachHandle(DMA_HandleTypeDef* handle);
+
+}
 
 extern "C" {
 
@@ -442,15 +527,45 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
         HAL_NVIC_EnableIRQ(cfg->irq);
     }
 
+    /* DMA configuration */
+    if (cfg->dma_tx) {
+        state->dma_tx_handle.Instance = cfg->dma_tx;
+
+        if (huart->Instance == USART1) {
+            state->dma_tx_handle.Init.Request = DMA_REQUEST_USART1_TX;
+        } else if (huart->Instance == USART2) {
+            state->dma_tx_handle.Init.Request = DMA_REQUEST_USART2_TX;
+        } else if (huart->Instance == USART3) {
+            state->dma_tx_handle.Init.Request = DMA_REQUEST_USART3_TX;
+        } else {
+            return;
+        }
+
+        state->dma_tx_handle.Init.Direction = DMA_MEMORY_TO_PERIPH;
+        state->dma_tx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
+        state->dma_tx_handle.Init.MemInc = DMA_MINC_ENABLE;
+        state->dma_tx_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+        state->dma_tx_handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+        state->dma_tx_handle.Init.Mode = DMA_NORMAL;
+        state->dma_tx_handle.Init.Priority = DMA_PRIORITY_LOW;
+        state->dma_tx_handle.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+        if (HAL_DMA_Init(&state->dma_tx_handle) != HAL_OK) {
+            state->dma_tx_handle.Instance = nullptr; /* to prevent HAL_DMA_Deinit */
+            return;
+        }
+
+        __HAL_LINKDMA(huart, hdmatx, state->dma_tx_handle);
+    } else {
+        state->dma_tx_handle.Instance = nullptr;
+    }
+
     state->initialized = true;
 
-    if (huart->Instance == USART1) {
-        uart_handle_ptrs[1] = huart;
-    } else if (huart->Instance == USART2) {
-        uart_handle_ptrs[2] = huart;
-    } else if (huart->Instance == USART3) {
-        uart_handle_ptrs[3] = huart;
-    }
+    assignHandle(huart);
+
+    if (state->dma_tx_handle.Instance) {
+        teller::hal::dma::assignHandle(&state->dma_tx_handle);
+    };
 }
 
 /* Weakly linked function that is called by the STM32 HAL when an UART is
@@ -482,22 +597,26 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
         HAL_NVIC_DisableIRQ(cfg->irq);
     }
 
+    if (cfg->dma_tx && state->dma_tx_handle.Instance) {
+        HAL_DMA_DeInit(&state->dma_tx_handle);
+    }
+
     if (state) {
         osEventFlagsDelete(state->event);
         state->initialized = false;
     }
 
-    if (huart->Instance == USART1) {
-        uart_handle_ptrs[1] = nullptr;
-    } else if (huart->Instance == USART2) {
-        uart_handle_ptrs[2] = nullptr;
-    } else if (huart->Instance == USART3) {
-        uart_handle_ptrs[3] = nullptr;
-    }
+    detachHandle(huart);
+
+    if (state->dma_tx_handle.Instance) {
+        teller::hal::dma::detachHandle(&state->dma_tx_handle);
+    };
 }
 }
 
 /* ************************************************************************** */
+
+/* IRQ handlers */
 
 extern "C" {
 
@@ -524,6 +643,13 @@ void USART3_IRQHandler(void)
         HAL_UART_IRQHandler(ptr);
     }
 }
+}
+
+/* ************************************************************************** */
+
+/* HAL UART callbacks */
+
+extern "C" {
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef* uart)
 {
@@ -548,6 +674,13 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef* uart)
         osEventFlagsSet(state->event, EVT_ERROR);
     }
 }
+}
+
+/* ************************************************************************** */
+
+/* printf integration */
+
+extern "C" {
 
 int __io_putchar(int ch)
 {

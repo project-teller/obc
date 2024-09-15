@@ -1,3 +1,4 @@
+#include "config.h"
 #include "stm32_hal.h"
 #include <cmsis_os2.h>
 

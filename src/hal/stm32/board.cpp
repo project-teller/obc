@@ -1,5 +1,6 @@
 #include "hal/board.h"
 
+#include "config.h"
 #include "stm32_hal.h"
 
 using namespace teller::hal::board;
@@ -73,10 +74,10 @@ static bool configureSystemClock()
 
 #if defined(STM32H7)
     /* Supply configuration update enable */
-    // HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
+    HAL_PWREx_ConfigSupply(PWR_LDO_SUPPLY);
 
-    // __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE2);
-    // while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) { };
+    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+    while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) { };
 #elif defined(STM32F4)
     /* Configure the main internal regulator output voltage */
     __HAL_RCC_PWR_CLK_ENABLE();
@@ -84,7 +85,7 @@ static bool configureSystemClock()
 #endif
 
     /* Configure the oscillators */
-    oscInit.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_LSI;
+    oscInit.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_LSE;
 
     /* HSI: High Speed Internal oscillator (64 MHz @ STM32H7) */
 #if defined(TELLER_BOARD_NUCLEO144)
@@ -97,24 +98,20 @@ static bool configureSystemClock()
     /* LSI: Low Speed Internal oscillator (32 kHz @ STM32H7) */
     oscInit.LSIState = RCC_LSI_ON;
 
-#if defined(TELLER_BOARD_NUCLEO144)
-    oscInit.OscillatorType |= RCC_OSCILLATORTYPE_HSE;
-
-    /* HSE: High Speed External oscillator */
-    oscInit.HSEState = RCC_HSE_BYPASS;
-#endif
+    /* LSE: Low Speed External oscillator */
+    oscInit.LSEState = RCC_LSE_OFF;
 
 #if defined(TELLER_BOARD_NUCLEO144)
     /* Phase-locked loop */
     oscInit.PLL.PLLState = RCC_PLL_ON;
-    oscInit.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-    oscInit.PLL.PLLM = 1;
-    oscInit.PLL.PLLN = 24;
+    oscInit.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+    oscInit.PLL.PLLM = 4;
+    oscInit.PLL.PLLN = 10;
     oscInit.PLL.PLLP = 2; /* Division factor for system clock */
     oscInit.PLL.PLLQ = 4; /* Division factor for peripheral clock */
     oscInit.PLL.PLLR = 2; /* Division factor for peripheral clock */
     oscInit.PLL.PLLRGE = RCC_PLL1VCIRANGE_3;
-    oscInit.PLL.PLLVCOSEL = RCC_PLL1VCOWIDE;
+    oscInit.PLL.PLLVCOSEL = RCC_PLL1VCOMEDIUM;
     oscInit.PLL.PLLFRACN = 0;
 #else
     oscInit.PLL.PLLState = RCC_PLL_NONE;

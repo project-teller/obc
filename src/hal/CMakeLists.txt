@@ -6,6 +6,7 @@ set(HAL_LIBRARIES lfs)
 if(TARGET_MCU STREQUAL "POSIX")
     list(APPEND HAL_SOURCES
         posix/board.cpp
+        posix/dma.cpp
         posix/flashmem.cpp
         posix/gpio.cpp
         posix/imu.cpp
@@ -22,6 +23,7 @@ if(TARGET_MCU STREQUAL "POSIX")
 else()
     list(APPEND HAL_SOURCES
         stm32/board.cpp
+        stm32/dma.cpp
         stm32/flashmem.cpp
         stm32/gpio.cpp
         stm32/imu.cpp
@@ -43,15 +45,17 @@ else()
         ${FREERTOS_NAMESPACE}::Timers
         ${FREERTOS_NAMESPACE}::Heap::4
         ${FREERTOS_NAMESPACE}::${TARGET_MCU_FREERTOS_MODULE}
+        ${HAL_NAMESPACE}::CORTEX
+        ${HAL_NAMESPACE}::DMA
+        ${HAL_NAMESPACE}::GPIO
+        ${HAL_NAMESPACE}::IWDG
+        ${HAL_NAMESPACE}::PWR
+        ${HAL_NAMESPACE}::PWREx
         ${HAL_NAMESPACE}::RCC
         ${HAL_NAMESPACE}::RCCEx
-        ${HAL_NAMESPACE}::GPIO
-        ${HAL_NAMESPACE}::DMA
-        ${HAL_NAMESPACE}::IWDG
         ${HAL_NAMESPACE}::RTC
         ${HAL_NAMESPACE}::SPI
         ${HAL_NAMESPACE}::UART
-        ${HAL_NAMESPACE}::CORTEX
         CMSIS::${TARGET_MCU_CMSIS_MODULE}
         STM32::NoSys
         ${CMSIS_NAMESPACE}::RTOS_V2

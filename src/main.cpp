@@ -74,9 +74,9 @@ static cmd_task_args_t cmd_task_args = {
 static const task_definition_t tasks[] = {
     { .func = blinkTask, .name = "blinker", .priority = LOW },
     { .func = pinsTask, .name = "pins", .priority = NORMAL, .stack_size = 1024 },
-    { .func = serialTask, .name = "serial", .priority = HIGH, .stack_size = 1024 },
+    { .func = serialTask, .name = "serial", .priority = HIGH, .stack_size = 2048 },
     { .func = supervisorTask, .name = "supervisor", .priority = LOW, .stack_size = 1024 },
-    { .func = telemetryTask, .name = "telem", .priority = NORMAL, .stack_size = 1024 },
+    { .func = telemetryTask, .name = "telem", .priority = NORMAL, .stack_size = 2048 },
     { .func = commandTask, .name = "cmd", .priority = LOW, .stack_size = 4096, .context = &cmd_task_args },
     { .func = flashMemoryTask, .name = "flashmem", .priority = HIGH, .stack_size = 4096 },
     { .func = sdCardTask, .name = "sdcard", .priority = HIGH, .stack_size = 1024 },
