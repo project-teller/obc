@@ -230,6 +230,7 @@ bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
 {
     uart_phy_state_t* pState = find_phy_for_uart(index);
     UART_HandleTypeDef* pHandle = pState ? &pState->handle : nullptr;
+    HAL_StatusTypeDef result;
     uint32_t flags;
     bool shouldAbort;
 
@@ -237,8 +238,24 @@ bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
         return false;
     }
 
-    if (HAL_UART_Receive_IT(pHandle, data, 1) != HAL_OK) {
-        return false;
+    while (true) {
+        result = HAL_UART_Receive_IT(pHandle, data, 1);
+        if (result == HAL_OK) {
+            break;
+        } else if (result == HAL_BUSY && timeout > 0) {
+            /* Try again until the timeout expires */
+            uint32_t now, deadline = teller::hal::system::getTimeSinceBootMsec() + timeout;
+            while (pHandle->RxState != HAL_UART_STATE_READY) {
+                now = teller::hal::system::getTimeSinceBootMsec();
+                if (now < deadline) {
+                    teller::hal::system::delayMsec(1);
+                } else {
+                    return false;
+                }
+            }
+        } else {
+            return false;
+        }
     }
 
     flags = osEventFlagsWait(pState->event, EVT_READ | EVT_ERROR, osFlagsWaitAny, timeout);
