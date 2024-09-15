@@ -90,6 +90,47 @@ bool send(
     std::uint32_t timeout = DEFAULT_TELEMETRY_TIMEOUT);
 
 /**
+ * @brief Sends a telemetry message to the telemetry module, using the given envelope.
+ *
+ * The message is defined by its envelope (containing a sequence number, a
+ * message type, a source component ID and a target component ID) and the
+ * payload. In the envelope, the caller needs to provide the message type and
+ * \em may provide the target component ID. When the target component ID is
+ * unknown (unspecified), it is assumed to be the ground station. When the
+ * source component ID is unknown (unspecified), it is assumed to be the
+ * onboard computer.
+ *
+ * Sequence numbers will be filled automatically by the telemetry module.
+ *
+ * @param targets   bitmask of the telemetry channels to send the message to
+ * @param envelope  the envelope of the telemetry message
+ * @param payload   the payload of the message
+ * @param length    lengrh of the payload to send
+ * @param timeout timeout to use when writing data to the telemetry queue
+ * @return whether the data was sent successfully to the telemetry module
+ */
+bool sendTo(
+    uint8_t targets, envelope_t envelope, const std::uint8_t* payload,
+    std::uint8_t length, std::uint32_t timeout = DEFAULT_TELEMETRY_TIMEOUT);
+
+/**
+ * @brief Sends a telemetry message of a given type to the telemetry module.
+ *
+ * This is a convenience function that fills the envelope with sensible defaults.
+ * Only the message type needs to be provided explicitly.
+ *
+ * @param targets   bitmask of the telemetry channels to send the message to
+ * @param type      the type of the message
+ * @param payload   the payload of the message
+ * @param length    lengrh of the payload to send
+ * @param timeout timeout to use when writing data to the telemetry queue
+ * @return whether the data was sent successfully to the telemetry module
+ */
+bool sendTo(
+    uint8_t targets, frames::frame_type_t type, const std::uint8_t* payload,
+    std::uint8_t length, std::uint32_t timeout = DEFAULT_TELEMETRY_TIMEOUT);
+
+/**
  * @brief Stops the telemetry stream onthe UART with the given index.
  */
 void stopTelemetry(teller::hal::uart::uart_t index);
