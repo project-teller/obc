@@ -55,7 +55,6 @@ static void sendHeartbeat(uint8_t* payload);
 static void sendClockStatus(uint8_t* payload);
 static void sendIMUMeasurement(uint8_t* payload);
 
-static bool sendTo(uint8_t targets, envelope_t envelope, const uint8_t* payload, uint8_t length, uint32_t timeout);
 static bool sendLowLevel(uint8_t targets, uint8_t* buf, uint8_t length, uint32_t timeout);
 
 #define NO_MORE_TASKS \
