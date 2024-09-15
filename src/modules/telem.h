@@ -51,33 +51,6 @@ void requestTelemetry(teller::hal::uart::uart_t index);
 void runSingleIteration(std::uint8_t* payload);
 
 /**
- * @brief Sends a raw byte sequence to the telemetry module.
- *
- * The data being sent here is copied before it is enqueued for the telemetry
- * module. The ownership of the original buffer remains at the caller. The
- * copy will be freed by the telemetry module.
- *
- * @param data    the raw data to send
- * @param length  lengrh of the data to send
- * @param timeout timeout to use when writing data to the telemetry queue
- * @return whether the data was sent successfully to the telemetry module
- */
-bool send(const std::uint8_t* data, std::uint8_t length, std::uint32_t timeout = DEFAULT_TELEMETRY_TIMEOUT);
-
-/**
- * @brief Sends a string to the telemetry module.
- *
- * The data being sent here is copied before it is enqueued for the telemetry
- * module. The ownership of the original buffer remains at the caller. The
- * copy will be freed by the telemetry module.
- *
- * @param data    the string to send
- * @param timeout timeout to use when writing data to the telemetry queue
- * @return whether the data was sent successfully to the telemetry module
- */
-bool send(const char* data, std::uint32_t timeout = DEFAULT_TELEMETRY_TIMEOUT);
-
-/**
  * @brief Sends a telemetry message to the telemetry module, using the given envelope.
  *
  * The message is defined by its envelope (containing a sequence number, a

@@ -55,7 +55,8 @@ static void sendHeartbeat(uint8_t* payload);
 static void sendClockStatus(uint8_t* payload);
 static void sendIMUMeasurement(uint8_t* payload);
 
-static bool sendLowLevel(uint8_t* buf, uint8_t length, uint32_t timeout);
+static bool sendTo(uint8_t targets, envelope_t envelope, const uint8_t* payload, uint8_t length, uint32_t timeout);
+static bool sendLowLevel(uint8_t targets, uint8_t* buf, uint8_t length, uint32_t timeout);
 
 #define NO_MORE_TASKS \
     {                 \
@@ -152,33 +153,32 @@ void runSingleIteration(uint8_t* payload)
     }
 }
 
-bool send(const uint8_t* data, uint8_t length, uint32_t timeout)
-{
-    bool success = false;
-
-    if (data == nullptr) {
-        return true;
-    }
-
-    uint8_t* buf = static_cast<uint8_t*>(malloc(length));
-    TELLER_CHECK_OOM(buf);
-
-    memcpy(buf, data, length);
-    success = sendLowLevel(buf, length, timeout);
-
-    if (!success) {
-        free(buf);
-    }
-
-    return success;
-}
-
-bool send(const char* data, uint32_t timeout)
-{
-    return send(reinterpret_cast<uint8_t*>(const_cast<char*>(data)), strlen(data), timeout);
-}
-
 bool send(envelope_t envelope, const uint8_t* payload, uint8_t length, uint32_t timeout)
+{
+    return sendTo(telemetry_channel_mask, envelope, payload, length, timeout);
+}
+
+bool send(
+    teller::telem::frames::frame_type_t type, const uint8_t* payload,
+    uint8_t length, uint32_t timeout)
+{
+    envelope_t envelope;
+    envelope.frame_type = static_cast<uint8_t>(type);
+    envelope.source = ONBOARD_COMPUTER;
+    envelope.target = GROUND_STATION;
+    return send(envelope, payload, length, timeout);
+}
+
+void stopTelemetry(uart::uart_t index)
+{
+    telemetry_channel_mask &= ~(1 << index);
+}
+
+}
+
+/* ************************************************************************* */
+
+static bool sendTo(uint8_t targets, envelope_t envelope, const uint8_t* payload, uint8_t length, uint32_t timeout)
 {
     uint8_t* buf;
     uint8_t buf_length;
@@ -202,7 +202,7 @@ bool send(envelope_t envelope, const uint8_t* payload, uint8_t length, uint32_t 
         goto cleanup;
     }
 
-    success = sendLowLevel(buf, length + 8, timeout);
+    success = sendLowLevel(targets, buf, length + 8, timeout);
 
 cleanup:
     if (!success) {
@@ -212,30 +212,10 @@ cleanup:
     return success;
 }
 
-bool send(
-    teller::telem::frames::frame_type_t type, const uint8_t* payload,
-    uint8_t length, uint32_t timeout)
-{
-    envelope_t envelope;
-    envelope.frame_type = static_cast<uint8_t>(type);
-    envelope.source = ONBOARD_COMPUTER;
-    envelope.target = GROUND_STATION;
-    return send(envelope, payload, length, timeout);
-}
-
-void stopTelemetry(uart::uart_t index)
-{
-    telemetry_channel_mask &= ~(1 << index);
-}
-
-}
-
-/* ************************************************************************* */
-
-bool sendLowLevel(uint8_t* buf, uint8_t length, uint32_t timeout)
+bool sendLowLevel(uint8_t targets, uint8_t* buf, uint8_t length, uint32_t timeout)
 {
     message_t message = {
-        .targets = telemetry_channel_mask,
+        .targets = targets,
         .data = buf,
         .length = length
     };

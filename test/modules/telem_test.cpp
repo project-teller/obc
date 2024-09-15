@@ -34,11 +34,6 @@ TEST_F(TelemetryModuleTest, sendRawMessage)
     ASSERT_TRUE(telem::flushNext());
     EXPECT_EQ(std::string(reinterpret_cast<char*>(buf), sizeof(buf)), redirect.getAndClear());
 
-    /* Sending string */
-    ASSERT_TRUE(telem::send(test_string));
-    ASSERT_TRUE(telem::flushNext());
-    EXPECT_EQ(test_string, redirect.getAndClear());
-
     /* Sending null pointer -- we should not crash */
     ASSERT_TRUE(telem::send(nullptr, 12, telem::DEFAULT_TELEMETRY_TIMEOUT));
 }
