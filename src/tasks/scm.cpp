@@ -23,6 +23,10 @@ using namespace teller::telem;
     task.expect(BASE_SCM_UPDATE_FREQ_HZ - 2, BASE_SCM_UPDATE_FREQ_HZ + 1);
 
     healthy = scm::setup();
+    if (!healthy) {
+        task.disable();
+    }
+
     while (healthy) {
         healthy = scm::update(payload, updated);
         if (updated) {

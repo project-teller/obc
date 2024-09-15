@@ -23,6 +23,9 @@ typedef struct {
     /** Human-readable name of the task; null if the slot is unused */
     const char* name;
 
+    /** Whether the task is enabled */
+    bool enabled;
+
     /** Number of seconds between consecutive checks of the task counters */
     uint8_t interval_sec;
 
@@ -67,13 +70,15 @@ static_assert(MAX_QUEUES < INVALID_TOKEN);
 static_assert(MAX_QUEUES <= 32);
 static queue_stats_t queue_stats[MAX_QUEUES];
 
+static void disableTask(teller::supervisor::task_token_t token);
 static task_stats_t* getTaskFromToken(teller::supervisor::task_token_t token);
-static bool isValidTask(const task_stats_t* stat);
+static bool isTaskEnabled(const task_stats_t* stats);
+static bool isTaskValid(const task_stats_t* stat);
 static teller::supervisor::task_token_t registerTask(const char* name);
 static void unregisterTask(teller::supervisor::task_token_t token);
 static void nudgeTask(teller::supervisor::task_token_t token);
 
-static bool isValidQueue(const queue_stats_t* stat);
+static bool isQueueValid(const queue_stats_t* stat);
 static queue_stats_t* getQueueFromToken(teller::supervisor::queue_token_t token);
 static teller::supervisor::queue_token_t registerQueue(const char* name, BlockingQueueBase* queue);
 static void unregisterQueue(teller::supervisor::queue_token_t token);
@@ -91,6 +96,11 @@ TaskRegistration::TaskRegistration(const char* name)
 TaskRegistration::~TaskRegistration()
 {
     unregisterTask(m_token);
+}
+
+void TaskRegistration::disable()
+{
+    disableTask(m_token);
 }
 
 void TaskRegistration::nudge()
@@ -173,7 +183,7 @@ bool checkQueues(void)
 
     for (i = 0; i < MAX_QUEUES; i++) {
         stats = &queue_stats[i];
-        if (!isValidQueue(stats) || !stats->queue) {
+        if (!isQueueValid(stats) || !stats->queue) {
             continue;
         }
 
@@ -203,7 +213,7 @@ bool checkTasks(uint32_t timestamp)
 
     for (i = 0; i < MAX_TASKS; i++) {
         stats = &task_stats[i];
-        if (!isValidTask(stats)) {
+        if (!isTaskValid(stats) || !isTaskEnabled(stats)) {
             continue;
         }
 
@@ -249,7 +259,12 @@ static task_stats_t* getTaskFromToken(teller::supervisor::task_token_t token)
     }
 }
 
-static bool isValidTask(const task_stats_t* stats)
+static bool isTaskEnabled(const task_stats_t* stats)
+{
+    return stats->enabled;
+}
+
+static bool isTaskValid(const task_stats_t* stats)
 {
     return stats->name != nullptr && stats->interval_sec > 0;
 }
@@ -264,7 +279,7 @@ static teller::supervisor::task_token_t registerTask(const char* name)
 
     for (uint8_t i = 0; i < MAX_TASKS; i++) {
         stats = &task_stats[i];
-        if (!isValidTask(stats)) {
+        if (!isTaskValid(stats)) {
             stats->name = name;
             stats->interval_sec = 1;
             stats->time_until_next_check_sec = 1;
@@ -285,11 +300,21 @@ static void unregisterTask(teller::supervisor::task_token_t token)
     }
 }
 
+static void disableTask(teller::supervisor::task_token_t token)
+{
+    task_stats_t* stats = getTaskFromToken(token);
+    if (stats) {
+        stats->nudges = 0;
+        stats->enabled = false;
+    }
+}
+
 static void nudgeTask(teller::supervisor::task_token_t token)
 {
     task_stats_t* stats = getTaskFromToken(token);
     if (stats) {
         stats->nudges++;
+        stats->enabled = true;
     }
 }
 
@@ -304,7 +329,7 @@ static queue_stats_t* getQueueFromToken(teller::supervisor::queue_token_t token)
     }
 }
 
-static bool isValidQueue(const queue_stats_t* stat)
+static bool isQueueValid(const queue_stats_t* stat)
 {
     return stat->name != nullptr;
 }
@@ -319,7 +344,7 @@ static teller::supervisor::queue_token_t registerQueue(const char* name, Blockin
 
     for (uint8_t i = 0; i < MAX_QUEUES; i++) {
         stats = &queue_stats[i];
-        if (!isValidQueue(stats)) {
+        if (!isQueueValid(stats)) {
             stats->name = name;
             stats->queue = queue;
         }

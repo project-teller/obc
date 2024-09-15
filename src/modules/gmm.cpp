@@ -68,8 +68,8 @@ subsystem_status_t getSubsystemStatus()
 
 bool setup()
 {
-    status = SUBSYSTEM_STATUS_OK;
     lastMessageReceivedAt = system::getTimeSinceBootMsec();
+    status = uart::isConnected(uart::GMM) ? SUBSYSTEM_STATUS_OK : SUBSYSTEM_STATUS_CRITICAL;
     return updateStatus();
 }
 

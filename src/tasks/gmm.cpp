@@ -23,6 +23,10 @@ using namespace teller::telem;
     task.expect(BASE_GMM_UPDATE_FREQ_HZ - 2, BASE_GMM_UPDATE_FREQ_HZ + 1);
 
     healthy = gmm::setup();
+    if (!healthy) {
+        task.disable();
+    }
+
     while (healthy) {
         healthy = gmm::update(payload, updated);
         if (updated) {

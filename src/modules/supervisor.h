@@ -30,6 +30,14 @@ public:
     ~TaskRegistration();
 
     /**
+     * @brief Disables the task registration.
+     *
+     * No errors are reported from a disabled task registration. A nudge enables
+     * the task registration automatically.
+     */
+    void disable(void);
+
+    /**
      * @brief Sets the number of nudges that are to be expected between consecutive checks.
      */
     TaskRegistration& expect(std::uint16_t min, std::uint16_t max = std::numeric_limits<uint16_t>::max());
