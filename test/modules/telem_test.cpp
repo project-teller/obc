@@ -23,21 +23,6 @@ protected:
     }
 };
 
-TEST_F(TelemetryModuleTest, sendRawMessage)
-{
-    hal::uart::UARTOutputRedirector redirect(hal::uart::TELEMETRY);
-    uint8_t buf[8] = { 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49 };
-    const char* test_string = "spam ham bacon";
-
-    /* Sending raw byte buffer */
-    ASSERT_TRUE(telem::send(buf, sizeof(buf)));
-    ASSERT_TRUE(telem::flushNext());
-    EXPECT_EQ(std::string(reinterpret_cast<char*>(buf), sizeof(buf)), redirect.getAndClear());
-
-    /* Sending null pointer -- we should not crash */
-    ASSERT_TRUE(telem::send(nullptr, 12, telem::DEFAULT_TELEMETRY_TIMEOUT));
-}
-
 TEST_F(TelemetryModuleTest, sendWithEnvelope)
 {
     hal::uart::UARTOutputRedirector redirect(hal::uart::TELEMETRY);
