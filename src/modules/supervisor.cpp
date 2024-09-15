@@ -1,9 +1,13 @@
 #include "modules/supervisor.h"
+#include "hal/mutex.hpp"
 #include "hal/queue.hpp"
 #include "hal/system.h"
 #include "hal/watchdog.h"
 #include "modules/log.h"
 #include <cstring>
+
+using teller::hal::lock_guard;
+using teller::hal::mutex;
 
 using namespace teller::hal::system;
 using namespace teller::telem;
@@ -15,6 +19,11 @@ static teller::log::Logger* logger = nullptr;
 #define MAX_QUEUES 8
 #define INVALID_TOKEN std::numeric_limits<uint8_t>::max()
 #define UNLIMITED_NUDGES std::numeric_limits<uint16_t>::max()
+
+/**
+ * @brief Mutex protecting the task and queue stats structures during the registration phase.
+ */
+mutex stats_mutex;
 
 /**
  * @brief Structure in which the status and configuration of a registered task is stored.
@@ -272,6 +281,7 @@ static bool isTaskValid(const task_stats_t* stats)
 static teller::supervisor::task_token_t registerTask(const char* name)
 {
     task_stats_t* stats;
+    lock_guard lock(stats_mutex);
 
     if (!name) {
         return INVALID_TOKEN;
@@ -294,6 +304,8 @@ static teller::supervisor::task_token_t registerTask(const char* name)
 
 static void unregisterTask(teller::supervisor::task_token_t token)
 {
+    lock_guard lock(stats_mutex);
+
     task_stats_t* stats = getTaskFromToken(token);
     if (stats) {
         memset(stats, 0, sizeof(task_stats_t));
@@ -336,6 +348,7 @@ static bool isQueueValid(const queue_stats_t* stat)
 
 static teller::supervisor::queue_token_t registerQueue(const char* name, BlockingQueueBase* queue)
 {
+    lock_guard lock(stats_mutex);
     queue_stats_t* stats;
 
     if (!name || !queue) {
@@ -355,6 +368,7 @@ static teller::supervisor::queue_token_t registerQueue(const char* name, Blockin
 
 static void unregisterQueue(teller::supervisor::queue_token_t token)
 {
+    lock_guard lock(stats_mutex);
     queue_stats_t* stats = getQueueFromToken(token);
     if (stats) {
         memset(stats, 0, sizeof(queue_stats_t));
