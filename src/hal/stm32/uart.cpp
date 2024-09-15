@@ -176,6 +176,10 @@ void teller::hal::uart::destroy()
 
 bool teller::hal::uart::isConnected(uart_t index)
 {
+    if (uart_map[index] < 0) {
+        return false;
+    }
+
     if (isUARTAlwaysConnected(index)) {
         return true;
     }
