@@ -61,8 +61,12 @@ static std::list<event_callback_t*> callbacks;
 
         try {
             recorders[area].run(fs, area);
+        } catch (littlefs::Error& err) {
+            log->error(
+                "%s: IO error, code = %d", name,
+                teller::storage::convertLittleFSErrorCode(err));
         } catch (...) {
-            /* pass */
+            log->error("%s: unknown error", name);
         }
 
         retval = storage::unmountStorage(area);
