@@ -1,6 +1,7 @@
 #include "hal/rtc.h"
 #include "core/utils/time.h"
 
+#include "config.h"
 #include "stm32_hal.h"
 
 using namespace std;
@@ -8,16 +9,30 @@ using namespace std;
 static RTC_HandleTypeDef handle;
 static bool initialized = false;
 
+// Define this if the board using the 32.768 kHz LSE clock for the RTC and
+// not the 32 kHz LSI
+// #define USES_LSE
+
 namespace teller::hal::rtc {
 
 bool init()
 {
     bool success = false;
 
+    /* RTC clock speed must be 1 Hz. Effective RTC clock speed is the speed
+     * of its clock source divided by (AsyncPrediv + 1) * (SynchPrediv + 1).
+     * AsyncPrediv must be as large as possible. Therefore, when using the
+     * LSE oscillator running at 32.768 kHz, one needs AP=127 and SP=255.
+     * When using the LSI at 32 kHz, one needs AP=127 and SP=249. */
     handle.Instance = RTC;
     handle.Init.HourFormat = RTC_HOURFORMAT_24;
     handle.Init.AsynchPrediv = 127;
+#if defined(USES_LSE)
     handle.Init.SynchPrediv = 255;
+#else
+    handle.Init.SynchPrediv = 249;
+#endif
+
     handle.Init.OutPut = RTC_OUTPUT_DISABLE;
     handle.Init.OutPutPolarity = RTC_OUTPUT_POLARITY_HIGH;
     handle.Init.OutPutType = RTC_OUTPUT_TYPE_OPENDRAIN;
@@ -88,10 +103,18 @@ void HAL_RTC_MspInit(RTC_HandleTypeDef* hrtc)
     RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = { 0 };
     if (hrtc->Instance == RTC) {
         PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_RTC;
+#if defined(USES_LSE)
+        PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
+#else
         PeriphClkInitStruct.RTCClockSelection = RCC_RTCCLKSOURCE_LSI;
+#endif
         if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
             return;
         }
+
+#if defined(USES_LSE)
+        __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_MEDIUMHIGH);
+#endif
 
         __HAL_RCC_RTC_ENABLE();
 
