@@ -11,10 +11,8 @@ using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::telem;
 
-static const spi::address_t address = {
-    .bus = 0,
-    .device = 0
-};
+// static const spi::address_t address = { .bus = 0, .device = 0 };
+static const spi::address_t address = spi::NO_ADDRESS;
 
 /* Registers in user bank 0 */
 #define REG_WHO_AM_I 0x00

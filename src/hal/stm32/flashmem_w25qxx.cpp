@@ -11,8 +11,8 @@ using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::telem;
 
-// static const spi::address_t address = { .bus = 0, .device = 0 };
-static const spi::address_t address = spi::NO_ADDRESS;
+static const spi::address_t address = { .bus = 0, .device = 0 };
+// static const spi::address_t address = spi::NO_ADDRESS;
 
 /* Constants for size conversions */
 #define BLOCK_SIZE_IN_KB 64
