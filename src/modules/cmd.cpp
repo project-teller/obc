@@ -17,6 +17,7 @@ using namespace std;
 using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::telem;
+using teller::hal::uart::uart_t;
 
 /**
  * @brief Description of the response to be posted for an incoming packet.
@@ -63,10 +64,10 @@ public:
     }
 };
 
-static optional<Response> processPacket(const envelope_t& envelope, const uint8_t* payload);
+static optional<Response> processPacket(uart_t channel, const envelope_t& envelope, const uint8_t* payload);
 static optional<Response> processCalibrationPacket(const envelope_t& envelope, const uint8_t* payload);
-static optional<Response> processStoragePacket(const envelope_t& envelope, const uint8_t* payload);
-static bool sendResponse(const envelope_t& envelope, Response response, uint8_t* buf);
+static optional<Response> processStoragePacket(uart_t channel, const envelope_t& envelope, const uint8_t* payload);
+static bool sendResponse(uart_t channel, const envelope_t& envelope, Response response, uint8_t* buf);
 
 static Logger* logger;
 
@@ -91,7 +92,7 @@ void destroy()
     logger = nullptr;
 }
 
-bool handleCommands(teller::hal::uart::uart_t index, uint8_t* buf, uint32_t timeout)
+bool handleCommands(uart_t index, uint8_t* buf, uint32_t timeout)
 {
     uint8_t ch;
     optional<Response> response;
@@ -107,7 +108,7 @@ bool handleCommands(teller::hal::uart::uart_t index, uint8_t* buf, uint32_t time
         const envelope_t& envelope = parser->getEnvelope();
         if (envelope.target == ONBOARD_COMPUTER) {
             /* This is a packet for us */
-            response = processPacket(envelope, parser->getPayload());
+            response = processPacket(index, envelope, parser->getPayload());
         } else {
             /* This is a packet for some other component */
             response.reset();
@@ -117,7 +118,7 @@ bool handleCommands(teller::hal::uart::uart_t index, uint8_t* buf, uint32_t time
         if (response) {
             /* return value ignored, we can't do much if we can't send
              * responses */
-            sendResponse(envelope, *response, buf);
+            sendResponse(index, envelope, *response, buf);
         }
 
         return true;
@@ -133,7 +134,7 @@ bool handleCommands(teller::hal::uart::uart_t index, uint8_t* buf, uint32_t time
         logger->warning("Ignored %s req from c%d", what, envelope.source); \
     } else
 
-optional<Response> processPacket(const envelope_t& envelope, const uint8_t* payload)
+optional<Response> processPacket(uart_t channel, const envelope_t& envelope, const uint8_t* payload)
 {
     switch (envelope.frame_type) {
 
@@ -149,7 +150,7 @@ optional<Response> processPacket(const envelope_t& envelope, const uint8_t* payl
     case frames::STORAGE:
         REJECT_UNLESS_FROM_GCS("storage")
         {
-            return processStoragePacket(envelope, payload);
+            return processStoragePacket(channel, envelope, payload);
         }
         break;
 
@@ -168,7 +169,7 @@ optional<Response> processPacket(const envelope_t& envelope, const uint8_t* payl
     return {};
 }
 
-bool sendResponse(const envelope_t& envelope, Response response, uint8_t* buf)
+bool sendResponse(uart_t channel, const envelope_t& envelope, Response response, uint8_t* buf)
 {
     frames::ack_data_t data = {
         .frame_type = static_cast<frames::frame_type_t>(envelope.frame_type),
@@ -178,7 +179,7 @@ bool sendResponse(const envelope_t& envelope, Response response, uint8_t* buf)
         .value = response.value
     };
     uint8_t length = frames::encodeAckFrame(&data, buf);
-    return teller::telem::send(frames::ACK, buf, length);
+    return teller::telem::sendTo((1 << channel), frames::ACK, buf, length);
 }
 
 optional<Response> processCalibrationPacket(const envelope_t& envelope, const uint8_t* payload)
@@ -211,7 +212,7 @@ optional<Response> processCalibrationPacket(const envelope_t& envelope, const ui
     }
 }
 
-optional<Response> processStoragePacket(const envelope_t& envelope, const uint8_t* payload)
+optional<Response> processStoragePacket(uart_t channel, const envelope_t& envelope, const uint8_t* payload)
 {
     frames::storage_command_data_t data;
     int retval;
@@ -242,7 +243,7 @@ optional<Response> processStoragePacket(const envelope_t& envelope, const uint8_
 
     case frames::STORAGE_COMMAND_READ:
         retval = teller::storage::startReadingStorage(
-            data.area, data.offset, data.length, envelope.seq_no);
+            data.area, data.offset, data.length, (1 << channel), envelope.seq_no);
         break;
 
     case frames::STORAGE_COMMAND_GET_SIZE:
