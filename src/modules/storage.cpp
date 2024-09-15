@@ -359,6 +359,11 @@ public:
         EVT_STARTED = 1,
     };
 
+    void setTargets(uint8_t targets)
+    {
+        _targets = targets;
+    }
+
     bool startReading(storage_area_t area, uint32_t address, uint16_t length, uint8_t seq_no)
     {
         if (running() || length == 0) {
@@ -423,7 +428,7 @@ public:
             }
 
             uint8_t length = frames::encodeBinaryDataFrame(&_binaryData, _buf);
-            if (!teller::telem::send(frames::BINARY_DATA, _buf, length)) {
+            if (!teller::telem::sendTo(_targets, frames::BINARY_DATA, _buf, length)) {
                 return false;
             }
 
@@ -442,6 +447,7 @@ private:
     teller::hal::EventFlags _events;
     frames::binary_data_t _binaryData;
     uint8_t _buf[MAX_PAYLOAD_LENGTH];
+    uint8_t _targets;
 };
 
 static Filesystems fs;
@@ -662,9 +668,10 @@ int getStorageSize(teller::telem::storage_area_t area)
 
 int startReadingStorage(
     teller::telem::storage_area_t area, uint32_t address, uint16_t length,
-    uint8_t seq_no)
+    uint8_t targets, uint8_t seq_no)
 {
     if (!storageReader.running()) {
+        storageReader.setTargets(targets);
         storageReader.startReading(area, address, length, seq_no);
         return 0;
     } else {

@@ -110,12 +110,13 @@ int convertLittleFSErrorCode(std::optional<littlefs::Error> code);
  * @param  area     the storage area to read
  * @param  address  the address to read from
  * @param  length   number of bytes to read
+ * @param  targets  mask of the telemetry channels to send the data to
  * @param  seq_no   sequence number of the message that initiated the request
  * @return POSIX error code; zero if the operation was successful
  */
 int startReadingStorage(
     teller::telem::storage_area_t area, uint32_t address, uint16_t length,
-    uint8_t seq_no = 0);
+    uint8_t targets, uint8_t seq_no = 0);
 
 /**
  * @brief Runs a a background task that reads the raw contents of the storage
