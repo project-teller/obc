@@ -281,7 +281,7 @@ static bool isTaskValid(const task_stats_t* stats)
 static teller::supervisor::task_token_t registerTask(const char* name)
 {
     task_stats_t* stats;
-    lock_guard lock(stats_mutex);
+    lock_guard<mutex> lock(stats_mutex);
 
     if (!name) {
         return INVALID_TOKEN;
@@ -304,7 +304,7 @@ static teller::supervisor::task_token_t registerTask(const char* name)
 
 static void unregisterTask(teller::supervisor::task_token_t token)
 {
-    lock_guard lock(stats_mutex);
+    lock_guard<mutex> lock(stats_mutex);
 
     task_stats_t* stats = getTaskFromToken(token);
     if (stats) {
@@ -348,7 +348,7 @@ static bool isQueueValid(const queue_stats_t* stat)
 
 static teller::supervisor::queue_token_t registerQueue(const char* name, BlockingQueueBase* queue)
 {
-    lock_guard lock(stats_mutex);
+    lock_guard<mutex> lock(stats_mutex);
     queue_stats_t* stats;
 
     if (!name || !queue) {
@@ -368,7 +368,7 @@ static teller::supervisor::queue_token_t registerQueue(const char* name, Blockin
 
 static void unregisterQueue(teller::supervisor::queue_token_t token)
 {
-    lock_guard lock(stats_mutex);
+    lock_guard<mutex> lock(stats_mutex);
     queue_stats_t* stats = getQueueFromToken(token);
     if (stats) {
         memset(stats, 0, sizeof(queue_stats_t));
