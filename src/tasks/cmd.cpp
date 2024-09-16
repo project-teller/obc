@@ -19,6 +19,10 @@ namespace teller::tasks {
 [[noreturn]] void commandTask(void* args_)
 {
     cmd_task_args_t* args = static_cast<cmd_task_args_t*>(args_);
+    if (!isConnected(args->uart_index)) {
+        teller::hal::system::sleepForever();
+    }
+
     uint8_t responseBuffer[MAX_PAYLOAD_LENGTH];
     TaskRegistration task(args->task_name);
 
