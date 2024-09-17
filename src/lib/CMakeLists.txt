@@ -8,6 +8,10 @@ add_library(
 target_include_directories(
     lfs PUBLIC littlefs littlefs-cpp
 )
+target_compile_definitions(
+    # We want to use pvPortMalloc() from FreeRTOS so no malloc() inside lfs
+    lfs PUBLIC LFS_NO_MALLOC
+)
 
 # LittleFS in-memory and in-file block device emulation for tests and the
 # POSIX HAL layer

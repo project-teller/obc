@@ -6,6 +6,7 @@
 
 #include "core/utils/smart_file_handle.h"
 
+#include "hal/memory.h"
 #include "hal/storage.h"
 
 #include "modules/log.h"
@@ -244,17 +245,31 @@ ExperimentDataRecorder::~ExperimentDataRecorder()
 
 void ExperimentDataRecorder::run(littlefs::Filesystem* fs, storage_area_t area)
 {
+    void* buffer = nullptr;
+
     assert(!running() && !_queue.closed());
+
+    buffer = teller::hal::memory::malloc(fs->cache_size());
+    if (buffer == nullptr) {
+        throw std::bad_alloc();
+    }
 
     this->_fs = fs;
     _queue.clear();
+
     try {
+        this->_file_config = make_unique<littlefs::FileConfig>(buffer);
         _run(area);
     } catch (...) {
+        this->_file_config = nullptr;
         this->_fs = nullptr;
+        teller::hal::memory::free(buffer);
         throw;
     }
+
+    this->_file_config = nullptr;
     this->_fs = nullptr;
+    teller::hal::memory::free(buffer);
 }
 
 void ExperimentDataRecorder::stop()
@@ -286,7 +301,7 @@ size_t ExperimentDataRecorder::_getLastLogIndex()
 
     /* Open LASTLOG.TXT */
     long int index;
-    SmartFileHandle fd(this->_fs, this->_fs->open(LASTLOG_FILE, littlefs::OpenFlag::RDONLY));
+    SmartFileHandle fd(this->_fs, this->_fs->opencfg(LASTLOG_FILE, littlefs::OpenFlag::RDONLY, *this->_file_config));
 
     /* Read file contents */
     memset(buf, 0, sizeof(buf));
@@ -302,10 +317,13 @@ size_t ExperimentDataRecorder::_getLastLogIndex()
 
 void ExperimentDataRecorder::_run(storage_area_t area)
 {
-    ssize_t logIndex = _getLastLogIndex();
+    ssize_t logIndex;
     char fname[32];
     LogRequest request;
 
+    assert(this->_file_config);
+
+    logIndex = _getLastLogIndex();
     logIndex = logIndex < 0 ? 0 : (logIndex + 1);
     _updateLastLogIndex(logIndex);
 
@@ -313,9 +331,10 @@ void ExperimentDataRecorder::_run(storage_area_t area)
 
     SmartFileHandle fd(
         this->_fs,
-        this->_fs->open(
+        this->_fs->opencfg(
             fname,
-            littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC));
+            littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC,
+            *_file_config));
     LogWriter writer(fd);
 
     /* Call all callbacks to let modules print initial log records. We have to
@@ -353,7 +372,12 @@ void ExperimentDataRecorder::_run(storage_area_t area)
 void ExperimentDataRecorder::_updateLastLogIndex(size_t index)
 {
     /* Open LASTLOG.TXT */
-    SmartFileHandle fd(this->_fs, this->_fs->open(LASTLOG_FILE, littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC));
+    SmartFileHandle fd(
+        this->_fs,
+        this->_fs->opencfg(
+            LASTLOG_FILE,
+            littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC,
+            *_file_config));
     char buf[32];
     int num_printed = snprintf(buf, sizeof(buf), "%lu", static_cast<long unsigned int>(index));
     if (num_printed < 0 || fd.write(buf, num_printed) != static_cast<size_t>(num_printed)) {

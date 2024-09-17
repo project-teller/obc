@@ -70,11 +70,26 @@ std::optional<Error> Filesystem::rename(std::string const& old_path, std::string
 }
 #endif
 
+#ifndef LFS_NO_MALLOC
 std::variant<Error, FileHandle> Filesystem::open(std::string const& path, OpenFlag const flags)
 {
     auto file_hdl = std::make_shared<lfs_file_t>();
 
     int const rc = lfs_file_open(&_lfs, file_hdl.get(), path.c_str(), static_cast<int>(flags));
+
+    if (rc < LFS_ERR_OK)
+        return static_cast<Error>(rc);
+
+    _file_desc_map[_file_dsc_cnt++] = file_hdl;
+    return (_file_dsc_cnt - 1);
+}
+#endif
+
+std::variant<Error, FileHandle> Filesystem::opencfg(std::string const& path, OpenFlag const flags, FileConfig& cfg)
+{
+    auto file_hdl = std::make_shared<lfs_file_t>();
+
+    int const rc = lfs_file_opencfg(&_lfs, file_hdl.get(), path.c_str(), static_cast<int>(flags), &cfg.raw_cfg());
 
     if (rc < LFS_ERR_OK)
         return static_cast<Error>(rc);
@@ -297,6 +312,11 @@ std::variant<Error, size_t> Filesystem::fs_size()
         return static_cast<Error>(rc);
 
     return static_cast<size_t>(rc);
+}
+
+lfs_size_t Filesystem::cache_size() const
+{
+    return _cfg.raw_cfg().cache_size;
 }
 
 /**************************************************************************************

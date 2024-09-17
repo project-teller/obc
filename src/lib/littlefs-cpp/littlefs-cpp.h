@@ -127,6 +127,21 @@ public:
     [[nodiscard]] lfs_config& raw_cfg() { return _cfg; }
 };
 
+class FileConfig {
+private:
+    lfs_file_config _cfg;
+
+public:
+    explicit FileConfig(void* buffer = NULL)
+    {
+        _cfg.buffer = buffer;
+        _cfg.attrs = NULL;
+        _cfg.attr_count = 0;
+    }
+
+    [[nodiscard]] lfs_file_config& raw_cfg() { return _cfg; }
+};
+
 class Filesystem {
 private:
     FilesystemConfig& _cfg;
@@ -156,7 +171,11 @@ public:
     [[nodiscard]] std::optional<Error> rename(std::string const& old_path, std::string const& new_path);
 #endif
 
+#ifndef LFS_NO_MALLOC
     [[nodiscard]] std::variant<Error, FileHandle> open(std::string const& path, OpenFlag const flags);
+#endif
+    [[nodiscard]] std::variant<Error, FileHandle> opencfg(std::string const& path, OpenFlag const flags, FileConfig& config);
+
     [[nodiscard]] std::optional<Error> sync(FileHandle const fd);
     [[nodiscard]] std::optional<Error> close(FileHandle const fd);
 
@@ -183,6 +202,8 @@ public:
     [[nodiscard]] std::optional<Error> dir_rewind(DirHandle const dd);
 
     [[nodiscard]] std::variant<Error, size_t> fs_size();
+
+    [[nodiscard]] lfs_size_t cache_size() const;
 };
 
 /**************************************************************************************

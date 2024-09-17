@@ -3,6 +3,7 @@
 
 #include "core/log_records.h"
 #include "core/utils/crc.h"
+#include "hal/memory.h"
 #include "hal/queue.hpp"
 #include "hal/uart.h"
 #include "modules/edr.hpp"
@@ -190,7 +191,7 @@ bool sendTo(uint8_t targets, envelope_t envelope, const uint8_t* payload, uint8_
         return false; /* LCOV_EXCL_LINE */
     }
 
-    buf = static_cast<uint8_t*>(malloc(buf_length));
+    buf = static_cast<uint8_t*>(teller::hal::memory::malloc(buf_length));
     TELLER_CHECK_OOM(buf);
 
     envelope.seq_no = seq_no++;
@@ -203,7 +204,7 @@ bool sendTo(uint8_t targets, envelope_t envelope, const uint8_t* payload, uint8_
 
 cleanup:
     if (!success) {
-        free(buf);
+        teller::hal::memory::free(buf);
     }
 
     return success;

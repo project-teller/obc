@@ -164,6 +164,7 @@ public:
 
 private:
     littlefs::Filesystem* _fs;
+    std::unique_ptr<littlefs::FileConfig> _file_config;
     bool _running;
     teller::hal::BlockingQueue<LogRequest> _queue;
 

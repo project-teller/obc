@@ -11,6 +11,7 @@ if(TARGET_MCU STREQUAL "POSIX")
         posix/gpio.cpp
         posix/imu.cpp
         posix/led.cpp
+        posix/memory.cpp
         posix/rtc.cpp
         posix/sdcard.cpp
         posix/spi.cpp
@@ -28,6 +29,7 @@ else()
         stm32/gpio.cpp
         stm32/imu.cpp
         stm32/led.cpp
+        stm32/memory.cpp
         stm32/rtc.cpp
         stm32/sdcard.cpp
         stm32/spi.cpp
