@@ -2,16 +2,24 @@
 add_library(
     lfs
     littlefs/lfs.c
-    littlefs/lfs_util.c
+    littlefs-cpp/lfs_util.c
     littlefs-cpp/littlefs-cpp.cpp
 )
 target_include_directories(
     lfs PUBLIC littlefs littlefs-cpp
 )
-target_compile_definitions(
-    # We want to use pvPortMalloc() from FreeRTOS so no malloc() inside lfs
-    lfs PUBLIC LFS_NO_MALLOC
-)
+if(TARGET_MCU_FREERTOS_MODULE)
+    target_compile_definitions(
+        # We want to use pvPortMalloc() from FreeRTOS
+        lfs PUBLIC LFS_CONFIG=${CMAKE_CURRENT_SOURCE_DIR}/lfs_config.h LFS_MALLOC=pvPortMalloc LFS_FREE=vPortFree LFS_USES_FREERTOS=1
+    )
+    target_include_directories(
+        lfs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/.. # because of FreeRTOSConfig.h
+    )
+    target_link_libraries(
+        lfs PUBLIC ${FREERTOS_NAMESPACE}::${TARGET_MCU_FREERTOS_MODULE}
+    )
+endif()
 
 # LittleFS in-memory and in-file block device emulation for tests and the
 # POSIX HAL layer
@@ -32,6 +40,16 @@ target_link_libraries(
 
 # libsdlog library
 add_subdirectory(sdlog)
+if(TARGET_MCU_FREERTOS_MODULE)
+    target_compile_definitions(sdlog PUBLIC SDLOG_MALLOC=pvPortMalloc SDLOG_FREE=vPortFree)
+    target_compile_definitions(sdlog PRIVATE SDLOG_MEMORY_INC=${CMAKE_CURRENT_SOURCE_DIR}/sdlog_config.h)
+    target_include_directories(
+        sdlog PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/..    # because of FreeRTOSConfig.h
+    )
+    target_link_libraries(
+        sdlog PUBLIC ${FREERTOS_NAMESPACE}::${TARGET_MCU_FREERTOS_MODULE}
+    )
+endif()
 
 #############################################################################
 
