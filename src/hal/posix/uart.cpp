@@ -53,9 +53,13 @@ static map<uart_t, stringstream> uartOutputOverrides;
 #define ALWAYS_READABLE_FILE_DESCRIPTOR -1
 
 namespace teller::hal::uart {
+
+const uint32_t WAIT_FOREVER = std::numeric_limits<uint32_t>::max();
+
 void setDebugPort(const std::string& service);
 void setGMMFileDescriptor(int fd);
 void setSCMFileDescriptor(int fd);
+
 }
 
 bool teller::hal::uart::init()
@@ -128,7 +132,7 @@ bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
         int activity;
         fd_set read_fds;
         fd_set except_fds;
-        bool has_timeout = timeout < std::numeric_limits<uint32_t>::max();
+        bool has_timeout = timeout < WAIT_FOREVER;
         struct timeval timeout_timeval;
 
         if (has_timeout) {

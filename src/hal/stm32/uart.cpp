@@ -15,6 +15,12 @@ using namespace std;
 using namespace teller::hal::uart;
 using namespace teller::hal::utils;
 
+namespace teller::hal::uart {
+
+const uint32_t WAIT_FOREVER = osWaitForever;
+
+}
+
 static const uint32_t EVT_READ = 0x00000001U;
 static const uint32_t EVT_WRITTEN = 0x00000002U;
 static const uint32_t EVT_ERROR = 0x00000004U;

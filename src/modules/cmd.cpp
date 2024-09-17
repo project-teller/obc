@@ -92,13 +92,13 @@ void destroy()
     logger = nullptr;
 }
 
-bool handleCommands(uart_t index, uint8_t* buf, uint32_t timeout)
+bool handleCommands(uart_t index, uint8_t* buf)
 {
     uint8_t ch;
     optional<Response> response;
     Parser* parser;
 
-    if (!uart::read1(index, &ch, timeout)) {
+    if (!uart::read1(index, &ch, uart::WAIT_FOREVER)) {
         return false;
     }
 

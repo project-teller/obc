@@ -22,10 +22,8 @@ void destroy(void);
  * @param index  index of the UART to read
  * @param buf  a pre-allocated buffer where the response to the command can
  *        be composed if needed
- * @param timeout  maximum number of milliseconds to wait for the next byte to
- *        read from the UART
  * @return Whether an incoming packet was decoded and handled successfully.
  */
-bool handleCommands(teller::hal::uart::uart_t index, uint8_t* buf, uint32_t timeout);
+bool handleCommands(teller::hal::uart::uart_t index, uint8_t* buf);
 
 }

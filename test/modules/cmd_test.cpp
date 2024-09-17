@@ -58,7 +58,7 @@ protected:
 
     bool handleCommands()
     {
-        return cmd::handleCommands(hal::uart::TELEMETRY, responseBuffer, 250);
+        return cmd::handleCommands(hal::uart::TELEMETRY, responseBuffer);
     }
 
     void feedMessage(uint8_t* message)
