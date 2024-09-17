@@ -101,7 +101,7 @@ void destroy()
     while (!out_queue.empty()) {
         out_queue.receive(message);
         if (message.data != nullptr) {
-            free(message.data);
+            teller::hal::memory::free(message.data);
         }
     }
 
@@ -131,7 +131,7 @@ bool flushNext()
             uart::write(uart::DEBUG, message.data, message.length);
         }
 
-        free(message.data);
+        teller::hal::memory::free(message.data);
     }
 
     return true;
