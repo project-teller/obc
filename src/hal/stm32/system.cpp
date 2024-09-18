@@ -43,4 +43,9 @@ void sleepForever()
     }
 }
 
+void yield(void)
+{
+    osThreadYield();
+}
+
 }

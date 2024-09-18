@@ -79,6 +79,11 @@ void sleepForever()
     }
 }
 
+void yield(void)
+{
+    /* empty */
+}
+
 size_t countPreventedResetAttempts(void)
 {
     return numResetsPrevented;

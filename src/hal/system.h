@@ -40,4 +40,9 @@ void requestReset(void);
  */
 [[noreturn]] void sleepForever(void);
 
+/**
+ * @brief Yields execution to other tasks with identical or higher priorities.
+ */
+void yield(void);
+
 }
