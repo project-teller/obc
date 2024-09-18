@@ -391,6 +391,21 @@ static bool startTasks()
 static osPriority_t convertPriorityToFreeRTOS(task_priority_t prio);
 static bool startTask(const task_definition_t* task);
 
+/* Make sure that the new and delete operators use the allocators from FreeRTOS */
+void* operator new(std::size_t count)
+{
+    void* result = pvPortMalloc(count);
+    if (result == NULL) {
+        throw std::bad_alloc();
+    }
+    return result;
+}
+
+void operator delete(void* ptr) noexcept
+{
+    vPortFree(ptr);
+}
+
 #define HANDLE_FATAL_ERROR(code)                                                \
     {                                                                           \
         /* Store the name of the current task that caused a malloc failed event \
