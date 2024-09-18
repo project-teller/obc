@@ -16,6 +16,7 @@ add_library(
     storage.cpp
     supervisor.cpp
     telem.cpp
+    uart_rx.cpp
 )
 target_include_directories(
 	obc-modules PRIVATE

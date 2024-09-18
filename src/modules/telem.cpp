@@ -27,7 +27,7 @@ typedef struct {
 
     /** Length of data to write to the UART */
     uint8_t length;
-} message_t;
+} OutboundMessage;
 
 /**
  * @brief Type specification for functions that the logging module will call periodically.
@@ -50,7 +50,7 @@ static uint8_t seq_no = 0;
 static const int QUEUE_SIZE = 64;
 
 /** Queue in which the enqueued messages are stored */
-static BlockingQueue<message_t> out_queue(QUEUE_SIZE);
+static BlockingQueue<OutboundMessage> out_queue(QUEUE_SIZE);
 
 static void sendHeartbeat(uint8_t* payload);
 static void sendClockStatus(uint8_t* payload);
@@ -96,7 +96,7 @@ bool init()
 
 void destroy()
 {
-    message_t message;
+    OutboundMessage message;
 
     while (!out_queue.empty()) {
         out_queue.receive(message);
@@ -114,9 +114,9 @@ BlockingQueueBase* getQueue()
     return &out_queue;
 }
 
-bool flushNext()
+bool processNext()
 {
-    message_t message;
+    OutboundMessage message;
 
     if (!out_queue.receive(message)) {
         return false;
@@ -135,6 +135,11 @@ bool flushNext()
     }
 
     return true;
+}
+
+size_t waiting()
+{
+    return out_queue.size();
 }
 
 void requestTelemetry(uart::uart_t index)
@@ -221,7 +226,7 @@ void stopTelemetry(uart::uart_t index)
 
 bool sendLowLevel(uint8_t targets, uint8_t* buf, uint8_t length, uint32_t timeout)
 {
-    message_t message = {
+    OutboundMessage message = {
         .targets = targets,
         .data = buf,
         .length = length

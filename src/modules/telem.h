@@ -19,19 +19,23 @@ namespace teller::telem {
 void destroy(void);
 
 /**
- * @brief Flushes the next message waiting in the telemetry subsystem to the
- * appropriate UART.
+ * @brief Returns a pointer to the outbound queue of the telemetry subsystem.
+ */
+teller::hal::BlockingQueueBase* getQueue(void);
+
+/**
+ * @brief Processes the next message waiting in the telemetry subsystem.
  *
  * Blocks indefinitely if there are no messages to send.
  *
  * @return whether a message was received successfully
  */
-bool flushNext(void);
+bool processNext(void);
 
 /**
- * @brief Returns a pointer to the outbound queue of the telemetry subsystem.
+ * @brief Returns the number of messages waiting in the command handler module.
  */
-teller::hal::BlockingQueueBase* getQueue(void);
+size_t waiting(void);
 
 /**
  * @brief Requests the telemetry stream to be forwarded to the UART with the given index.

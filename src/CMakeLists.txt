@@ -114,10 +114,11 @@ add_executable(
 	tasks/pins.cpp
 	tasks/scm.cpp
 	tasks/sdcard.cpp
-	tasks/serial.cpp
 	tasks/storage.cpp
 	tasks/supervisor.cpp
 	tasks/telem.cpp
+	tasks/uart_rx.cpp
+	tasks/uart_tx.cpp
 )
 target_include_directories(
 	${TARGET_NAME} PRIVATE

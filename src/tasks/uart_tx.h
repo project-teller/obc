@@ -2,6 +2,6 @@
 
 namespace teller::tasks {
 
-[[noreturn]] void serialTask(void* args);
+[[noreturn]] void uartTxTask(void* args);
 
 }

@@ -5,6 +5,7 @@
 #include "core/telem/calibration.h"
 #include "core/telem/parser.h"
 #include "core/telem/storage.h"
+#include "hal/memory.h"
 #include "hal/system.h"
 #include "modules/cmd.h"
 #include "modules/edr.hpp"
@@ -18,6 +19,20 @@ using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::telem;
 using teller::hal::uart::uart_t;
+
+typedef struct {
+    /** Index of the UART that the message was received from */
+    uart_t index;
+
+    /** Envelope of the message */
+    envelope_t envelope;
+
+    /** Pointer to the payload of the message */
+    uint8_t* payload;
+
+    /** Length of the payload */
+    uint8_t length;
+} InboundMessage;
 
 /**
  * @brief Description of the response to be posted for an incoming packet.
@@ -64,69 +79,121 @@ public:
     }
 };
 
+/** Number of messages that can be waiting to be processed in the task without blocking */
+static const int QUEUE_SIZE = 64;
+
+/** Queue in which the incoming messages are stored */
+static BlockingQueue<InboundMessage> in_queue(QUEUE_SIZE);
+
+static bool prepareMessage(InboundMessage& message, uart_t index,
+    const envelope_t& envelope, const uint8_t* payload, uint8_t length);
 static optional<Response> processPacket(uart_t channel, const envelope_t& envelope, const uint8_t* payload);
 static optional<Response> processCalibrationPacket(const envelope_t& envelope, const uint8_t* payload);
 static optional<Response> processStoragePacket(uart_t channel, const envelope_t& envelope, const uint8_t* payload);
-static bool sendResponse(uart_t channel, const envelope_t& envelope, Response response, uint8_t* buf);
+static bool sendResponse(uart_t channel, const envelope_t& envelope, Response response);
 
 static Logger* logger;
-
-/* TODO(ntamas): this is wasteful, we are allocating parsers also for those
- * UART channels where we will not have commands */
-static Parser parsers[teller::hal::uart::NUM_UARTS];
+static uint8_t responseBuffer[MAX_PAYLOAD_LENGTH];
 
 namespace teller::cmd {
 
 bool init()
 {
-    for (int i = 0; i < teller::hal::uart::NUM_UARTS; i++) {
-        parsers[i].reset();
-    }
-
     logger = getLogger(MODULE_ID_OBC);
     return logger != nullptr;
 }
 
 void destroy()
 {
+    InboundMessage message;
+
+    while (!in_queue.empty()) {
+        in_queue.receive(message);
+        if (message.payload != nullptr) {
+            teller::hal::memory::free(message.payload);
+        }
+    }
+
     logger = nullptr;
 }
 
-bool handleCommands(uart_t index, uint8_t* buf)
+teller::hal::BlockingQueueBase* getQueue(void)
 {
-    uint8_t ch;
-    optional<Response> response;
-    Parser* parser;
+    return &in_queue;
+}
 
-    if (!uart::read1(index, &ch, uart::WAIT_FOREVER)) {
+void feed(
+    teller::hal::uart::uart_t index,
+    const teller::telem::envelope_t& envelope,
+    const std::uint8_t* payload, std::uint8_t length)
+{
+    InboundMessage message;
+    if (prepareMessage(message, index, envelope, payload, length)) {
+        in_queue.send(message);
+    }
+}
+
+bool feedNonblocking(
+    teller::hal::uart::uart_t index,
+    const teller::telem::envelope_t& envelope,
+    const std::uint8_t* payload, std::uint8_t length)
+{
+    InboundMessage message;
+    return (
+        prepareMessage(message, index, envelope, payload, length) && in_queue.send_or_drop(message));
+}
+
+bool processNext(void)
+{
+    InboundMessage message;
+    optional<Response> response;
+
+    if (!in_queue.receive(message)) {
         return false;
     }
 
-    parser = &parsers[index];
-
-    if (parser->feed(ch)) {
-        const envelope_t& envelope = parser->getEnvelope();
-        if (envelope.target == ONBOARD_COMPUTER) {
+    if (message.payload != nullptr) {
+        if (message.envelope.target == ONBOARD_COMPUTER) {
             /* This is a packet for us */
-            response = processPacket(index, envelope, parser->getPayload());
+            response = processPacket(message.index, message.envelope, message.payload);
         } else {
             /* This is a packet for some other component */
             response.reset();
             /* TODO(ntamas): forward to SCM if needed */
         }
 
+        teller::hal::memory::free(message.payload);
+
         if (response) {
             /* return value ignored, we can't do much if we can't send
              * responses */
-            sendResponse(index, envelope, *response, buf);
+            sendResponse(message.index, message.envelope, *response);
         }
-
-        return true;
-    } else {
-        return false;
     }
+
+    return true;
 }
 
+size_t waiting(void)
+{
+    return in_queue.size();
+}
+}
+
+bool prepareMessage(InboundMessage& message, uart_t index,
+    const envelope_t& envelope, const uint8_t* payload, uint8_t length)
+{
+    std::uint8_t* payloadCopy = static_cast<std::uint8_t*>(teller::hal::memory::malloc(length));
+    if (!payloadCopy) {
+        return false;
+    }
+
+    message.index = index;
+    message.envelope = envelope;
+    message.payload = payloadCopy;
+    message.length = length;
+
+    return true;
 }
 
 #define REJECT_UNLESS_FROM_GCS(what)                                       \
@@ -169,7 +236,7 @@ optional<Response> processPacket(uart_t channel, const envelope_t& envelope, con
     return {};
 }
 
-bool sendResponse(uart_t channel, const envelope_t& envelope, Response response, uint8_t* buf)
+bool sendResponse(uart_t channel, const envelope_t& envelope, Response response)
 {
     frames::ack_data_t data = {
         .frame_type = static_cast<frames::frame_type_t>(envelope.frame_type),
@@ -178,8 +245,8 @@ bool sendResponse(uart_t channel, const envelope_t& envelope, Response response,
         .error = response.error,
         .value = response.value
     };
-    uint8_t length = frames::encodeAckFrame(&data, buf);
-    return teller::telem::sendTo((1 << channel), frames::ACK, buf, length);
+    uint8_t length = frames::encodeAckFrame(&data, responseBuffer);
+    return teller::telem::sendTo((1 << channel), frames::ACK, responseBuffer, length);
 }
 
 optional<Response> processCalibrationPacket(const envelope_t& envelope, const uint8_t* payload)

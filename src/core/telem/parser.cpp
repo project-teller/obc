@@ -22,16 +22,22 @@ void Parser::reset()
     memset(&_envelope, 0, sizeof(_envelope));
 }
 
-bool Parser::feed(std::uint8_t ch)
+uint8_t Parser::feed(std::uint8_t ch)
 {
+    uint8_t length;
+
     _state = _feed(ch);
 
     if (_state == DONE) {
+        /* _end is past the checksum (2 bytes long), getPayload() is at the
+         * start of the payload, and we must return their difference minus 2
+         * (because of the checksum) plus 1 */
+        length = _end - getPayload() - 1;
         reset();
         _updateEnvelope();
-        return true;
+        return length;
     } else {
-        return false;
+        return 0;
     }
 }
 

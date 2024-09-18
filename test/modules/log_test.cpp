@@ -32,7 +32,7 @@ TEST_F(LogTest, sendRawMessage)
 
     ASSERT_TRUE(log::sendToTelemetry(
         telem::MODULE_ID_GMM, telem::LOG_LEVEL_WARNING, "dummy message"));
-    ASSERT_TRUE(telem::flushNext());
+    ASSERT_TRUE(telem::processNext());
 
     EXPECT_EQ(
         std::string("\xca\xfe\x00\x02!\x0e\x14"
@@ -46,7 +46,7 @@ TEST_F(LogTest, getLogger)
     hal::uart::UARTOutputRedirector redirect(hal::uart::TELEMETRY);
 
     ASSERT_TRUE(log::getLogger(telem::MODULE_ID_GMM)->warning("dummy message"));
-    ASSERT_TRUE(telem::flushNext());
+    ASSERT_TRUE(telem::processNext());
 
     EXPECT_EQ(
         std::string("\xca\xfe\x00\x02!\x0e\x14"

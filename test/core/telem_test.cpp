@@ -392,7 +392,7 @@ TEST(TelemetryTest, parsingValidMessage)
     const uint8_t junk[] = { 0xde, 0xad, 0xbe, 0xef, 0xca, 0xca, 0xca, 0xca, 0x0b, 0xad };
 
     for (i = 0; i < n; i++) {
-        ASSERT_EQ(i == n - 1, parser.feed(clockStatusMessage[i]));
+        ASSERT_EQ(i == n - 1 ? 0x0d : 0, parser.feed(clockStatusMessage[i]));
     }
 
     envelope = parser.getEnvelope();
@@ -403,10 +403,10 @@ TEST(TelemetryTest, parsingValidMessage)
 
     /* Add some junk bytes and then parse again */
     for (i = 0; i < sizeof(junk); i++) {
-        ASSERT_FALSE(parser.feed(junk[i]));
+        ASSERT_EQ(0, parser.feed(junk[i]));
     }
     for (i = 0; i < n; i++) {
-        ASSERT_EQ(i == n - 1, parser.feed(clockStatusMessage[i]));
+        ASSERT_EQ(i == n - 1 ? 0x0d : 0, parser.feed(clockStatusMessage[i]));
     }
 
     envelope = parser.getEnvelope();
@@ -428,7 +428,7 @@ TEST(TelemetryTest, parsingZeroLengthPayload)
     envelope_t envelope;
 
     for (i = 0; i < n; i++) {
-        ASSERT_EQ(i == n - 1, parser.feed(message[i]));
+        ASSERT_EQ(i == n - 1 ? 0x01 : 0, parser.feed(message[i]));
     }
 
     envelope = parser.getEnvelope();
@@ -444,9 +444,9 @@ TEST(TelemetryTest, parsingTooLongPayload)
     size_t i;
 
     for (i = 0; i < 5; i++) {
-        ASSERT_FALSE(parser.feed(clockStatusMessage[i]));
+        ASSERT_EQ(0, parser.feed(clockStatusMessage[i]));
     }
-    ASSERT_FALSE(parser.feed(MAX_PAYLOAD_LENGTH + 1));
+    ASSERT_EQ(0, parser.feed(MAX_PAYLOAD_LENGTH + 1));
     ASSERT_EQ(teller::telem::ParserState::WAITING_SYNC_BYTE_1, parser.getState());
 }
 
@@ -456,11 +456,11 @@ TEST(TelemetryTest, parsingInvalidCRC)
     size_t i, n = sizeof(clockStatusMessage);
 
     for (i = 0; i < n - 2; i++) {
-        ASSERT_FALSE(parser.feed(clockStatusMessage[i]));
+        ASSERT_EQ(0, parser.feed(clockStatusMessage[i]));
     }
     ASSERT_EQ(teller::telem::ParserState::READING_CHECKSUM, parser.getState());
-    ASSERT_FALSE(parser.feed(0xff));
+    ASSERT_EQ(0, parser.feed(0xff));
     ASSERT_EQ(teller::telem::ParserState::READING_CHECKSUM, parser.getState());
-    ASSERT_FALSE(parser.feed(0xff));
+    ASSERT_EQ(0, parser.feed(0xff));
     ASSERT_EQ(teller::telem::ParserState::WAITING_SYNC_BYTE_1, parser.getState());
 }

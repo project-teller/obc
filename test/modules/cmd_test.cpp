@@ -14,6 +14,7 @@
 #include "modules/cmd.h"
 #include "modules/log.h"
 #include "modules/telem.h"
+#include "modules/uart_rx.h"
 
 using namespace teller;
 
@@ -38,6 +39,7 @@ protected:
         ASSERT_TRUE(hal::uart::init());
         ASSERT_TRUE(telem::init());
         ASSERT_TRUE(log::init());
+        ASSERT_TRUE(uart_rx::init());
         ASSERT_TRUE(cmd::init());
 
         inputRedirector = std::make_unique<hal::uart::UARTInputRedirector>(hal::uart::TELEMETRY);
@@ -50,15 +52,29 @@ protected:
         inputRedirector.reset();
 
         cmd::destroy();
+        uart_rx::destroy();
         log::destroy();
         telem::destroy();
         hal::uart::destroy();
         hal::system::destroy();
     }
 
-    bool handleCommands()
+    bool processNextInboundCommand()
     {
-        return cmd::handleCommands(hal::uart::TELEMETRY, responseBuffer);
+        if (cmd::waiting()) {
+            return cmd::processNext();
+        } else {
+            return false;
+        }
+    }
+
+    bool processNextOutboundMessage()
+    {
+        if (telem::waiting()) {
+            return telem::processNext();
+        } else {
+            return false;
+        }
     }
 
     void feedMessage(uint8_t* message)
@@ -72,12 +88,15 @@ protected:
             message[length - 1] = crc >> 8;
         }
 
-        ASSERT_FALSE(handleCommands());
+        ASSERT_FALSE(uart_rx::read(hal::uart::TELEMETRY));
+        ASSERT_FALSE(processNextInboundCommand());
         inputRedirector->feed(std::string(reinterpret_cast<char*>(message), length));
         for (size_t i = 0; i < length - 1; i++) {
-            ASSERT_FALSE(handleCommands());
+            ASSERT_FALSE(uart_rx::read(hal::uart::TELEMETRY));
+            ASSERT_FALSE(processNextInboundCommand());
         }
-        ASSERT_TRUE(handleCommands());
+        ASSERT_TRUE(uart_rx::read(hal::uart::TELEMETRY));
+        ASSERT_TRUE(processNextInboundCommand());
     }
 
     void expectAck(telem::frames::frame_type_t frame_type, uint8_t expected_seq_no = 0, uint8_t seq_no = 0)
@@ -105,7 +124,7 @@ protected:
         size_t length = telem::serialize(
             buffer, sizeof(buffer), envelope, payload, payload_length);
 
-        ASSERT_TRUE(telem::flushNext());
+        ASSERT_TRUE(processNextOutboundMessage());
         ASSERT_EQ(
             std::string(reinterpret_cast<char*>(buffer), length),
             outputRedirector->getAndClear());
@@ -130,7 +149,7 @@ protected:
         stream.put(crc & 0xff);
         stream.put(crc >> 8);
 
-        ASSERT_TRUE(telem::flushNext());
+        ASSERT_TRUE(processNextOutboundMessage());
         ASSERT_EQ(stream.str(), outputRedirector->getAndClear());
     }
 };
@@ -150,20 +169,24 @@ TEST_F(CmdTest, readUnhandledPacket)
     size_t i;
 
     /* Feed a heartbeat message into the task */
-    ASSERT_FALSE(handleCommands());
+    ASSERT_FALSE(uart_rx::read(hal::uart::TELEMETRY));
+    ASSERT_FALSE(processNextInboundCommand());
     msg = reinterpret_cast<char*>(heartbeatMessage);
     inputRedirector->feed(std::string(msg, 6));
     for (i = 0; i < 6; i++) {
-        ASSERT_FALSE(handleCommands());
+        ASSERT_FALSE(uart_rx::read(hal::uart::TELEMETRY));
+        ASSERT_FALSE(processNextInboundCommand());
     }
     inputRedirector->feed(std::string(msg + 6, sizeof(heartbeatMessage) - 6));
     for (i = 0; i < sizeof(heartbeatMessage) - 7; i++) {
-        ASSERT_FALSE(handleCommands());
+        ASSERT_FALSE(uart_rx::read(hal::uart::TELEMETRY));
+        ASSERT_FALSE(processNextInboundCommand());
     }
-    ASSERT_TRUE(handleCommands());
+    ASSERT_TRUE(uart_rx::read(hal::uart::TELEMETRY));
+    ASSERT_TRUE(processNextInboundCommand());
 
     /* We expect to receive a warning message in response */
-    ASSERT_TRUE(telem::flushNext());
+    ASSERT_TRUE(processNextOutboundMessage());
     msg = reinterpret_cast<char*>(expectedLogMessage);
     ASSERT_EQ(std::string(msg, sizeof(expectedLogMessage)), outputRedirector->getAndClear());
 }
@@ -217,10 +240,14 @@ TEST_F(CmdTest, readResetPacketFromForbiddenComponent)
 
 TEST_F(CmdTest, readStoragePacket)
 {
+    /* clang-format off */
     uint8_t storageNopMessage[] = {
         /* NOP storage command addressed at area 1 */
-        PREAMBLE, 0x00, 0x06, GND_TO_OBC, 0x01, 0x10, 0x00, 0x00
+        PREAMBLE, 0x00, 0x06, GND_TO_OBC, 0x07, 0x10, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     };
+    /* clang-format on */
+
     char* msg;
     size_t i;
 
@@ -231,10 +258,13 @@ TEST_F(CmdTest, readStoragePacket)
 
 TEST_F(CmdTest, readStoragePacketFromForbiddenComponent)
 {
+    /* clang-format off */
     uint8_t storageNopMessage[] = {
         /* NOP storage command addressed at area 1, but from the SCM */
-        PREAMBLE, 0x00, 0x06, SCM_TO_OBC, 0x01, 0x10, 0x00, 0x00
+        PREAMBLE, 0x00, 0x06, SCM_TO_OBC, 0x07, 0x10, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     };
+    /* clang-format on */
 
     /* Feed a reset message from a forbidden component into the task */
     feedMessage(storageNopMessage);

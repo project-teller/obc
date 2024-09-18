@@ -27,10 +27,11 @@ public:
      * @brief Feeds a new byte into the parser.
      *
      * @param   ch  the byte to feed into the parser
-     * @return  whether the byte just fed into the parser was the last character
-     *          in a telemetry message
+     * @return  the total length of the payload of the message plus one if the
+     *          byte just fed into the parser was the last character in a
+     *          telemetry message, zero otherwise
      */
-    bool feed(std::uint8_t ch);
+    std::uint8_t feed(std::uint8_t ch);
 
     /**
      * @brief Returns the envelope of the current message being parsed.

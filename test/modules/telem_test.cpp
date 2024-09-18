@@ -38,13 +38,13 @@ TEST_F(TelemetryModuleTest, sendWithEnvelope)
             telem::frames::TEXT_MESSAGE,
             reinterpret_cast<const uint8_t*>(test_string),
             strlen(test_string)));
-    ASSERT_TRUE(telem::flushNext());
+    ASSERT_TRUE(telem::processNext());
     EXPECT_EQ(expected, redirect.getAndClear());
 
     /* Sending null payload -- we should not crash but send a message with
      * an empty payload instead */
     ASSERT_TRUE(telem::send(telem::frames::TEXT_MESSAGE, nullptr, 12));
-    ASSERT_TRUE(telem::flushNext());
+    ASSERT_TRUE(telem::processNext());
     EXPECT_EQ(expected_empty, redirect.getAndClear());
 
     /* Sending too large payload */
