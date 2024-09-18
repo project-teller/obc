@@ -196,40 +196,40 @@ bool teller::hal::uart::isConnected(uart_t index)
 
 bool teller::hal::uart::readInto(uart_t index, uint8_t* data, uint16_t size, uint16_t* bytes_read)
 {
-    uint32_t flags;
+    uint32_t flags = 0;
+    uart_phy_state_t* pState;
+    UART_HandleTypeDef* pHandle;
 
     if (size == 0) {
-        if (bytes_read) {
-            *bytes_read = 0;
-        }
-        return true;
+        teller::hal::system::yield();
+        goto exit;
     }
 
-    uart_phy_state_t* pState = find_phy_for_uart(index);
-    if (pState) {
-        UART_HandleTypeDef* pHandle = &pState->handle;
+    pState = find_phy_for_uart(index);
+    pHandle = pState ? &pState->handle : nullptr;
 
-        if (HAL_UART_Receive_IT(pHandle, data, size) != HAL_OK) {
-            return false;
+    if (pHandle) {
+        if (HAL_UART_Receive_IT(pHandle, data, size) == HAL_OK) {
+            flags = osEventFlagsWait(pState->event, EVT_READ | EVT_ERROR, osFlagsWaitAny, osWaitForever);
+            if (flags & (osFlagsError | EVT_ERROR)) {
+                HAL_UART_AbortReceive(pHandle);
+            }
+        } else {
+            teller::hal::system::yield();
         }
+    } else {
+        teller::hal::system::yield();
+    }
 
-        flags = osEventFlagsWait(pState->event, EVT_READ | EVT_ERROR, osFlagsWaitAny, osWaitForever);
-
-        if (flags & (osFlagsError | EVT_ERROR)) {
-            HAL_UART_AbortReceive(pHandle);
-            return false;
-        }
-
+exit:
+    if (flags & EVT_READ) {
         if (bytes_read) {
             *bytes_read = size;
         }
+        return true;
     } else {
-        if (bytes_read) {
-            *bytes_read = 0;
-        }
+        return false;
     }
-
-    return true;
 }
 
 bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
@@ -237,45 +237,50 @@ bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
     uart_phy_state_t* pState = find_phy_for_uart(index);
     UART_HandleTypeDef* pHandle = pState ? &pState->handle : nullptr;
     HAL_StatusTypeDef result;
-    uint32_t flags;
+    uint32_t flags = 0;
     bool shouldAbort;
 
     if (!pHandle) {
-        return false;
+        teller::hal::system::yield();
+        goto exit;
     }
 
-    while (true) {
-        result = HAL_UART_Receive_IT(pHandle, data, 1);
-        if (result == HAL_OK) {
-            break;
-        } else if (result == HAL_BUSY && timeout > 0) {
-            /* Try again until the timeout expires */
-            uint32_t now, deadline = teller::hal::system::getTimeSinceBootMsec() + timeout;
-            while (pHandle->RxState != HAL_UART_STATE_READY) {
-                now = teller::hal::system::getTimeSinceBootMsec();
-                if (now < deadline) {
-                    teller::hal::system::delayMsec(1);
-                } else {
-                    return false;
-                }
+    result = HAL_UART_Receive_IT(pHandle, data, 1);
+    if (result == HAL_BUSY) {
+        if (timeout == 0) {
+            /* We were just polling, so yield and return false */
+            teller::hal::system::yield();
+            goto exit;
+        } else if (timeout == WAIT_FOREVER) {
+            /* Retry until successful */
+            while (result == HAL_BUSY) {
+                teller::hal::system::delayMsec(1);
+                result = HAL_UART_Receive_IT(pHandle, data, 1);
             }
         } else {
-            return false;
+            /* Try again until the timeout expires */
+            uint32_t now = teller::hal::system::getTimeSinceBootMsec();
+            uint32_t deadline = now + timeout;
+            while (result == HAL_BUSY && now < deadline) {
+                teller::hal::system::delayMsec(1);
+                result = HAL_UART_Receive_IT(pHandle, data, 1);
+                now = teller::hal::system::getTimeSinceBootMsec();
+            }
         }
     }
 
-    flags = osEventFlagsWait(pState->event, EVT_READ | EVT_ERROR, osFlagsWaitAny, timeout);
-
-    /* If the read timed out, we need to reset the UART by aborting the receive
-     * operation. Since we are not using DMA, we can safely use the blocking
-     * variant as the operation takes effect immediately.
-     *
-     * If there was an error, we need to abort the operation as well. */
-    shouldAbort = flags & (osFlagsError | EVT_ERROR);
-    if (shouldAbort) {
+    if (result == HAL_OK) {
+        flags = osEventFlagsWait(pState->event, EVT_READ | EVT_ERROR, osFlagsWaitAny, timeout);
+        shouldAbort = flags & (osFlagsError | EVT_ERROR);
+        if (shouldAbort) {
+            HAL_UART_AbortReceive(pHandle);
+        }
+    } else {
         HAL_UART_AbortReceive(pHandle);
+        teller::hal::system::yield();
     }
 
+exit:
     return flags & EVT_READ;
 }
 
