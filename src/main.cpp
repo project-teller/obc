@@ -91,7 +91,7 @@ static const task_definition_t tasks[] = {
     { .func = loggerTask, .name = "log", .priority = NORMAL, .stack_size = 2048 },
     { .func = modeManagerTask, .name = "mode", .priority = NORMAL, .stack_size = 1024 },
     { .func = debugTask, .name = "debug", .priority = NORMAL, .stack_size = 1024 },
-    { .func = storageReaderTask, .name = "storage", .priority = LOW, .stack_size = 1024 },
+    { .func = storageReaderTask, .name = "storage", .priority = LOW, .stack_size = 4096 },
     { .func = gmmTask, .name = "gmm", .priority = NORMAL, .stack_size = 1024 },
     { .func = scmTask, .name = "scm", .priority = NORMAL, .stack_size = 1024 },
     NO_MORE_TASKS
