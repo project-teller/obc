@@ -183,7 +183,7 @@ size_t waiting(void)
 bool prepareMessage(InboundMessage& message, uart_t index,
     const envelope_t& envelope, const uint8_t* payload, uint8_t length)
 {
-    std::uint8_t* payloadCopy = static_cast<std::uint8_t*>(teller::hal::memory::malloc(length));
+    std::uint8_t* payloadCopy = static_cast<std::uint8_t*>(teller::hal::memory::malloc(length > 0 ? length : 1));
     if (!payloadCopy) {
         return false;
     }

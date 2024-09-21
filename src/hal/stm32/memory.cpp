@@ -8,7 +8,9 @@ namespace teller::hal::memory {
 
 void* malloc(std::size_t size)
 {
-    return pvPortMalloc(size);
+    /* pvPortMalloc() calls vApplicationMallocFailedHook() for zero-size
+     * allocations and we want to avoid that */
+    return size > 0 ? pvPortMalloc(size) : nullptr;
 }
 
 void free(void* ptr)
