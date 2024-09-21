@@ -377,7 +377,7 @@ static bool readIntoBuffer(uint32_t offset, uint8_t* buf, uint16_t length)
 
     spi::transfer_t xfer[] = {
         { header, nullptr, static_cast<uint16_t>(end - header) },
-        { buf, nullptr, length },
+        { nullptr, buf, length },
         spi::NO_MORE_TRANSFERS
     };
     return waitWhileBusy() && spi::transfer(address, xfer, 0);
