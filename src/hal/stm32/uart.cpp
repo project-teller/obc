@@ -571,6 +571,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     if (cfg->dma_tx) {
         state->dma_tx_handle.Instance = cfg->dma_tx;
 
+#ifdef STM32H7
         if (huart->Instance == USART1) {
             state->dma_tx_handle.Init.Request = DMA_REQUEST_USART1_TX;
         } else if (huart->Instance == USART2) {
@@ -580,6 +581,17 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
         } else {
             return;
         }
+#else
+        if (huart->Instance == USART1) {
+            state->dma_tx_handle.Init.Channel = DMA_CHANNEL_0;
+        } else if (huart->Instance == USART2) {
+            state->dma_tx_handle.Init.Channel = DMA_CHANNEL_1;
+        } else if (huart->Instance == USART3) {
+            state->dma_tx_handle.Init.Channel = DMA_CHANNEL_2;
+        } else {
+            return;
+        }
+#endif
 
         state->dma_tx_handle.Init.Direction = DMA_MEMORY_TO_PERIPH;
         state->dma_tx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
