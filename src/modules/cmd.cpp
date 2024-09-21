@@ -188,6 +188,8 @@ bool prepareMessage(InboundMessage& message, uart_t index,
         return false;
     }
 
+    memcpy(payloadCopy, payload, length);
+
     message.index = index;
     message.envelope = envelope;
     message.payload = payloadCopy;
