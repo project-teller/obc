@@ -199,6 +199,7 @@ bool teller::hal::uart::readInto(uart_t index, uint8_t* data, uint16_t size, uin
     uint32_t flags = 0;
     uart_phy_state_t* pState;
     UART_HandleTypeDef* pHandle;
+    HAL_StatusTypeDef status;
 
     if (size == 0) {
         teller::hal::system::yield();
@@ -209,11 +210,15 @@ bool teller::hal::uart::readInto(uart_t index, uint8_t* data, uint16_t size, uin
     pHandle = pState ? &pState->handle : nullptr;
 
     if (pHandle) {
-        if (HAL_UART_Receive_IT(pHandle, data, size) == HAL_OK) {
+        status = HAL_UART_Receive_IT(pHandle, data, size);
+        if (status == HAL_OK) {
             flags = osEventFlagsWait(pState->event, EVT_READ | EVT_ERROR, osFlagsWaitAny, osWaitForever);
             if (flags & (osFlagsError | EVT_ERROR)) {
                 HAL_UART_AbortReceive(pHandle);
             }
+        } else if (status == HAL_BUSY) {
+            HAL_UART_AbortReceive(pHandle);
+            teller::hal::system::yield();
         } else {
             teller::hal::system::yield();
         }
@@ -328,7 +333,10 @@ bool teller::hal::uart::write(uart_t index, uint8_t* data, uint16_t size)
             }
         }
 
-        flags = osEventFlagsWait(pState->event, EVT_WRITTEN | EVT_ERROR, osFlagsWaitAny, osWaitForever);
+        /* Let us not block on EVT_ERROR here -- it seems like it is triggered
+         * by reading the UART and not by writing it, and we do not want to
+         * unblock if a read error happens in the meanwhile */
+        flags = osEventFlagsWait(pState->event, EVT_WRITTEN, osFlagsWaitAny, osWaitForever);
 
         if (flags & (osFlagsError | EVT_ERROR)) {
             HAL_UART_AbortTransmit(pHandle);
@@ -703,7 +711,19 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef* uart)
 {
     uart_phy_state_t* state = find_uart_phy_state(uart);
     if (state) {
-        osEventFlagsSet(state->event, EVT_ERROR);
+        /* There are two types of UART errors: blocking and non-blocking.
+         * We do not care about non-blocking errors because the underlying TX or
+         * RX transfer keeps on going in the STM32 HAL. We only need to trigger
+         * the error event if the transfer is not active any more.
+         *
+         * Not doing this would present problems at startup: the first transmit
+         * and the first receive request would fire concurrently, and if there
+         * is a framing error on the UART (which is very likely at startup if
+         * we start receiving in the middle of a frame), we would trigger the
+         * error flag here (framing errors are non-blocking). */
+        if (state->handle.RxState == HAL_UART_STATE_READY) {
+            osEventFlagsSet(state->event, EVT_ERROR);
+        }
     }
 }
 }
