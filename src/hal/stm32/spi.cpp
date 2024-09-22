@@ -228,11 +228,12 @@ bool transfer(
         }
 
         transfer = transfers;
-        while (count > 0 && transfer->tx_buf != nullptr) {
+        while (count > 0 && (transfer->tx_buf != nullptr || transfer->rx_buf != nullptr)) {
             count--;
 
             hal_status = HAL_SPI_TransmitReceive_IT(
-                &pState->handle, transfer->tx_buf,
+                &pState->handle,
+                transfer->tx_buf ? transfer->tx_buf : transfer->rx_buf,
                 transfer->rx_buf ? transfer->rx_buf : transfer->tx_buf,
                 transfer->size);
             if (hal_status != HAL_OK) {
@@ -259,11 +260,12 @@ bool transfer(
         }
 
         transfer = transfers;
-        while (count > 0 && transfer->tx_buf != nullptr) {
+        while (count > 0 && (transfer->tx_buf != nullptr || transfer->rx_buf != nullptr)) {
             count--;
 
             hal_status = HAL_SPI_TransmitReceive(
-                &pState->handle, transfer->tx_buf,
+                &pState->handle,
+                transfer->tx_buf ? transfer->tx_buf : transfer->rx_buf,
                 transfer->rx_buf ? transfer->rx_buf : transfer->tx_buf,
                 transfer->size, SPI_TIMEOUT_MSEC);
             if (hal_status != HAL_OK) {
@@ -315,10 +317,8 @@ static bool configure_spi_bus(spi_bus_state_t* state, const spi_bus_config_t* cf
 
     pHandle->Instance = cfg->instance;
 
-    /* Prescaler = 256 --> 187.5 KBit/s */
-    /* Prescaler = 128 --> 375 KBit/s */
-    /* Prescaler = 64 --> 750 KBit/s */
-    /* Prescaler = 32 --> 1.5 MBit/s */
+    /* SPI peripheral clock speed is set in board.cpp, here we divide it by
+     * the baud rate prescaler */
 
     pHandle->Init.Mode = SPI_MODE_MASTER;
     pHandle->Init.Direction = SPI_DIRECTION_2LINES;
@@ -470,11 +470,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
             enableGPIOClocksForPort(cfg->gpio.by_index[i].port);
             GPIO_InitStruct.Pin = cfg->gpio.by_index[i].pins;
             GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-            /* For SD cards, we enable pull-up on the MISO pin. According to
-             * http://elm-chan.org/docs/mmc/mmc_e.html, "[a] pull-up on the DO
-             * cannot be omited, or some cards will fail initialization
-             * process." */
-            GPIO_InitStruct.Pull = (&cfg->gpio.by_index[i] == &cfg->gpio.by_name.miso) ? GPIO_PULLDOWN : GPIO_NOPULL;
+            GPIO_InitStruct.Pull = GPIO_NOPULL;
             GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
             GPIO_InitStruct.Alternate = gpioFunc;
             HAL_GPIO_Init(cfg->gpio.by_index[i].port, &GPIO_InitStruct);
@@ -489,7 +485,6 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
             GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
             GPIO_InitStruct.Pull = GPIO_NOPULL;
             GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-            GPIO_InitStruct.Alternate = gpioFunc;
             HAL_GPIO_Init(cfg->cs[i].port, &GPIO_InitStruct);
             HAL_GPIO_WritePin(cfg->cs[i].port, cfg->cs[i].pins, GPIO_PIN_SET);
         }

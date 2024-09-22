@@ -392,6 +392,8 @@ static bool startTasks()
 #include <cmsis_os2.h>
 #include <task.h>
 
+#include "stm32_hal.h"
+
 static osPriority_t convertPriorityToFreeRTOS(task_priority_t prio);
 static bool startTask(const task_definition_t* task);
 
@@ -482,6 +484,7 @@ static bool startTask(const task_definition_t* task)
 
 extern "C" void vApplicationTickHook(void)
 {
+    HAL_IncTick();
 }
 
 extern "C" void vApplicationIdleHook(void)
@@ -500,12 +503,17 @@ extern "C" void vApplicationStackOverflowHook(TaskHandle_t pxTask, char* pcTaskN
     HANDLE_FATAL_ERROR(teller::debug::ERROR_STACK_OVERFLOW);
 }
 
-/* STM32-specific fault handlers */
+/* STM32-specific handlers */
 
 extern "C" void HardFault_Handler(void)
 {
     char* pcTaskName = pcTaskGetName(nullptr);
     HANDLE_FATAL_ERROR(teller::debug::ERROR_HARD_FAULT);
+}
+
+extern "C" void HAL_Delay(uint32_t millis)
+{
+    vTaskDelay(millis);
 }
 
 #endif
