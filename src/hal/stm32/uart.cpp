@@ -75,8 +75,14 @@ typedef struct {
     /** DMA stream of the UART when it is using DMA for TX */
     DMA_HandleTypeDef dma_tx_handle;
 
+    /** Pointer to the DMA buffer of the UART when it is using DMA for TX */
+    uint8_t* dma_tx_buffer;
+
     /** DMA stream of the UART when it is using DMA for RX */
     DMA_HandleTypeDef dma_rx_handle;
+
+    /** Pointer to the DMA buffer of the UART when it is using DMA for RX */
+    uint8_t* dma_rx_buffer;
 
     /**
      * Event flags to trigger when the UART is ready to read or write or if an
@@ -126,9 +132,9 @@ const uart_phy_config_t uart_phy_config[] = {
             },
         },
         .irq = USART3_IRQn,
-        .dma_tx = nullptr,
+        .dma_tx = DMA1_Stream0,
         .dma_rx = nullptr,
-        .baud_rate = 115200  /* 115200 is the max that seems to work; 230400 triggers the watchdog sometimes */
+        .baud_rate = 38400  /* 115200 is the max that seems to work; 230400 triggers the watchdog sometimes */
     },
     NO_MORE_UARTS
 };
@@ -163,6 +169,11 @@ static bool isUARTAlwaysConnected(uart_t index);
 
 static UART_HandleTypeDef* uart_handle_ptrs[10];
 static uart_phy_state_t uart_phy_state[NUM_PHY_UARTS];
+
+#define DMA_BUFFER_SIZE 256
+
+static DMA_BUFFER uint8_t uart_dma_rx_buffers[NUM_PHY_UARTS][DMA_BUFFER_SIZE];
+static DMA_BUFFER uint8_t uart_dma_tx_buffers[NUM_PHY_UARTS][DMA_BUFFER_SIZE];
 
 bool teller::hal::uart::init()
 {
@@ -319,11 +330,12 @@ bool teller::hal::uart::write(uart_t index, uint8_t* data, uint16_t size)
     if (pState && pState->cfg) {
         UART_HandleTypeDef* pHandle = &pState->handle;
 
-        if (pState->cfg->dma_tx) {
+        if (pState->dma_tx_buffer) {
             /* Transfer with DMA */
+            memcpy(pState->dma_tx_buffer, data, size);
             /* TODO(ntamas): this does not work yet; DMA needs a buffer that is
              * guaranteed to be in DMA-accessible memory */
-            if (HAL_UART_Transmit_DMA(pHandle, data, size) != HAL_OK) {
+            if (HAL_UART_Transmit_DMA(pHandle, pState->dma_tx_buffer, size) != HAL_OK) {
                 return false;
             }
         } else {
@@ -606,9 +618,12 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
             return;
         }
 
+        state->dma_tx_buffer = uart_dma_tx_buffers[state - uart_phy_state];
+
         __HAL_LINKDMA(huart, hdmatx, state->dma_tx_handle);
     } else {
         state->dma_tx_handle.Instance = nullptr;
+        state->dma_tx_buffer = nullptr;
     }
 
     state->initialized = true;
