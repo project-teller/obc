@@ -104,12 +104,12 @@ static bool configureSystemClock()
 #if defined(TELLER_BOARD_NUCLEO144)
     /* Phase-locked loop */
     oscInit.PLL.PLLState = RCC_PLL_ON;
-    oscInit.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-    oscInit.PLL.PLLM = 4;
-    oscInit.PLL.PLLN = 10;
-    oscInit.PLL.PLLP = 2; /* Division factor for system clock */
-    oscInit.PLL.PLLQ = 4; /* Division factor for peripheral clock */
-    oscInit.PLL.PLLR = 2; /* Division factor for peripheral clock */
+    oscInit.PLL.PLLSource = RCC_PLLSOURCE_HSI; /* HSI = 64 MHz */
+    oscInit.PLL.PLLM = 4; /* 64 MHz / 4 = 16 MHz */
+    oscInit.PLL.PLLN = 10; /* 16 MHz * 10 = 160 MHz */
+    oscInit.PLL.PLLP = 2; /* Division factor for system clock --> 80 MHz, but the system clock runs from HSI */
+    oscInit.PLL.PLLQ = 4; /* Division factor for peripheral clock --> 40 MHz */
+    oscInit.PLL.PLLR = 2; /* Division factor for peripheral clock --> 80 MHz, unused */
     oscInit.PLL.PLLRGE = RCC_PLL1VCIRANGE_3;
     oscInit.PLL.PLLVCOSEL = RCC_PLL1VCOMEDIUM;
     oscInit.PLL.PLLFRACN = 0;
