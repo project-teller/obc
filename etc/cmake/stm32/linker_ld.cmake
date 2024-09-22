@@ -29,6 +29,19 @@ MB_MEM2 (NOLOAD)       : { _sMB_MEM2 = . ; *(MB_MEM2) ; _eMB_MEM2 = . ; } >RAM_S
     ")
 endif()
 
+if((NOT RAM_DMA_SIZE) OR (RAM_DMA_SIZE STREQUAL "0K"))
+    set(RAM_DMA_DEFINITION "")
+    set(RAM_DMA_SECTION "")
+else()
+    set(RAM_DMA_DEFINITION "    RAM_DMA (xrw)   : ORIGIN = ${RAM_DMA_ORIGIN}, LENGTH = ${RAM_DMA_SIZE}\n")
+    set(RAM_DMA_SECTION "
+  .dma_buffer :
+  {
+    *(.dma_buffer)
+  } >RAM_DMA
+    ")
+endif()
+
 set(SCRIPT_TEXT
 "ENTRY(Reset_Handler)\n\
 \n\
@@ -39,8 +52,9 @@ _Min_Stack_Size = ${STACK_SIZE};\n\
 MEMORY\n\
 {\n\
     FLASH (rx)      : ORIGIN = ${FLASH_ORIGIN}, LENGTH = ${FLASH_SIZE}\n\
-    RAM (xrw)      : ORIGIN = ${RAM_ORIGIN}, LENGTH = ${RAM_SIZE}\n\
+    RAM (xrw)       : ORIGIN = ${RAM_ORIGIN}, LENGTH = ${RAM_SIZE}\n\
 ${CCRAM_DEFINITION}\n\
+${RAM_DMA_DEFINITION}\n\
 ${RAM_SHARE_DEFINITION}\n\
 }\n\
 \n\
@@ -151,6 +165,7 @@ ${CCRAM_SECTION}\n\
 \n\
   .ARM.attributes 0 : { *(.ARM.attributes) }\n\
 ${RAM_SHARE_SECTION}\n\
+${RAM_DMA_SECTION}\n\
 }"
 )
 file(WRITE "${LINKER_SCRIPT}" "${SCRIPT_TEXT}")
