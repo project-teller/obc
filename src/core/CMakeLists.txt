@@ -8,6 +8,7 @@ add_library(
     telem/binary_data.cpp
     telem/calibration.cpp
     telem/clock_status.cpp
+    telem/echo.cpp
     telem/generic.cpp
     telem/gmm.cpp
     telem/heartbeat.cpp

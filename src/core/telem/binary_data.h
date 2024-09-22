@@ -11,31 +11,6 @@ const int MAX_BINARY_DATA_FRAGMENT_LENGTH = MAX_PAYLOAD_LENGTH - 4;
 namespace teller::telem::frames {
 
 /**
- * @brief Enum containing the possible response codes in an acknowledgment frame.
- */
-typedef enum {
-    /** Command is accepted and was executed. */
-    ACK_ACCEPTED = 0,
-
-    /** Command is invalid because of invalid parameters. Retrying the command
-     * with the same parameters will not work. */
-    NAK_DENIED = 1,
-
-    /** Command execution was attempted but the command failed. Retrying the
-     * command might work. */
-    NAK_FAILED = 2,
-
-    /** Command is not supported. */
-    NAK_UNSUPPORTED = 3,
-
-    /** Invalid response; used only when deserializing a frame with an unknown
-     * response code. */
-    NAK_INVALID,
-
-    NUM_ACK_RESULT_CODES,
-} ack_result_t;
-
-/**
  * @brief Structure containing all the data required to construct a binary
  * data frame.
  */
@@ -72,7 +47,7 @@ uint8_t encodeBinaryDataFrame(const binary_data_t* data, std::uint8_t* encoded);
  * @brief Decodes a binary data frame from its wire representation.
  *
  * @param encoded  the encoded representation of the binary data frame
- * @param decoded  the decoded representation of the binary data ame
+ * @param decoded  the decoded representation of the binary data frame
  */
 void decodeBinaryDataFrame(const std::uint8_t* encoded, size_t length, binary_data_t* decoded);
 

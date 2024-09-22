@@ -3,6 +3,7 @@
 
 #include "core/telem/ack.h"
 #include "core/telem/calibration.h"
+#include "core/telem/echo.h"
 #include "core/telem/parser.h"
 #include "core/telem/storage.h"
 #include "hal/memory.h"
@@ -87,8 +88,9 @@ static BlockingQueue<InboundMessage> in_queue(QUEUE_SIZE);
 
 static bool prepareMessage(InboundMessage& message, uart_t index,
     const envelope_t& envelope, const uint8_t* payload, uint8_t length);
-static optional<Response> processPacket(uart_t channel, const envelope_t& envelope, const uint8_t* payload);
+static optional<Response> processPacket(const InboundMessage& message);
 static optional<Response> processCalibrationPacket(const envelope_t& envelope, const uint8_t* payload);
+static bool processEchoPacket(const InboundMessage& message);
 static optional<Response> processStoragePacket(uart_t channel, const envelope_t& envelope, const uint8_t* payload);
 static bool sendResponse(uart_t channel, const envelope_t& envelope, Response response);
 
@@ -155,7 +157,7 @@ bool processNext(void)
     if (message.payload != nullptr) {
         if (message.envelope.target == ONBOARD_COMPUTER) {
             /* This is a packet for us */
-            response = processPacket(message.index, message.envelope, message.payload);
+            response = processPacket(message);
         } else {
             /* This is a packet for some other component */
             response.reset();
@@ -203,8 +205,11 @@ bool prepareMessage(InboundMessage& message, uart_t index,
         logger->warning("Ignored %s req from c%d", what, envelope.source); \
     } else
 
-optional<Response> processPacket(uart_t channel, const envelope_t& envelope, const uint8_t* payload)
+optional<Response> processPacket(const InboundMessage& message)
 {
+    const envelope_t& envelope = message.envelope;
+    const uint8_t* payload = message.payload;
+
     switch (envelope.frame_type) {
 
     case frames::RESET:
@@ -219,7 +224,7 @@ optional<Response> processPacket(uart_t channel, const envelope_t& envelope, con
     case frames::STORAGE:
         REJECT_UNLESS_FROM_GCS("storage")
         {
-            return processStoragePacket(channel, envelope, payload);
+            return processStoragePacket(message.index, envelope, payload);
         }
         break;
 
@@ -228,6 +233,10 @@ optional<Response> processPacket(uart_t channel, const envelope_t& envelope, con
         {
             return processCalibrationPacket(envelope, payload);
         }
+
+    case frames::ECHO:
+        processEchoPacket(message);
+        break;
 
     default:
         /* We are not interested in this packet */
@@ -279,6 +288,27 @@ optional<Response> processCalibrationPacket(const envelope_t& envelope, const ui
     } else {
         return Response::ok();
     }
+}
+
+bool processEchoPacket(const InboundMessage& message)
+{
+    frames::echo_data_t data;
+    uint8_t length;
+    envelope_t envelope;
+
+    frames::decodeEchoFrame(message.payload, message.length, &data);
+    if (data.is_reply) {
+        return true;
+    }
+
+    data.is_reply = 1;
+    length = frames::encodeEchoFrame(&data, responseBuffer);
+
+    envelope.frame_type = message.envelope.frame_type;
+    envelope.source = ONBOARD_COMPUTER;
+    envelope.target = message.envelope.source;
+
+    return teller::telem::sendTo((1 << message.index), envelope, responseBuffer, length);
 }
 
 optional<Response> processStoragePacket(uart_t channel, const envelope_t& envelope, const uint8_t* payload)

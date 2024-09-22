@@ -136,6 +136,7 @@ namespace frames {
         BINARY_DATA = 14,
         LCL_RESET = 15,
         CALIBRATION = 16,
+        ECHO = 17,
     } frame_type_t;
 
 }
