@@ -379,11 +379,16 @@ static bool eraseSector(uint32_t sector)
 
 static bool readIntoBuffer(uint32_t offset, uint8_t* buf, uint16_t length)
 {
-    uint8_t header[6] = { CMD_FAST_READ };
+    /* TODO(ntamas): figure out why it does not work with CMD_FAST_READ! */
+    /* Maybe the length of the header buffer? It is not divisible by 4 */
+    /* when using CMD_FAST_READ */
+    // uint8_t header[6] = { CMD_FAST_READ };
+    // uint8_t* end = fillBufferWithAddress(header + 1, offset);
+    //
+    // /* add 8 dummy clock cycles */
+    // *(end++) = 0;
+    uint8_t header[6] = { CMD_READ_DATA };
     uint8_t* end = fillBufferWithAddress(header + 1, offset);
-
-    /* add 8 dummy clock cycles */
-    *(end++) = 0;
 
     spi::transfer_t xfer[] = {
         { header, nullptr, static_cast<uint16_t>(end - header) },
