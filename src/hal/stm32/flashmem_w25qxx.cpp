@@ -74,12 +74,12 @@ static const flashmem_w25qxx_cfg_t known_devices[] = {
 static bool eraseSector(uint32_t sector);
 static const flashmem_w25qxx_cfg_t* identify(void);
 static bool isWriteEnabled(void);
+static bool programFromBuffer(uint32_t offset, const uint8_t* buf, uint16_t length);
 static bool readIntoBuffer(uint32_t offset, uint8_t* buf, uint16_t length);
 static uint32_t readJEDECId(void);
-static std::optional<uint8_t> readStatusRegister(uint8_t index);
+static int16_t readStatusRegister(uint8_t index);
 static uint32_t sectorToAddress(uint32_t sector, uint32_t off = 0);
 static bool waitWhileBusy(void);
-static bool writeFromBuffer(uint32_t offset, const uint8_t* buf, uint16_t length);
 
 /** The logger used by the driver */
 static Logger* logger;
@@ -243,20 +243,30 @@ const flashmem_w25qxx_cfg_t* identify()
  */
 static uint32_t readJEDECId()
 {
+    // For some strange reason, stepping through this function with the
+    // debugger does not work if we are re-using 'buf' for transmission and
+    // reception
     uint8_t buf[4] = { CMD_READ_JEDEC_ID, 0x00, 0x00, 0x00 };
-    if (!spi::transfer(address, buf, sizeof(buf))) {
+    uint8_t rxBuf[4] = { 0x00, 0x00, 0x00, 0x00 };
+    if (!spi::transfer(address, buf, rxBuf, sizeof(buf), 0)) {
         return 0;
     } else {
-        return (buf[1] << 16) | (buf[2] << 8) | buf[3];
+        return (rxBuf[1] << 16) | (rxBuf[2] << 8) | rxBuf[3];
     }
 }
 
 /**
  * @brief Reads the status register with the given index.
+ *
+ * @return -1 in case of an error, or the value of the status register otherwise
  */
-static std::optional<uint8_t> readStatusRegister(uint8_t index)
+static int16_t readStatusRegister(uint8_t index)
 {
+    // For some strange reason, stepping through this function with the
+    // debugger does not work if we are re-using 'buf' for transmission and
+    // reception
     uint8_t buf[2] = { CMD_INVALID, 0 };
+    uint8_t rxBuf[2] = { 0, 0 };
 
     if (index == 1) {
         buf[0] = CMD_READ_STATUS_REGISTER_1;
@@ -266,10 +276,10 @@ static std::optional<uint8_t> readStatusRegister(uint8_t index)
         buf[0] = CMD_READ_STATUS_REGISTER_3;
     }
 
-    if (buf[0] != CMD_INVALID && spi::transfer(address, buf, sizeof(buf))) {
-        return buf[1];
+    if (buf[0] != CMD_INVALID && spi::transfer(address, buf, rxBuf, sizeof(buf))) {
+        return rxBuf[1];
     } else {
-        return std::nullopt;
+        return -1;
     }
 }
 
@@ -278,8 +288,8 @@ static std::optional<uint8_t> readStatusRegister(uint8_t index)
  */
 static bool isWriteEnabled()
 {
-    auto reg = readStatusRegister(1);
-    return reg && (reg.value() & 0x02);
+    int16_t reg = readStatusRegister(1);
+    return reg >= 0 && (reg & 0x02);
 }
 
 /**
@@ -292,10 +302,10 @@ static bool isWriteEnabled()
 static bool waitWhileBusy()
 {
     while (true) {
-        auto reg = readStatusRegister(1);
-        if (!reg) {
+        int16_t reg = readStatusRegister(1);
+        if (reg < 0) {
             return false;
-        } else if ((reg.value() & 0x01) == 0) {
+        } else if ((reg & 0x01) == 0) {
             return true;
         }
         system::delayMsec(1);
@@ -383,8 +393,9 @@ static bool readIntoBuffer(uint32_t offset, uint8_t* buf, uint16_t length)
     return waitWhileBusy() && spi::transfer(address, xfer, 0);
 }
 
-static bool writeFromBuffer(uint32_t offset, const uint8_t* buf, uint16_t length)
+static bool programFromBuffer(uint32_t offset, const uint8_t* buf, uint16_t length)
 {
+    /* Programming operation works only on previously erased pages */
     uint8_t header[6] = { CMD_PAGE_PROGRAM };
     uint8_t* end = fillBufferWithAddress(header + 1, offset);
     spi::transfer_t xfer[] = {
@@ -397,15 +408,20 @@ static bool writeFromBuffer(uint32_t offset, const uint8_t* buf, uint16_t length
     if (success) {
         WriteEnabledContext ctx;
         int code = 0;
-        success = ctx.enable() && (code = spi::transfer(address, xfer, 0));
+        success = ctx.enable();
 
         if (!success) {
-            code = spi::getLastErrorCode();
-            logger->error("writeFromBuffer: HAL error %d", code);
-        }
+            logger->error("programFromBuffer: failed to enable WEL");
+        } else {
+            success = spi::transfer(address, xfer, 0);
+            if (!success) {
+                code = spi::getLastErrorCode();
+                logger->error("programFromBuffer: HAL error %d", code);
+            }
 
-        if (!waitWhileBusy()) {
-            success = false;
+            if (!waitWhileBusy()) {
+                success = false;
+            }
         }
     }
 
@@ -448,7 +464,7 @@ static int flashmem_write(
 
     while (size > 0) {
         toWrite = size > PAGE_SIZE ? PAGE_SIZE : size;
-        if (!writeFromBuffer(address, ptr, toWrite)) {
+        if (!programFromBuffer(address, ptr, toWrite)) {
             return LFS_ERR_IO;
         }
         address += toWrite;

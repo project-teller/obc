@@ -402,7 +402,7 @@ public:
             _events.waitAny(EVT_STARTED);
         }
 
-        while (_bytesLeft > 0) {
+        while (running()) {
             bool success;
 
             _binaryData.data_length = _bytesLeft > limit ? limit : _bytesLeft;

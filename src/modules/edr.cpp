@@ -343,6 +343,7 @@ void ExperimentDataRecorder::_run(storage_area_t area)
      *
      * If this becomes a problem, we should drain the queue after every callback.
      */
+    /* TODO(ntamas): re-enable this! */
     /*
     if (area != STORAGE_AREA_UNKNOWN) {
         for (auto it = callbacks.begin(); it != callbacks.end(); it++) {
