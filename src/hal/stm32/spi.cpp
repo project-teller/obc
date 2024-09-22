@@ -159,6 +159,10 @@ bool transfer(
         return false;
     }
 
+    if (txBuf == nullptr && rxBuf == nullptr) {
+        return true;
+    }
+
     pCfg = &spi_config[address.bus];
     pState = &spi_state[address.bus];
 
@@ -206,6 +210,7 @@ bool transfer(
     spi_bus_state_t* pState;
     HAL_StatusTypeDef hal_status;
     std::uint32_t events;
+    bool success = false;
 
     if (!is_spi_address_valid(address)) {
         return false;
@@ -228,14 +233,20 @@ bool transfer(
         }
 
         transfer = transfers;
-        while (count > 0 && (transfer->tx_buf != nullptr || transfer->rx_buf != nullptr)) {
+        while (count > 0) {
             count--;
+
+            if (transfer->tx_buf == nullptr && transfer->rx_buf == nullptr) {
+                success = true;
+                break;
+            }
 
             hal_status = HAL_SPI_TransmitReceive_IT(
                 &pState->handle,
                 transfer->tx_buf ? transfer->tx_buf : transfer->rx_buf,
                 transfer->rx_buf ? transfer->rx_buf : transfer->tx_buf,
                 transfer->size);
+
             if (hal_status != HAL_OK) {
                 break;
             }
@@ -260,14 +271,24 @@ bool transfer(
         }
 
         transfer = transfers;
-        while (count > 0 && (transfer->tx_buf != nullptr || transfer->rx_buf != nullptr)) {
+        while (count > 0) {
             count--;
 
-            hal_status = HAL_SPI_TransmitReceive(
-                &pState->handle,
-                transfer->tx_buf ? transfer->tx_buf : transfer->rx_buf,
-                transfer->rx_buf ? transfer->rx_buf : transfer->tx_buf,
-                transfer->size, SPI_TIMEOUT_MSEC);
+            if (transfer->tx_buf != nullptr && transfer->rx_buf != nullptr) {
+                hal_status = HAL_SPI_TransmitReceive(
+                    &pState->handle, transfer->tx_buf, transfer->rx_buf,
+                    transfer->size, SPI_TIMEOUT_MSEC);
+            } else if (transfer->tx_buf != nullptr) {
+                hal_status = HAL_SPI_Transmit(
+                    &pState->handle, transfer->tx_buf, transfer->size, SPI_TIMEOUT_MSEC);
+            } else if (transfer->rx_buf != nullptr) {
+                hal_status = HAL_SPI_Receive(
+                    &pState->handle, transfer->rx_buf, transfer->size, SPI_TIMEOUT_MSEC);
+            } else {
+                success = true;
+                break;
+            }
+
             if (hal_status != HAL_OK) {
                 break;
             }
@@ -282,7 +303,7 @@ bool transfer(
 
     last_hal_status = hal_status;
 
-    return hal_status == HAL_OK;
+    return success;
 }
 
 bool unselect(address_t address)
