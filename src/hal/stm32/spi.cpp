@@ -11,7 +11,7 @@
 
 using namespace teller::hal::utils;
 
-#define SPI_TIMEOUT_MSEC 500
+#define SPI_TIMEOUT_MSEC 100
 
 static const uint32_t EVT_DONE = 0x00000001U;
 static const uint32_t EVT_ERROR = 0x00000002U;
@@ -339,7 +339,12 @@ static bool configure_spi_bus(spi_bus_state_t* state, const spi_bus_config_t* cf
     pHandle->Instance = cfg->instance;
 
     /* SPI peripheral clock speed is set in board.cpp, here we divide it by
-     * the baud rate prescaler */
+     * the baud rate prescaler.
+     *
+     * Preipheral clock runs at 40 MHz.
+     * Prescaler = 8: SPI bus will run at 5 MHz
+     * Prescaler = 256: SPI bus will run at 160 kHz
+     */
 
     pHandle->Init.Mode = SPI_MODE_MASTER;
     pHandle->Init.Direction = SPI_DIRECTION_2LINES;

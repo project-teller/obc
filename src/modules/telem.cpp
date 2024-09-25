@@ -89,7 +89,7 @@ bool init()
     seq_no = 0;
     telemetry_channel_mask = 0;
 
-    requestTelemetry(uart::TELEMETRY);
+    requestTelemetry(uart::RXSM);
 
     return true;
 }
@@ -123,8 +123,8 @@ bool processNext()
     }
 
     if (message.data != nullptr) {
-        if (message.targets & (1 << uart::TELEMETRY)) {
-            uart::write(uart::TELEMETRY, message.data, message.length);
+        if (message.targets & (1 << uart::RXSM)) {
+            uart::write(uart::RXSM, message.data, message.length);
         }
 
         if (message.targets & (1 << uart::DEBUG)) {

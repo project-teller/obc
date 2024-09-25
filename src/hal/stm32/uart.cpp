@@ -107,7 +107,7 @@ typedef struct {
 // STM32H743ZI Nucleo-144 dev board, for testing purposes
 #define NUM_PHY_UARTS 2
 const uart_phy_config_t uart_phy_config[] = {
-    /* UART towards the RXSM */
+    /* USART2 towards the RXSM */
     {
         .instance = USART2,
         .gpio = {
@@ -122,7 +122,7 @@ const uart_phy_config_t uart_phy_config[] = {
         .baud_rate = 38400
     },
 
-    /* Debug UART */
+    /* USART3 towards the debug port */
     {
         .instance = USART3,
         .gpio = {
@@ -139,19 +139,70 @@ const uart_phy_config_t uart_phy_config[] = {
     NO_MORE_UARTS
 };
 const int8_t uart_map[NUM_UARTS] = {
-    0,   /* TELEMETRY --> USART2 */
+    0,   /* RXSM --> USART2 */
     -1,  /* GMM --> not connected */
     -1,  /* SCM --> not connected */
     1,   /* DEBUG --> USART3 */
     -1   /* SINK --> not connected */
 };
-#elif defined STM32F4
-// STM32F4-Discovery
-#define NUM_PHY_UARTS 0
+#elif defined TELLER_BOARD_STM32F4
+// STM32F415RG TELLER OBC
+#define NUM_PHY_UARTS 3
 const uart_phy_config_t uart_phy_config[] = {
+    /* USART1 towards the SCM */
+    {
+        .instance = USART1,
+        .gpio = {
+            .by_name = {
+                .tx = { GPIOA, GPIO_PIN_9 },
+                .rx = { GPIOA, GPIO_PIN_8 }
+            },
+        },
+        .irq = USART1_IRQn,
+        .dma_tx = nullptr,
+        .dma_rx = nullptr,
+        .baud_rate = 38400
+    },
+
+    /* UART4 towards the RXSM */
+    {
+        .instance = UART4,
+        .gpio = {
+            .by_name = {
+                .tx = { GPIOA, GPIO_PIN_0 },
+                .rx = { GPIOA, GPIO_PIN_1 }
+            },
+        },
+        .irq = UART4_IRQn,
+        .dma_tx = nullptr,
+        .dma_rx = nullptr,
+        .baud_rate = 38400
+    },
+
+    /* USART6 towards the GMM */
+    {
+        .instance = USART6,
+        .gpio = {
+            .by_name = {
+                .tx = { GPIOC, GPIO_PIN_6 },
+                .rx = { GPIOC, GPIO_PIN_7 }
+            },
+        },
+        .irq = USART6_IRQn,
+        .dma_tx = nullptr,
+        .dma_rx = nullptr,
+        .baud_rate = 38400
+    },
+
     NO_MORE_UARTS
 };
-const int8_t uart_map[NUM_UARTS] = { -1, -1, -1, -1, -1 };
+const int8_t uart_map[NUM_UARTS] = {
+    1,   /* RXSM --> UART4 */
+    2,  /* GMM --> UART6 */
+    0,  /* SCM --> USART1 */
+    -1,   /* DEBUG --> not connected, USB-OTG */
+    -1   /* SINK --> not connected */
+};
 #else
 // No UART supported on this hardware
 #define NUM_PHY_UARTS 0
@@ -289,7 +340,7 @@ bool teller::hal::uart::write(uart_t index, uint8_t* data, uint16_t size)
         /* Enable TXEIE to get a notification when the UART is ready to send,
          * and then wait for the event that indicates that the ring buffer is
          * empty again */
-        SET_BIT(state->handle.Instance->CR1, USART_CR1_TXEIE_TXFNFIE);
+        SET_BIT(state->handle.Instance->CR1, USART_CR1_TXEIE);
 
         /* TODO: figure out why we need a timeout of 100 ms here, why we cannot
          * use osWaitForever. Doing so would stall the outbound queue in an
@@ -371,7 +422,7 @@ static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t*
     success = true;
 
     /* Enable RXNEIE to notify us when a new byte can be received */
-    SET_BIT(pHandle->Instance->CR1, USART_CR1_RXNEIE_RXFNEIE);
+    SET_BIT(pHandle->Instance->CR1, USART_CR1_RXNEIE);
 
     /* Make sure that parity errors (PE) and transmission complete events (TC)
      * do not trigger interrupts */
@@ -419,6 +470,12 @@ static void assignHandle(UART_HandleTypeDef* huart)
         uart_handle_ptrs[2] = huart;
     } else if (huart->Instance == USART3) {
         uart_handle_ptrs[3] = huart;
+    } else if (huart->Instance == UART4) {
+        uart_handle_ptrs[4] = huart;
+    } else if (huart->Instance == UART5) {
+        uart_handle_ptrs[5] = huart;
+    } else if (huart->Instance == USART6) {
+        uart_handle_ptrs[6] = huart;
     }
 }
 
@@ -457,54 +514,47 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
         return;
     }
 
-    if (huart->Instance == USART1) {
-        gpioFunc = GPIO_AF7_USART1;
-
 #ifdef STM32H7
-        RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = { 0 };
-
-        /* Initializes the peripherals clock */
-        PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART1;
+#define INIT_PERIPH_CLOCK(clockSelection)                          \
+    {                                                              \
+        RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = { 0 };      \
+                                                                   \
+        /* Initializes the peripherals clock */                    \
+        PeriphClkInitStruct.PeriphClockSelection = clockSelection; \
         PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
-        if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
-            return;
-        }
+    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
+        return;
+    }
+#else
+#define INIT_PERIPH_CLOCK(clockSelection) ;
 #endif
 
-        /* Peripheral clock enable */
+    if (huart->Instance == USART1) {
+        gpioFunc = GPIO_AF7_USART1;
+        INIT_PERIPH_CLOCK(RCC_USART234578CLKSOURCE_D2PCLK1);
         __HAL_RCC_USART1_CLK_ENABLE();
     } else if (huart->Instance == USART2) {
         gpioFunc = GPIO_AF7_USART2;
-
-#ifdef STM32H7
-        RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = { 0 };
-
-        /* Initializes the peripherals clock */
-        PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART2;
-        PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
-        if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
-            return;
-        }
-#endif
-
-        /* Peripheral clock enable */
+        INIT_PERIPH_CLOCK(RCC_USART234578CLKSOURCE_D2PCLK1);
         __HAL_RCC_USART2_CLK_ENABLE();
     } else if (huart->Instance == USART3) {
         gpioFunc = GPIO_AF7_USART3;
-
-#ifdef STM32H7
-        RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = { 0 };
-
-        /* Initializes the peripherals clock */
-        PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART3;
-        PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
-        if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
-            return;
-        }
-#endif
-
-        /* Peripheral clock enable */
+        INIT_PERIPH_CLOCK(RCC_USART234578CLKSOURCE_D2PCLK1);
         __HAL_RCC_USART3_CLK_ENABLE();
+    } else if (huart->Instance == UART4) {
+        gpioFunc = GPIO_AF8_UART4;
+        INIT_PERIPH_CLOCK(RCC_USART234578CLKSOURCE_D2PCLK1);
+        __HAL_RCC_UART4_CLK_ENABLE();
+    } else if (huart->Instance == UART5) {
+        gpioFunc = GPIO_AF8_UART5;
+        INIT_PERIPH_CLOCK(RCC_USART234578CLKSOURCE_D2PCLK1);
+        __HAL_RCC_UART5_CLK_ENABLE();
+    } else if (huart->Instance == USART6) {
+        gpioFunc = GPIO_AF8_USART6;
+        INIT_PERIPH_CLOCK(RCC_USART234578CLKSOURCE_D2PCLK1);
+        __HAL_RCC_USART6_CLK_ENABLE();
+    } else {
+        return;
     }
 
     /* GPIO configuration */
@@ -658,6 +708,12 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
         __HAL_RCC_USART2_CLK_DISABLE();
     } else if (huart->Instance == USART3) {
         __HAL_RCC_USART3_CLK_DISABLE();
+    } else if (huart->Instance == UART4) {
+        __HAL_RCC_UART4_CLK_DISABLE();
+    } else if (huart->Instance == UART5) {
+        __HAL_RCC_UART5_CLK_DISABLE();
+    } else if (huart->Instance == USART6) {
+        __HAL_RCC_USART6_CLK_DISABLE();
     }
 
     for (int i = NUM_GPIO_PINS_PER_UART - 1; i >= 0; i--) {
@@ -727,6 +783,30 @@ void USART3_IRQHandler(void)
         uart_irq_handler(ptr);
     }
 }
+
+void UART4_IRQHandler(void)
+{
+    UART_HandleTypeDef* ptr = uart_handle_ptrs[4];
+    if (ptr) {
+        uart_irq_handler(ptr);
+    }
+}
+
+void UART5_IRQHandler(void)
+{
+    UART_HandleTypeDef* ptr = uart_handle_ptrs[5];
+    if (ptr) {
+        uart_irq_handler(ptr);
+    }
+}
+
+void USART6_IRQHandler(void)
+{
+    UART_HandleTypeDef* ptr = uart_handle_ptrs[6];
+    if (ptr) {
+        uart_irq_handler(ptr);
+    }
+}
 }
 
 /* ************************************************************************** */
@@ -738,25 +818,41 @@ void uart_irq_handler(UART_HandleTypeDef* ptr)
         return;
     }
 
+#ifdef STM32H7
+#define ISR_REG uart->ISR
+#define RDR_REG uart->TDR
+#define TDR_REG uart->TDR
+#define ORE_FLAG USART_ISR_ORE
+#define TXE_FLAG USART_ISR_TXE_TXFNF
+#define RXNE_FLAG USART_ISR_RXNE_RXFNE
+#else
+#define ISR_REG uart->SR
+#define RDR_REG uart->DR
+#define TDR_REG uart->DR
+#define ORE_FLAG USART_SR_ORE
+#define TXE_FLAG USART_SR_TXE
+#define RXNE_FLAG USART_SR_RXNE
+#endif
+
     USART_TypeDef* uart = state->handle.Instance;
-    uint32_t flags = READ_REG(uart->ISR);
+    uint32_t flags = READ_REG(ISR_REG);
     uint8_t ch;
 
-    if (flags & USART_ISR_TXE_TXFNF) {
+    if (flags & TXE_FLAG) {
         /* TX register empty so we can transmit the next byte from the TX buffer */
         if (lwrb_read(&state->tx_buffer, &ch, 1)) {
-            uart->TDR = (uint16_t)ch;
+            TDR_REG = (uint16_t)ch;
         } else {
             /* No more bytes, clear the TXEIE interrupt and send an event to
              * the task that was blocked on the write */
-            CLEAR_BIT(state->handle.Instance->CR1, USART_CR1_TXEIE_TXFNFIE);
+            CLEAR_BIT(state->handle.Instance->CR1, USART_CR1_TXEIE);
             osEventFlagsSet(state->event, EVT_WRITTEN);
         }
     }
 
-    if (flags & USART_ISR_RXNE_RXFNE) {
+    if (flags & RXNE_FLAG) {
         /* RX register not empty, write the received byte into the RX buffer */
-        ch = uart->RDR & 0x00FFU;
+        ch = RDR_REG & 0x00FFU;
         if (lwrb_write(&state->rx_buffer, &ch, 1) == 0) {
             /* dropped */
             ch = 0;
@@ -764,9 +860,12 @@ void uart_irq_handler(UART_HandleTypeDef* ptr)
         osEventFlagsSet(state->event, EVT_READ);
     }
 
-    if (flags & USART_ISR_ORE) {
+    if (flags & USART_SR_ORE) {
         /* Overrun error, just clear the flag */
+#ifdef STM32H7
         uart->ICR = UART_CLEAR_OREF;
+#endif
+        /* TODO: implement for STM32F4 */
     }
 }
 

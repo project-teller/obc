@@ -71,7 +71,7 @@ typedef struct {
 
 static uart_rx_task_args_t uart_telem_task_args = {
     .task_name = "uartRxTel",
-    .uart_index = teller::hal::uart::TELEMETRY
+    .uart_index = teller::hal::uart::RXSM
 };
 
 static uart_rx_task_args_t uart_debug_task_args = {

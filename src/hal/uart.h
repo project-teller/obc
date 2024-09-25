@@ -8,7 +8,7 @@ namespace teller::hal::uart {
 extern const uint32_t WAIT_FOREVER;
 
 typedef enum {
-    TELEMETRY,
+    RXSM,
     GMM,
     SCM,
     DEBUG,

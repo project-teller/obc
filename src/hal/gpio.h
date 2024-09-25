@@ -19,7 +19,7 @@ typedef enum {
     STATUS_SUC_LCL1,
     STATUS_SUC_LCL2,
     STATUS_SUC_LCL3,
-    STATUS_HVPSU_LCL,
+    STATUS_CAM_LCL,
 
     /* Latching current limiter reset */
     RST_GMM_LCL,
@@ -27,7 +27,7 @@ typedef enum {
     RST_SUC_LCL1,
     RST_SUC_LCL2,
     RST_SUC_LCL3,
-    RST_HVPSU_LCL,
+    RST_CAM_LCL,
 
     NUM_GPIO_PINS,
 } pin_t;

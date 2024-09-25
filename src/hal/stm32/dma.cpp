@@ -15,6 +15,7 @@ typedef struct {
 
 const dma_config_t dma_config[] = {
     { DMA1, DMA1_Stream0_IRQn },
+    { DMA1, DMA1_Stream1_IRQn },
     NO_MORE_DMA_CHANNELS
 };
 

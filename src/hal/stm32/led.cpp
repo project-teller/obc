@@ -32,36 +32,8 @@ const led_config_t led_config[NUM_LEDS] = {
 #elif defined TELLER_BOARD_STM32F4
 // STM32F415RG TELLER OBC
 const led_config_t led_config[NUM_LEDS] = {
-    { GPIOA, GPIO_PIN_6 }, /* Heartbeat LED */
+    { GPIOA, GPIO_PIN_8 }, /* Heartbeat LED */
     { GPIOA, GPIO_PIN_2 }, /* Error LED */
-    { 0 }, /* Debug LED */
-};
-#elif defined STM32F1
-// STM32VL-Discovery green led - PC9
-const led_config_t led_config[NUM_LEDS] = {
-    { GPIOC, GPIO_PIN_9 }, /* Heartbeat LED */
-    { 0 }, /* Error LED */
-    { 0 }, /* Debug LED */
-};
-#elif defined STM32H7
-// STM32H743ZI blue LED
-const led_config_t led_config[NUM_LEDS] = {
-    { GPIOB, GPIO_PIN_7 }, /* Heartbeat LED */
-    { GPIOB, GPIO_PIN_14 }, /* Error LED */
-    { 0 }, /* Debug LED */
-};
-#elif defined STM32F4
-// STM32F4-Discovery green led - PD12
-const led_config_t led_config[NUM_LEDS] = {
-    { GPIOD, GPIO_PIN_12 }, /* Heartbeat LED */
-    { 0 }, /* Error LED */
-    { 0 }, /* Debug LED */
-};
-#elif defined STM32L5
-// NUCLEO-L552ZE-Q blue led - PB7
-const led_config_t led_config[NUM_LEDS] = {
-    { GPIOB, GPIO_PIN_7 }, /* Heartbeat LED */
-    { 0 }, /* Error LED */
     { 0 }, /* Debug LED */
 };
 #else

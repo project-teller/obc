@@ -29,7 +29,7 @@ static const lcl_pins_t pin_map[NUM_LCLS] = {
     { STATUS_SUC_LCL1, RST_SUC_LCL1 },
     { STATUS_SUC_LCL2, RST_SUC_LCL2 },
     { STATUS_SUC_LCL3, RST_SUC_LCL3 },
-    { STATUS_HVPSU_LCL, RST_HVPSU_LCL },
+    { STATUS_CAM_LCL, RST_CAM_LCL },
 };
 
 bool init()
