@@ -59,19 +59,6 @@ bool isConnected(uart_t index);
 bool readInto(uart_t index, std::uint8_t* data, std::uint16_t size, std::uint16_t* bytes_read);
 
 /**
- * @brief Reads a single byte from a UART, with a timeout.
- *
- * The function will block and yield to other tasks until a byte was received or
- * the timeout has expired.
- *
- * @param index the index of the UART to read from
- * @param data the buffer to read into
- * @param timeout number of milliseconds to wait for the next byte
- * @return whether the read was successful
- */
-bool read1(uart_t index, std::uint8_t* data, std::uint32_t timeout);
-
-/**
  * @brief Waits until the given UART becomes connected.
  */
 void waitUntilConnected(uart_t index);

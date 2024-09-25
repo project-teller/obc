@@ -119,69 +119,6 @@ bool teller::hal::uart::readInto(uart_t index, uint8_t* data, uint16_t size, uin
     return result;
 }
 
-bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
-{
-    istream& stream = uartToInputStream(index);
-    int fd = uartToInputFileDescriptor(index);
-    bool hasRealFd = fd >= 0;
-    bool result = false;
-    bool errored = false;
-
-    errored = hasRealFd ? false : ((stream.rdstate() & (stream.failbit | stream.eofbit)) != 0);
-    if (!errored) {
-        int activity;
-        fd_set read_fds;
-        fd_set except_fds;
-        bool has_timeout = timeout < WAIT_FOREVER;
-        struct timeval timeout_timeval;
-
-        if (has_timeout) {
-            timeout_timeval.tv_sec = timeout / 1000;
-            timeout_timeval.tv_usec = (timeout % 1000) * 1000;
-        }
-
-        FD_ZERO(&read_fds);
-        FD_ZERO(&except_fds);
-
-        if (fd == NEVER_READABLE_FILE_DESCRIPTOR) {
-            // Pretend that the timeout has expired, then return with an error
-            activity = 0;
-        } else if (fd == ALWAYS_READABLE_FILE_DESCRIPTOR) {
-            // Bypass the call to select(), fd is always readable
-            activity = 1;
-        } else {
-            // Use select()
-            FD_SET(fd, &read_fds);
-            FD_SET(fd, &except_fds);
-            activity = select(fd + 1, &read_fds, nullptr, &except_fds, has_timeout ? &timeout_timeval : nullptr);
-        }
-
-        if (activity < 0) {
-            // Error while calling select()
-            perror("select");
-        } else if (activity == 0) {
-            // Timeout
-        } else if (hasRealFd) {
-            if (FD_ISSET(fd, &except_fds)) {
-                // Exceptional condition on fd
-                result = false;
-            } else {
-                result = read(fd, data, 1) > 0;
-            }
-        } else {
-            // Use the stream
-            stream.read(reinterpret_cast<char*>(data), 1);
-            result = stream.gcount() > 0 || !(stream.rdstate() & (stream.failbit | stream.eofbit));
-        }
-    }
-
-    if (!result) {
-        // Read error. If this was the debug socket, close it. TODO(ntamas)
-    }
-
-    return result;
-}
-
 void teller::hal::uart::setDebugPort(const std::string& service)
 {
     // Close the connected debug client, if any

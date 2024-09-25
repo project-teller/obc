@@ -53,6 +53,11 @@ endif()
 
 #############################################################################
 
+# lwrb library
+add_subdirectory(lwrb)
+
+#############################################################################
+
 # minmea library. Even though it's CMake-based, we cannot use its CMakeLists.txt
 # file directly because it insists on find_packege(Threads)
 add_library(
@@ -74,6 +79,7 @@ target_include_directories(
 if(TARGET_MCU_CMSIS_MODULE)
     target_link_libraries(lfs PRIVATE CMSIS::${TARGET_MCU_CMSIS_MODULE})
     target_link_libraries(lfsbd PRIVATE CMSIS::${TARGET_MCU_CMSIS_MODULE})
+    target_link_libraries(lwrb PRIVATE CMSIS::${TARGET_MCU_CMSIS_MODULE})
     target_link_libraries(minmea PRIVATE CMSIS::${TARGET_MCU_CMSIS_MODULE})
     target_link_libraries(sdlog PRIVATE CMSIS::${TARGET_MCU_CMSIS_MODULE})
 endif()

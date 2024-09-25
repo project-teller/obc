@@ -2,6 +2,7 @@
 #include <cstring>
 #include <stdexcept>
 
+#include "lwrb/lwrb.h"
 #include "stm32_hal.h"
 #include <cmsis_os2.h>
 
@@ -23,7 +24,6 @@ const uint32_t WAIT_FOREVER = osWaitForever;
 
 static const uint32_t EVT_READ = 0x00000001U;
 static const uint32_t EVT_WRITTEN = 0x00000002U;
-static const uint32_t EVT_ERROR = 0x00000004U;
 
 #define NUM_GPIO_PINS_PER_UART 2
 
@@ -54,7 +54,7 @@ typedef struct {
 
     /**
      * The DMA channel to use for RX operations. Null if the UART is not using
-     * DMA for TX.
+     * DMA for RX.
      */
     DMA_Stream_TypeDef* dma_rx;
 
@@ -75,14 +75,14 @@ typedef struct {
     /** DMA stream of the UART when it is using DMA for TX */
     DMA_HandleTypeDef dma_tx_handle;
 
-    /** Pointer to the DMA buffer of the UART when it is using DMA for TX */
-    uint8_t* dma_tx_buffer;
-
     /** DMA stream of the UART when it is using DMA for RX */
     DMA_HandleTypeDef dma_rx_handle;
 
-    /** Pointer to the DMA buffer of the UART when it is using DMA for RX */
-    uint8_t* dma_rx_buffer;
+    /** Ring buffer that contains the data being sent on this UART */
+    lwrb_t tx_buffer;
+
+    /** Ring buffer that contains the data being received from this UART */
+    lwrb_t rx_buffer;
 
     /**
      * Event flags to trigger when the UART is ready to read or write or if an
@@ -132,9 +132,9 @@ const uart_phy_config_t uart_phy_config[] = {
             },
         },
         .irq = USART3_IRQn,
-        .dma_tx = DMA1_Stream0,
+        .dma_tx = nullptr,
         .dma_rx = nullptr,
-        .baud_rate = 38400  /* 115200 is the max that seems to work; 230400 triggers the watchdog sometimes */
+        .baud_rate = 230400  /* 230400 is the max that seems to work */
     },
     NO_MORE_UARTS
 };
@@ -164,6 +164,7 @@ const int8_t uart_map[NUM_UARTS] = { -1, -1, -1, -1, -1 };
 
 static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t* cfg);
 static uart_phy_state_t* find_phy_for_uart(int8_t index);
+static void uart_irq_handler(UART_HandleTypeDef* ptr);
 
 static bool isUARTAlwaysConnected(uart_t index);
 
@@ -172,8 +173,8 @@ static uart_phy_state_t uart_phy_state[NUM_PHY_UARTS];
 
 #define DMA_BUFFER_SIZE 256
 
-static DMA_BUFFER uint8_t uart_dma_rx_buffers[NUM_PHY_UARTS][DMA_BUFFER_SIZE];
-static DMA_BUFFER uint8_t uart_dma_tx_buffers[NUM_PHY_UARTS][DMA_BUFFER_SIZE];
+static DMA_BUFFER uint8_t uart_rx_buffers[NUM_PHY_UARTS][DMA_BUFFER_SIZE];
+static DMA_BUFFER uint8_t uart_tx_buffers[NUM_PHY_UARTS][DMA_BUFFER_SIZE];
 
 bool teller::hal::uart::init()
 {
@@ -208,96 +209,34 @@ bool teller::hal::uart::isConnected(uart_t index)
 bool teller::hal::uart::readInto(uart_t index, uint8_t* data, uint16_t size, uint16_t* bytes_read)
 {
     uint32_t flags = 0;
-    uart_phy_state_t* pState;
-    UART_HandleTypeDef* pHandle;
-    HAL_StatusTypeDef status;
+    uart_phy_state_t* state;
+    lwrb_sz_t read = 0;
 
     if (size == 0) {
         teller::hal::system::yield();
         goto exit;
     }
 
-    pState = find_phy_for_uart(index);
-    pHandle = pState ? &pState->handle : nullptr;
-
-    if (pHandle) {
-        status = HAL_UART_Receive_IT(pHandle, data, size);
-        if (status == HAL_OK) {
-            flags = osEventFlagsWait(pState->event, EVT_READ | EVT_ERROR, osFlagsWaitAny, osWaitForever);
-            if (flags & (osFlagsError | EVT_ERROR)) {
-                HAL_UART_AbortReceive(pHandle);
-            }
-        } else if (status == HAL_BUSY) {
-            HAL_UART_AbortReceive(pHandle);
-            teller::hal::system::yield();
-        } else {
-            teller::hal::system::yield();
-        }
-    } else {
-        teller::hal::system::yield();
-    }
-
-exit:
-    if (flags & EVT_READ) {
-        if (bytes_read) {
-            *bytes_read = size;
-        }
-        return true;
-    } else {
-        return false;
-    }
-}
-
-bool teller::hal::uart::read1(uart_t index, uint8_t* data, uint32_t timeout)
-{
-    uart_phy_state_t* pState = find_phy_for_uart(index);
-    UART_HandleTypeDef* pHandle = pState ? &pState->handle : nullptr;
-    HAL_StatusTypeDef result;
-    uint32_t flags = 0;
-    bool shouldAbort;
-
-    if (!pHandle) {
+    state = find_phy_for_uart(index);
+    if (!state) {
         teller::hal::system::yield();
         goto exit;
     }
 
-    result = HAL_UART_Receive_IT(pHandle, data, 1);
-    if (result == HAL_BUSY) {
-        if (timeout == 0) {
-            /* We were just polling, so yield and return false */
-            teller::hal::system::yield();
-            goto exit;
-        } else if (timeout == WAIT_FOREVER) {
-            /* Retry until successful */
-            while (result == HAL_BUSY) {
-                teller::hal::system::delayMsec(1);
-                result = HAL_UART_Receive_IT(pHandle, data, 1);
-            }
-        } else {
-            /* Try again until the timeout expires */
-            uint32_t now = teller::hal::system::getTimeSinceBootMsec();
-            uint32_t deadline = now + timeout;
-            while (result == HAL_BUSY && now < deadline) {
-                teller::hal::system::delayMsec(1);
-                result = HAL_UART_Receive_IT(pHandle, data, 1);
-                now = teller::hal::system::getTimeSinceBootMsec();
-            }
+    while (read == 0) {
+        /* Wait until there is something in the buffer */
+        flags = osEventFlagsWait(state->event, EVT_READ, osFlagsWaitAny, osWaitForever);
+        if (flags & EVT_READ) {
+            /* Try reading from the RX buffer */
+            read = lwrb_read(&state->rx_buffer, data, size);
         }
-    }
-
-    if (result == HAL_OK) {
-        flags = osEventFlagsWait(pState->event, EVT_READ | EVT_ERROR, osFlagsWaitAny, timeout);
-        shouldAbort = flags & (osFlagsError | EVT_ERROR);
-        if (shouldAbort) {
-            HAL_UART_AbortReceive(pHandle);
-        }
-    } else {
-        HAL_UART_AbortReceive(pHandle);
-        teller::hal::system::yield();
     }
 
 exit:
-    return flags & EVT_READ;
+    if (bytes_read) {
+        *bytes_read = read;
+    }
+    return true;
 }
 
 void teller::hal::uart::waitUntilConnected(uart_t index)
@@ -324,38 +263,41 @@ void teller::hal::uart::waitUntilDisconnected(uart_t index)
 
 bool teller::hal::uart::write(uart_t index, uint8_t* data, uint16_t size)
 {
-    uint32_t flags;
-    uart_phy_state_t* pState = find_phy_for_uart(index);
+    uart_phy_state_t* state;
+    lwrb_sz_t written;
 
-    if (pState && pState->cfg) {
-        UART_HandleTypeDef* pHandle = &pState->handle;
-
-        if (pState->dma_tx_buffer) {
-            /* Transfer with DMA */
-            memcpy(pState->dma_tx_buffer, data, size);
-            /* TODO(ntamas): this does not work yet; DMA needs a buffer that is
-             * guaranteed to be in DMA-accessible memory */
-            if (HAL_UART_Transmit_DMA(pHandle, pState->dma_tx_buffer, size) != HAL_OK) {
-                return false;
-            }
-        } else {
-            /* Transfer with interrupts */
-            if (HAL_UART_Transmit_IT(pHandle, data, size) != HAL_OK) {
-                return false;
-            }
-        }
-
-        /* Let us not block on EVT_ERROR here -- it seems like it is triggered
-         * by reading the UART and not by writing it, and we do not want to
-         * unblock if a read error happens in the meanwhile */
-        flags = osEventFlagsWait(pState->event, EVT_WRITTEN, osFlagsWaitAny, osWaitForever);
-
-        if (flags & (osFlagsError | EVT_ERROR)) {
-            HAL_UART_AbortTransmit(pHandle);
-            return false;
-        }
+    if (size == 0) {
+        teller::hal::system::yield();
+        goto exit;
     }
 
+    state = find_phy_for_uart(index);
+    if (!state) {
+        teller::hal::system::yield();
+        goto exit;
+    }
+
+    /* We do not use the STM32 HAL for UART handling; registers are
+     * programmed directly to address the shortcomings of the STM32 HAL */
+
+    /* Push the data to write into the buffer */
+    while (size > 0) {
+        written = lwrb_write(&state->tx_buffer, data, size);
+        size -= written;
+        data += written;
+
+        /* Enable TXEIE to get a notification when the UART is ready to send,
+         * and then wait for the event that indicates that the ring buffer is
+         * empty again */
+        SET_BIT(state->handle.Instance->CR1, USART_CR1_TXEIE_TXFNFIE);
+
+        /* TODO: figure out why we need a timeout of 100 ms here, why we cannot
+         * use osWaitForever. Doing so would stall the outbound queue in an
+         * echo test */
+        osEventFlagsWait(state->event, EVT_WRITTEN, osFlagsWaitAny, 100);
+    }
+
+exit:
     return true;
 }
 
@@ -427,6 +369,16 @@ static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t*
     }
 
     success = true;
+
+    /* Enable RXNEIE to notify us when a new byte can be received */
+    SET_BIT(pHandle->Instance->CR1, USART_CR1_RXNEIE_RXFNEIE);
+
+    /* Make sure that parity errors (PE) and transmission complete events (TC)
+     * do not trigger interrupts */
+    CLEAR_BIT(pHandle->Instance->CR1, USART_CR1_PEIE | USART_CR1_TCIE);
+
+    /* Disable receiver overrun error detection */
+    SET_BIT(pHandle->Instance->CR2, USART_CR3_OVRDIS);
 
 cleanup:
     if (state->initialized && !success) {
@@ -571,6 +523,18 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
         }
     }
 
+    /* Ring buffer initialization */
+    if (
+        lwrb_init(&state->rx_buffer, uart_rx_buffers[state - uart_phy_state], DMA_BUFFER_SIZE) == 0) {
+        /* 0 means failure in lwrb_init() */
+        return;
+    }
+    if (lwrb_init(&state->tx_buffer, uart_tx_buffers[state - uart_phy_state], DMA_BUFFER_SIZE) == 0) {
+        /* 0 means failure in lwrb_init() */
+        lwrb_free(&state->rx_buffer);
+        return;
+    }
+
     /* IRQ configuration */
     if (cfg->irq) {
         /* Priority 5 is the highest (i.e. smallest numeric value) that is
@@ -579,7 +543,51 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
         HAL_NVIC_EnableIRQ(cfg->irq);
     }
 
-    /* DMA configuration */
+    /* DMA configuration for RX */
+    if (cfg->dma_rx) {
+        state->dma_rx_handle.Instance = cfg->dma_rx;
+
+#ifdef STM32H7
+        if (huart->Instance == USART1) {
+            state->dma_rx_handle.Init.Request = DMA_REQUEST_USART1_RX;
+        } else if (huart->Instance == USART2) {
+            state->dma_rx_handle.Init.Request = DMA_REQUEST_USART2_RX;
+        } else if (huart->Instance == USART3) {
+            state->dma_rx_handle.Init.Request = DMA_REQUEST_USART3_RX;
+        } else {
+            return;
+        }
+#else
+        if (huart->Instance == USART1) {
+            state->dma_rx_handle.Init.Channel = DMA_CHANNEL_0;
+        } else if (huart->Instance == USART2) {
+            state->dma_rx_handle.Init.Channel = DMA_CHANNEL_1;
+        } else if (huart->Instance == USART3) {
+            state->dma_rx_handle.Init.Channel = DMA_CHANNEL_2;
+        } else {
+            return;
+        }
+#endif
+
+        state->dma_rx_handle.Init.Direction = DMA_PERIPH_TO_MEMORY;
+        state->dma_rx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
+        state->dma_rx_handle.Init.MemInc = DMA_MINC_ENABLE;
+        state->dma_rx_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+        state->dma_rx_handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+        state->dma_rx_handle.Init.Mode = DMA_CIRCULAR;
+        state->dma_rx_handle.Init.Priority = DMA_PRIORITY_LOW;
+        state->dma_rx_handle.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+        if (HAL_DMA_Init(&state->dma_rx_handle) != HAL_OK) {
+            state->dma_rx_handle.Instance = nullptr; /* to prevent HAL_DMA_Deinit */
+            return;
+        }
+
+        __HAL_LINKDMA(huart, hdmarx, state->dma_rx_handle);
+    } else {
+        state->dma_rx_handle.Instance = nullptr;
+    }
+
+    /* DMA configuration for TX */
     if (cfg->dma_tx) {
         state->dma_tx_handle.Instance = cfg->dma_tx;
 
@@ -618,17 +626,18 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
             return;
         }
 
-        state->dma_tx_buffer = uart_dma_tx_buffers[state - uart_phy_state];
-
         __HAL_LINKDMA(huart, hdmatx, state->dma_tx_handle);
     } else {
         state->dma_tx_handle.Instance = nullptr;
-        state->dma_tx_buffer = nullptr;
     }
 
     state->initialized = true;
 
     assignHandle(huart);
+
+    if (state->dma_rx_handle.Instance) {
+        teller::hal::dma::assignHandle(&state->dma_rx_handle);
+    };
 
     if (state->dma_tx_handle.Instance) {
         teller::hal::dma::assignHandle(&state->dma_tx_handle);
@@ -664,6 +673,10 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
         HAL_NVIC_DisableIRQ(cfg->irq);
     }
 
+    if (cfg->dma_rx && state->dma_rx_handle.Instance) {
+        HAL_DMA_DeInit(&state->dma_rx_handle);
+    }
+
     if (cfg->dma_tx && state->dma_tx_handle.Instance) {
         HAL_DMA_DeInit(&state->dma_tx_handle);
     }
@@ -675,9 +688,16 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
 
     detachHandle(huart);
 
+    if (state->dma_rx_handle.Instance) {
+        teller::hal::dma::detachHandle(&state->dma_rx_handle);
+    };
+
     if (state->dma_tx_handle.Instance) {
         teller::hal::dma::detachHandle(&state->dma_tx_handle);
     };
+
+    lwrb_free(&state->rx_buffer);
+    lwrb_free(&state->tx_buffer);
 }
 }
 
@@ -691,7 +711,7 @@ void USART1_IRQHandler(void)
 {
     UART_HandleTypeDef* ptr = uart_handle_ptrs[1];
     if (ptr) {
-        HAL_UART_IRQHandler(ptr);
+        uart_irq_handler(ptr);
     }
 }
 
@@ -699,7 +719,7 @@ void USART2_IRQHandler(void)
 {
     UART_HandleTypeDef* ptr = uart_handle_ptrs[2];
     if (ptr) {
-        HAL_UART_IRQHandler(ptr);
+        uart_irq_handler(ptr);
     }
 }
 
@@ -707,52 +727,45 @@ void USART3_IRQHandler(void)
 {
     UART_HandleTypeDef* ptr = uart_handle_ptrs[3];
     if (ptr) {
-        HAL_UART_IRQHandler(ptr);
+        uart_irq_handler(ptr);
     }
 }
 }
 
 /* ************************************************************************** */
 
-/* HAL UART callbacks */
-
-extern "C" {
-
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef* uart)
+void uart_irq_handler(UART_HandleTypeDef* ptr)
 {
-    uart_phy_state_t* state = find_uart_phy_state(uart);
-    if (state) {
-        osEventFlagsSet(state->event, EVT_WRITTEN);
+    uart_phy_state_t* state = find_uart_phy_state(ptr);
+    if (state == nullptr) {
+        return;
     }
-}
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef* uart)
-{
-    uart_phy_state_t* state = find_uart_phy_state(uart);
-    if (state) {
-        osEventFlagsSet(state->event, EVT_READ);
-    }
-}
+    USART_TypeDef* uart = state->handle.Instance;
+    uint32_t flags = READ_REG(uart->ISR);
+    uint8_t ch;
 
-void HAL_UART_ErrorCallback(UART_HandleTypeDef* uart)
-{
-    uart_phy_state_t* state = find_uart_phy_state(uart);
-    if (state) {
-        /* There are two types of UART errors: blocking and non-blocking.
-         * We do not care about non-blocking errors because the underlying TX or
-         * RX transfer keeps on going in the STM32 HAL. We only need to trigger
-         * the error event if the transfer is not active any more.
-         *
-         * Not doing this would present problems at startup: the first transmit
-         * and the first receive request would fire concurrently, and if there
-         * is a framing error on the UART (which is very likely at startup if
-         * we start receiving in the middle of a frame), we would trigger the
-         * error flag here (framing errors are non-blocking). */
-        if (state->handle.RxState == HAL_UART_STATE_READY) {
-            osEventFlagsSet(state->event, EVT_ERROR);
+    if (flags & USART_ISR_TXE_TXFNF) {
+        /* TX register empty so we can transmit the next byte from the TX buffer */
+        if (lwrb_read(&state->tx_buffer, &ch, 1)) {
+            uart->TDR = (uint16_t)ch;
+        } else {
+            /* No more bytes, clear the TXEIE interrupt and send an event to
+             * the task that was blocked on the write */
+            CLEAR_BIT(state->handle.Instance->CR1, USART_CR1_TXEIE_TXFNFIE);
+            osEventFlagsSet(state->event, EVT_WRITTEN);
         }
     }
-}
+
+    if (flags & USART_ISR_RXNE_RXFNE) {
+        /* RX register not empty, write the received byte into the RX buffer */
+        ch = uart->RDR & 0x00FFU;
+        if (lwrb_write(&state->rx_buffer, &ch, 1) == 0) {
+            /* dropped */
+            ch = 0;
+        }
+        osEventFlagsSet(state->event, EVT_READ);
+    }
 }
 
 /* ************************************************************************** */

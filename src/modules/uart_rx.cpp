@@ -26,6 +26,8 @@ static Logger* logger;
  * UART channels where we will not have commands */
 static Parser parsers[NUM_UARTS];
 
+static uint8_t rx_buf[256];
+
 namespace teller::uart_rx {
 
 bool init()
@@ -45,26 +47,29 @@ void destroy()
 
 bool read(uart_t index)
 {
-    uint8_t ch;
-    uint16_t bytes_read;
+    uint16_t i, bytes_read;
     Parser* parser;
+    uint8_t payload_length_plus_one;
+    bool result = false;
 
     /* uart::readInto() is guaranteed to yield if there are other tasks with
      * higher or equal priorities */
-    if (!uart::readInto(index, &ch, 1, &bytes_read)) {
-        return false;
+    if (uart::readInto(index, rx_buf, sizeof(rx_buf), &bytes_read)) {
+        for (i = 0; i < bytes_read; i++) {
+            parser = &parsers[index];
+            payload_length_plus_one = parser->feed(rx_buf[i]);
+            if (payload_length_plus_one) {
+                /* nonblocking mode used so we can return to reading the UART as fast
+                 * as possible */
+                teller::cmd::feedNonblocking(
+                    index, parser->getEnvelope(), parser->getPayload(),
+                    payload_length_plus_one - 1);
+                result = true;
+            }
+        }
     }
 
-    parser = &parsers[index];
-    ch = parser->feed(ch);
-    if (ch) {
-        /* nonblocking mode used so we can return to reading the UART as fast
-         * as possible */
-        teller::cmd::feedNonblocking(index, parser->getEnvelope(), parser->getPayload(), ch - 1);
-        return true;
-    } else {
-        return false;
-    }
+    return result;
 }
 
 }

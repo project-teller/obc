@@ -62,6 +62,7 @@ else()
         STM32::NoSys
         ${CMSIS_NAMESPACE}::RTOS_V2
     )
+    list(APPEND HAL_LIBRARIES lwrb)
 
     if(TARGET_MCU STREQUAL "STM32H7")
         list(APPEND HAL_LIBRARIES
