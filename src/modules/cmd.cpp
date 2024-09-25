@@ -321,7 +321,7 @@ optional<Response> processStoragePacket(uart_t channel, const envelope_t& envelo
 
     switch (data.command) {
     case frames::STORAGE_COMMAND_MOUNT:
-        retval = teller::storage::mountStorage(data.area);
+        retval = teller::storage::mountStorage(data.area, /* force = */ true);
         break;
 
     case frames::STORAGE_COMMAND_UNMOUNT:

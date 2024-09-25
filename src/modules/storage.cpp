@@ -92,6 +92,9 @@ public:
         }
     }
 
+    /**
+     * @brief Formats the filesystem.
+     */
     std::optional<littlefs::Error> format()
     {
         return _fs.format();
@@ -149,6 +152,27 @@ public:
     void clearErrors()
     {
         _flags &= ~FLAG_ERRORED;
+    }
+
+    /**
+     * @brief Reads the raw contents of the storage underneath the filesystem.
+     *
+     * @param buf  the buffer to read the data into
+     * @param address  the address to read from
+     * @param length  the number of bytes to read
+     */
+    bool readRawData(uint8_t* buf, uint32_t address, size_t length)
+    {
+        switch (_area) {
+        case STORAGE_AREA_FLASH_MEMORY:
+            return teller::hal::flashmem::readData(buf, address, length);
+
+        case STORAGE_AREA_SD_CARD:
+            return teller::hal::sdcard::readData(buf, address, length);
+
+        default:
+            return false;
+        }
     }
 
     /**
@@ -353,6 +377,8 @@ private:
     std::shared_ptr<FilesystemState> _filesystems[NUM_STORAGE_AREAS];
 };
 
+static Filesystems fs;
+
 class StorageReaderState {
 public:
     enum Events {
@@ -402,28 +428,14 @@ public:
             _events.waitAny(EVT_STARTED);
         }
 
+        auto _filesystem = fs.getState(_area, /* ensureMounted = */ false);
+        if (!_filesystem) {
+            return EINVAL;
+        }
+
         while (running()) {
-            bool success;
-
             _binaryData.data_length = _bytesLeft > limit ? limit : _bytesLeft;
-
-            switch (_area) {
-            case STORAGE_AREA_FLASH_MEMORY:
-                success = teller::hal::flashmem::readData(
-                    _binaryData.data, _address, _binaryData.data_length);
-                break;
-
-            case STORAGE_AREA_SD_CARD:
-                success = teller::hal::sdcard::readData(
-                    _binaryData.data, _address, _binaryData.data_length);
-                break;
-
-            default:
-                success = false;
-                break;
-            }
-
-            if (!success) {
+            if (!_filesystem->readRawData(_binaryData.data, _address, _binaryData.data_length)) {
                 break;
             }
 
@@ -450,7 +462,6 @@ private:
     uint8_t _targets;
 };
 
-static Filesystems fs;
 static StorageReaderState storageReader;
 
 namespace teller::storage {
@@ -560,11 +571,15 @@ void markStorageAsErrored(teller::telem::storage_area_t area, int error)
     }
 }
 
-int mountStorage(storage_area_t area)
+int mountStorage(storage_area_t area, bool force)
 {
     auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
     if (!_filesystem) {
         return EINVAL;
+    }
+
+    if (force) {
+        _filesystem->clearErrors();
     }
 
     if (!_filesystem->ensureMounted()) {

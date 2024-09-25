@@ -69,13 +69,18 @@ void markStorageAsErrored(teller::telem::storage_area_t area, int error = 0);
 
 /**
  * @brief Mounts a storage area in the storage subsystem.
+ *
+ * @param force  whether to try and mount the storage area even if it is marked
+ *        as errored
+ *
  * @return POSIX error code; zero if the operation was successful
- * or if the storage area was already mounted.
+ *         or if the storage area was already mounted.
  */
-[[nodiscard]] int mountStorage(teller::telem::storage_area_t area);
+[[nodiscard]] int mountStorage(teller::telem::storage_area_t area, bool force = false);
 
 /**
  * @brief Unmounts a storage area in the storage subsystem.
+ *
  * @return POSIX error code; zero if the operation was successful
  * or if the storage area was already unmounted.
  */
