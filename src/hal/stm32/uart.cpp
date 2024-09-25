@@ -377,9 +377,6 @@ static bool configure_uart_phy(uart_phy_state_t* state, const uart_phy_config_t*
      * do not trigger interrupts */
     CLEAR_BIT(pHandle->Instance->CR1, USART_CR1_PEIE | USART_CR1_TCIE);
 
-    /* Disable receiver overrun error detection */
-    SET_BIT(pHandle->Instance->CR2, USART_CR3_OVRDIS);
-
 cleanup:
     if (state->initialized && !success) {
         HAL_UART_DeInit(pHandle);
@@ -765,6 +762,11 @@ void uart_irq_handler(UART_HandleTypeDef* ptr)
             ch = 0;
         }
         osEventFlagsSet(state->event, EVT_READ);
+    }
+
+    if (flags & USART_ISR_ORE) {
+        /* Overrun error, just clear the flag */
+        uart->ICR = UART_CLEAR_OREF;
     }
 }
 
