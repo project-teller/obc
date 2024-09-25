@@ -362,6 +362,8 @@ void ExperimentDataRecorder::_run(storage_area_t area)
         _running = false;
         throw;
     }
+
+    _running = false;
 }
 
 #undef IS_END_OF_QUEUE
