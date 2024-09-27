@@ -6,6 +6,7 @@
 using namespace teller::hal::board;
 
 static reset_reason_t reasonOfLastReset = RESET_REASON_UNKNOWN;
+static TIM_HandleTypeDef tickTimer;
 
 static bool handleResetFlags(void);
 static bool configureSystemClock(void);
@@ -70,7 +71,6 @@ static bool configureSystemClock()
 {
     RCC_OscInitTypeDef oscInit = { 0 };
     RCC_ClkInitTypeDef clkInit = { 0 };
-    uint32_t flashLatency;
 
 #if defined(STM32H7)
     /* Supply configuration update enable */
@@ -80,12 +80,8 @@ static bool configureSystemClock()
     while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) { };
 #elif defined(STM32F4)
     /* Configure the main internal regulator output voltage */
-    __HAL_RCC_PWR_CLK_ENABLE();
     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 #endif
-
-    /* Configure PendSV IRQ at lowest priority for context switching */
-    HAL_NVIC_SetPriority(PendSV_IRQn, 15, 0);
 
     /* Configure the oscillators */
     oscInit.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_LSE | RCC_OSCILLATORTYPE_HSE;
@@ -101,8 +97,12 @@ static bool configureSystemClock()
     /* LSI: Low Speed Internal oscillator (32 kHz @ STM32H7) */
     oscInit.LSIState = RCC_LSI_ON;
 
-    /* LSE: Low Speed External oscillator */
+    /* LSE: Low Speed External oscillator (32.768 kHz @ STM32F4) */
+#if defined(TELLER_BOARD_NUCLEO144)
     oscInit.LSEState = RCC_LSE_OFF;
+#else
+    oscInit.LSEState = RCC_LSE_ON;
+#endif
 
     /* HSE: High Speed External oscillator */
 #if defined(TELLER_BOARD_NUCLEO144)
@@ -125,11 +125,11 @@ static bool configureSystemClock()
     oscInit.PLL.PLLFRACN = 0;
 #else
     oscInit.PLL.PLLState = RCC_PLL_ON;
-    oscInit.PLL.PLLSource = RCC_PLLSOURCE_HSE; /* HSE = 25 MHz */
-    oscInit.PLL.PLLM = 15; /* 25 MHz / 15 = 5/3 MHz */
-    oscInit.PLL.PLLN = 144; /* 5/3 MHz * 144 = 240 MHz */
-    oscInit.PLL.PLLP = RCC_PLLP_DIV2; /* 240 / 2 = 120 MHz */
-    oscInit.PLL.PLLQ = 5; /* 240 / 5 = 48 MHz */
+    oscInit.PLL.PLLSource = RCC_PLLSOURCE_HSE; /* HSE = 12 MHz */
+    oscInit.PLL.PLLM = 12; /* 12 MHz / 6 = 2 MHz */
+    oscInit.PLL.PLLN = 168; /* 2 MHz * 168 = 336 MHz */
+    oscInit.PLL.PLLP = RCC_PLLP_DIV2; /* 336 / 2 = 168 MHz */
+    oscInit.PLL.PLLQ = 7; /* 336 / 7 = 48 MHz */
 #endif
 
     if (HAL_RCC_OscConfig(&oscInit) != HAL_OK) {
@@ -139,8 +139,8 @@ static bool configureSystemClock()
     /* Initializes the CPU, AHB and APB bus clocks */
     clkInit.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
         | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
-    clkInit.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
 #if defined(TELLER_BOARD_NUCLEO144)
+    clkInit.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
     clkInit.ClockType |= RCC_CLOCKTYPE_D3PCLK1 | RCC_CLOCKTYPE_D1PCLK1;
     clkInit.SYSCLKDivider = RCC_SYSCLK_DIV1;
     clkInit.AHBCLKDivider = RCC_HCLK_DIV1;
@@ -149,24 +149,128 @@ static bool configureSystemClock()
     clkInit.APB3CLKDivider = RCC_APB3_DIV1;
     clkInit.APB4CLKDivider = RCC_APB4_DIV1;
 #else
+    clkInit.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
     clkInit.AHBCLKDivider = RCC_HCLK_DIV1;
     clkInit.APB1CLKDivider = RCC_HCLK_DIV1;
     clkInit.APB2CLKDivider = RCC_HCLK_DIV1;
 #endif
 
-    flashLatency = FLASH_LATENCY_0;
 #if defined(TELLER_BOARD_NUCLEO144)
-    flashLatency = FLASH_LATENCY_1;
-#endif
-
-    if (HAL_RCC_ClockConfig(&clkInit, flashLatency) != HAL_OK) {
+    if (HAL_RCC_ClockConfig(&clkInit, FLASH_LATENCY_1) != HAL_OK) {
         return false;
     }
+#else
+    if (HAL_RCC_ClockConfig(&clkInit, FLASH_LATENCY_0) != HAL_OK) {
+        return false;
+    }
+#endif
 
     return true;
 }
 
+/* ************************************************************************** */
+/* The functions below are required to set up TIM1 as the tick source in the  */
+/* system instead of the built-in systick.
+ */
+
 extern "C" {
+
+/**
+ * @brief  This function configures the TIM1 as a time base source.
+ *         The time source is configured  to have 1ms time base with a dedicated
+ *         Tick interrupt priority.
+ * @note   This function is called  automatically at the beginning of program after
+ *         reset by HAL_Init() or at any time when clock is configured, by HAL_RCC_ClockConfig().
+ * @param  TickPriority: Tick interrupt priority.
+ * @retval HAL status
+ */
+HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
+{
+    RCC_ClkInitTypeDef clkconfig;
+    uint32_t uwTimclock = 0U;
+
+    uint32_t uwPrescalerValue = 0U;
+    uint32_t pFLatency;
+    HAL_StatusTypeDef status;
+
+    /* Enable TIM1 clock */
+    __HAL_RCC_TIM1_CLK_ENABLE();
+
+    /* Get clock configuration */
+    HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
+
+    /* Compute TIM1 clock */
+    uwTimclock = HAL_RCC_GetPCLK2Freq();
+
+    /* Compute the prescaler value to have TIM1 counter clock equal to 1MHz */
+    uwPrescalerValue = (uint32_t)((uwTimclock / 1000000U) - 1U);
+
+    /* Initialize TIM1 */
+    tickTimer.Instance = TIM1;
+
+    /* Initialize TIMx peripheral as follows:
+     *
+     * Period = [(TIM1CLK/1000) - 1]. to have a (1/1000) s time base.
+     * Prescaler = (uwTimclock/1000000 - 1) to have a 1MHz counter clock.
+     * ClockDivision = 0
+     * Counter direction = Up
+     */
+    tickTimer.Init.Period = (1000000U / 1000U) - 1U;
+    tickTimer.Init.Prescaler = uwPrescalerValue;
+    tickTimer.Init.ClockDivision = 0;
+    tickTimer.Init.CounterMode = TIM_COUNTERMODE_UP;
+    tickTimer.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+
+    status = HAL_TIM_Base_Init(&tickTimer);
+    if (status == HAL_OK) {
+        /* Start the TIM time Base generation in interrupt mode */
+        status = HAL_TIM_Base_Start_IT(&tickTimer);
+        if (status == HAL_OK) {
+            /* Enable the TIM1 global Interrupt */
+            HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
+            /* Configure the SysTick IRQ priority */
+            if (TickPriority < (1UL << __NVIC_PRIO_BITS)) {
+                /* Configure the TIM IRQ priority */
+                HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, TickPriority, 0U);
+                uwTickPrio = TickPriority;
+            } else {
+                status = HAL_ERROR;
+            }
+        }
+    }
+
+    /* Return function status */
+    return status;
+}
+
+/**
+ * @brief  Suspend Tick increment.
+ * @note   Disable the tick increment by disabling TIM1 update interrupt.
+ * @param  None
+ * @retval None
+ */
+void HAL_SuspendTick(void)
+{
+    /* Disable TIM1 update Interrupt */
+    __HAL_TIM_DISABLE_IT(&tickTimer, TIM_IT_UPDATE);
+}
+
+/**
+ * @brief  Resume Tick increment.
+ * @note   Enable the tick increment by Enabling TIM1 update interrupt.
+ * @param  None
+ * @retval None
+ */
+void HAL_ResumeTick(void)
+{
+    /* Enable TIM1 Update interrupt */
+    __HAL_TIM_ENABLE_IT(&tickTimer, TIM_IT_UPDATE);
+}
+
+void TIM1_UP_TIM10_IRQHandler(void)
+{
+    HAL_TIM_IRQHandler(&tickTimer);
+}
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 {

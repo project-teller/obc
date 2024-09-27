@@ -39,7 +39,7 @@ configure_file(config.h.in config.h)
 
 # Figure out which components to link to
 if(BUILD_FIRMWARE)
-	set(HAL_COMP_LIST RCC GPIO UART CORTEX DMA IWDG PCD PWR RTC SPI LL_USB)
+	set(HAL_COMP_LIST RCC GPIO UART CORTEX DMA IWDG PCD PWR RTC SPI TIM LL_USB)
 	set(CMSIS_COMP_LIST RTOS_V2)
 else()
 	set(HAL_COMP_LIST "")

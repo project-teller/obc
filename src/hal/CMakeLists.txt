@@ -61,6 +61,8 @@ else()
         ${HAL_NAMESPACE}::RCCEx
         ${HAL_NAMESPACE}::RTC
         ${HAL_NAMESPACE}::SPI
+        ${HAL_NAMESPACE}::TIM
+        ${HAL_NAMESPACE}::TIMEx
         ${HAL_NAMESPACE}::UART
         CMSIS::${TARGET_MCU_CMSIS_MODULE}
         STM32::NoSys
@@ -75,6 +77,13 @@ else()
             ${HAL_NAMESPACE}::UARTEx
         )
     endif()
+endif()
+
+# Set the HSE oscillator frequency
+if(TARGET_MCU STREQUAL "STM32F4")
+    set(HSE_CLOCK_FREQ_MHZ 12)
+else()
+    set(HSE_CLOCK_FREQ_MHZ 16)
 endif()
 
 # Declare the hardware abstraction layer library
@@ -103,4 +112,5 @@ target_compile_definitions(
 	obc-hal PUBLIC
 	USE_CMSIS_RTOS_V2
 	CMSIS_RTOS_V2_DEVICE_HEADER="${CMSIS_RTOS_V2_DEVICE_HEADER}"
+    HSE_VALUE=${HSE_CLOCK_FREQ_MHZ}000000U
 )

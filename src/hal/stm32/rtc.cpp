@@ -11,7 +11,9 @@ static bool initialized = false;
 
 // Define this if the board using the 32.768 kHz LSE clock for the RTC and
 // not the 32 kHz LSI
-// #define USES_LSE
+#ifdef STM32F4
+#define USES_LSE
+#endif
 
 namespace teller::hal::rtc {
 
@@ -112,7 +114,7 @@ void HAL_RTC_MspInit(RTC_HandleTypeDef* hrtc)
             return;
         }
 
-#if defined(USES_LSE)
+#if defined(USES_LSE) && defined(STM32H7)
         __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_MEDIUMHIGH);
 #endif
 

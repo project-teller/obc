@@ -486,7 +486,6 @@ static bool startTask(const task_definition_t* task)
 
 extern "C" void vApplicationTickHook(void)
 {
-    HAL_IncTick();
 }
 
 extern "C" void vApplicationIdleHook(void)
