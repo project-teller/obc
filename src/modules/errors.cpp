@@ -2,10 +2,12 @@
 
 #include "hal/led.h"
 #include "hal/mutex.hpp"
+#include "modules/debug.h"
 #include "modules/errors.h"
 
 #define ERROR_BIT(x) (1ULL << (x - 1))
 
+using namespace teller::debug;
 using namespace teller::hal;
 
 /** Bitmask specifying which error codes are currently active */
@@ -95,7 +97,14 @@ teller::errors::error_t teller::errors::getError()
 
 static void updateErrorLED()
 {
-    led::set(led::ERROR, teller::errors::hasAnyErrors());
+    bool hasError = teller::errors::hasAnyErrors();
+    if (led::has(led::ERROR)) {
+        led::set(led::ERROR, hasError);
+    } else {
+        /* If we do not have an error LED, change the heartbeat to indicate
+         * that something is wrong */
+        setBlinkPattern(hasError ? BLINK_FAST : BLINK_HEARTBEAT);
+    }
 }
 
 static void updateSingleError()

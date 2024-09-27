@@ -12,6 +12,7 @@
 #include "storage.h"
 #include "system.h"
 #include "uart.h"
+#include "usb.h"
 #include "watchdog.h"
 
 using namespace teller::hal;
@@ -34,6 +35,7 @@ bool teller::hal::init()
     success &= gpio::init();
     success &= spi::init();
     success &= uart::init();
+    success &= usb::init();
 
     /* Storage devices */
     success &= flashmem::init(); /* depends on SPI */
@@ -59,6 +61,7 @@ void teller::hal::destroy()
     flashmem::destroy();
 
     /* I/O devices and buses */
+    usb::destroy();
     uart::destroy();
     spi::destroy();
     gpio::destroy();

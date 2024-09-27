@@ -155,7 +155,7 @@ const uart_phy_config_t uart_phy_config[] = {
         .gpio = {
             .by_name = {
                 .tx = { GPIOA, GPIO_PIN_9 },
-                .rx = { GPIOA, GPIO_PIN_8 }
+                .rx = { GPIOA, GPIO_PIN_10 }  /* A8 on the current board, but it's a mistake */
             },
         },
         .irq = USART1_IRQn,
@@ -515,15 +515,16 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     }
 
 #ifdef STM32H7
-#define INIT_PERIPH_CLOCK(clockSelection)                          \
-    {                                                              \
-        RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = { 0 };      \
-                                                                   \
-        /* Initializes the peripherals clock */                    \
-        PeriphClkInitStruct.PeriphClockSelection = clockSelection; \
-        PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1;
-    if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {
-        return;
+#define INIT_PERIPH_CLOCK(clockSelection)                                                 \
+    {                                                                                     \
+        RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = { 0 };                             \
+                                                                                          \
+        /* Initializes the peripherals clock */                                           \
+        PeriphClkInitStruct.PeriphClockSelection = clockSelection;                        \
+        PeriphClkInitStruct.Usart234578ClockSelection = RCC_USART234578CLKSOURCE_D2PCLK1; \
+        if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK) {                  \
+            return;                                                                       \
+        }                                                                                 \
     }
 #else
 #define INIT_PERIPH_CLOCK(clockSelection) ;
@@ -550,7 +551,11 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
         INIT_PERIPH_CLOCK(RCC_USART234578CLKSOURCE_D2PCLK1);
         __HAL_RCC_UART5_CLK_ENABLE();
     } else if (huart->Instance == USART6) {
+#ifdef STM32H7
+        gpioFunc = GPIO_AF7_USART6;
+#else
         gpioFunc = GPIO_AF8_USART6;
+#endif
         INIT_PERIPH_CLOCK(RCC_USART234578CLKSOURCE_D2PCLK1);
         __HAL_RCC_USART6_CLK_ENABLE();
     } else {
@@ -564,7 +569,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
             GPIO_InitStruct.Pin = cfg->gpio.by_index[i].pins;
             GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
             GPIO_InitStruct.Pull = i == 1 ? GPIO_PULLUP : GPIO_NOPULL;
-            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
             GPIO_InitStruct.Alternate = gpioFunc;
             HAL_GPIO_Init(cfg->gpio.by_index[i].port, &GPIO_InitStruct);
         }
@@ -820,7 +825,7 @@ void uart_irq_handler(UART_HandleTypeDef* ptr)
 
 #ifdef STM32H7
 #define ISR_REG uart->ISR
-#define RDR_REG uart->TDR
+#define RDR_REG uart->RDR
 #define TDR_REG uart->TDR
 #define ORE_FLAG USART_ISR_ORE
 #define TXE_FLAG USART_ISR_TXE_TXFNF
@@ -860,12 +865,9 @@ void uart_irq_handler(UART_HandleTypeDef* ptr)
         osEventFlagsSet(state->event, EVT_READ);
     }
 
-    if (flags & USART_SR_ORE) {
+    if (flags & ORE_FLAG) {
         /* Overrun error, just clear the flag */
-#ifdef STM32H7
-        uart->ICR = UART_CLEAR_OREF;
-#endif
-        /* TODO: implement for STM32F4 */
+        __HAL_UART_CLEAR_OREFLAG(&state->handle);
     }
 }
 

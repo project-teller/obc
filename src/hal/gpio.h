@@ -29,6 +29,9 @@ typedef enum {
     RST_SUC_LCL3,
     RST_CAM_LCL,
 
+    /* Miscellaneous */
+    START_CAM,
+
     NUM_GPIO_PINS,
 } pin_t;
 

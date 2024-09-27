@@ -1,7 +1,5 @@
 # Map TELLER_BOARD to TARGET_MCU
-if(TELLER_BOARD STREQUAL "KakuteH7v2")
-    set(TARGET_MCU "STM32H7")
-elseif(TELLER_BOARD STREQUAL "Nucleo144")
+if(TELLER_BOARD STREQUAL "Nucleo144")
 	set(TARGET_MCU "STM32H7")
 	set(OPENOCD_BOARD "st_nucleo_h743zi")
 elseif(TELLER_BOARD STREQUAL "STM32F4")
@@ -41,7 +39,7 @@ configure_file(config.h.in config.h)
 
 # Figure out which components to link to
 if(BUILD_FIRMWARE)
-	set(HAL_COMP_LIST RCC GPIO UART CORTEX DMA IWDG PWR RTC SPI)
+	set(HAL_COMP_LIST RCC GPIO UART CORTEX DMA IWDG PCD PWR RTC SPI LL_USB)
 	set(CMSIS_COMP_LIST RTOS_V2)
 else()
 	set(HAL_COMP_LIST "")
@@ -119,6 +117,7 @@ add_executable(
 	tasks/telem.cpp
 	tasks/uart_rx.cpp
 	tasks/uart_tx.cpp
+	tasks/usb.cpp
 )
 target_include_directories(
 	${TARGET_NAME} PRIVATE

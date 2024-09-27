@@ -36,6 +36,7 @@
 #include "tasks/telem.h"
 #include "tasks/uart_rx.h"
 #include "tasks/uart_tx.h"
+#include "tasks/usb.h"
 
 using namespace teller::tasks;
 
@@ -80,7 +81,7 @@ static uart_rx_task_args_t uart_debug_task_args = {
 };
 
 static const task_definition_t tasks[] = {
-    { .func = blinkTask, .name = "blinker", .priority = LOW },
+    { .func = blinkTask, .name = "blinker", .priority = LOW, .stack_size = 1024 },
     { .func = pinsTask, .name = "pins", .priority = NORMAL, .stack_size = 1024 },
     { .func = uartTxTask, .name = "uartTx", .priority = HIGH, .stack_size = 2048 },
     { .func = supervisorTask, .name = "supervisor", .priority = LOW, .stack_size = 1024 },
@@ -97,6 +98,7 @@ static const task_definition_t tasks[] = {
     { .func = scmTask, .name = "scm", .priority = NORMAL, .stack_size = 1024 },
     { .func = uartRxTask, .name = "uartRxTel", .priority = LOW, .stack_size = 1024, .context = &uart_telem_task_args },
     { .func = uartRxTask, .name = "uartRxDbg", .priority = LOW, .stack_size = 1024, .context = &uart_debug_task_args },
+    { .func = usbTask, .name = "usb", .priority = LOW, .stack_size = 1024 },
     NO_MORE_TASKS
 };
 

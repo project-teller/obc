@@ -15,14 +15,7 @@ typedef struct {
     bool inverted;
 } led_config_t;
 
-#if defined TELLER_BOARD_KAKUTEH7V2
-// KakuteH7v2 blue LED, for testing purposes
-const led_config_t led_config[NUM_LEDS] = {
-    { GPIOC, GPIO_PIN_2, /* inverted = */ true }, /* Heartbeat LED */
-    { 0 }, /* Error LED */
-    { 0 }, /* Debug LED */
-};
-#elif defined TELLER_BOARD_NUCLEO144
+#if defined TELLER_BOARD_NUCLEO144
 // STM32H743ZI Nucleo-144 dev board, for testing purposes
 const led_config_t led_config[NUM_LEDS] = {
     { GPIOB, GPIO_PIN_0 }, /* Heartbeat LED */
@@ -32,8 +25,8 @@ const led_config_t led_config[NUM_LEDS] = {
 #elif defined TELLER_BOARD_STM32F4
 // STM32F415RG TELLER OBC
 const led_config_t led_config[NUM_LEDS] = {
-    { GPIOA, GPIO_PIN_8 }, /* Heartbeat LED */
-    { GPIOA, GPIO_PIN_2 }, /* Error LED */
+    { GPIOA, GPIO_PIN_6 }, /* Heartbeat LED */
+    { 0 }, /* Error LED */
     { 0 }, /* Debug LED */
 };
 #else
@@ -46,6 +39,7 @@ const led_config_t led_config[NUM_LEDS] = {
 #endif
 
 static void configure_led(const led_config_t* cfg);
+static const led_config_t* find_config(led_t led);
 
 void teller::hal::led::init()
 {
@@ -63,19 +57,20 @@ void teller::hal::led::clear(led_t led)
     set(led, false);
 }
 
+bool teller::hal::led::has(led_t led)
+{
+    return find_config(led)->port != nullptr;
+}
+
 bool teller::hal::led::get(led_t led)
 {
-    assert(led >= 0 && led < NUM_LEDS);
-
-    const led_config_t* cfg = &led_config[led];
+    const led_config_t* cfg = find_config(led);
     return cfg->port != nullptr && HAL_GPIO_ReadPin(cfg->port, cfg->pin) == GPIO_PIN_SET;
 }
 
 void teller::hal::led::set(led_t led, bool value)
 {
-    assert(led >= 0 && led < NUM_LEDS);
-
-    const led_config_t* cfg = &led_config[led];
+    const led_config_t* cfg = find_config(led);
     if (cfg->port != nullptr) {
         HAL_GPIO_WritePin(
             cfg->port, cfg->pin,
@@ -101,4 +96,10 @@ static void configure_led(const led_config_t* cfg)
     enableGPIOClocksForPort(cfg->port);
 
     HAL_GPIO_Init(cfg->port, &GPIO_Config);
+}
+
+static const led_config_t* find_config(led_t led)
+{
+    assert(led >= 0 && led < NUM_LEDS);
+    return &led_config[led];
 }

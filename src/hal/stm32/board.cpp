@@ -84,8 +84,11 @@ static bool configureSystemClock()
     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 #endif
 
+    /* Configure PendSV IRQ at lowest priority for context switching */
+    HAL_NVIC_SetPriority(PendSV_IRQn, 15, 0);
+
     /* Configure the oscillators */
-    oscInit.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_LSE;
+    oscInit.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_LSI | RCC_OSCILLATORTYPE_LSE | RCC_OSCILLATORTYPE_HSE;
 
     /* HSI: High Speed Internal oscillator (64 MHz @ STM32H7) */
 #if defined(TELLER_BOARD_NUCLEO144)
@@ -101,8 +104,15 @@ static bool configureSystemClock()
     /* LSE: Low Speed External oscillator */
     oscInit.LSEState = RCC_LSE_OFF;
 
+    /* HSE: High Speed External oscillator */
 #if defined(TELLER_BOARD_NUCLEO144)
+    oscInit.HSEState = RCC_HSE_OFF;
+#else
+    oscInit.HSEState = RCC_HSE_ON;
+#endif
+
     /* Phase-locked loop */
+#if defined(TELLER_BOARD_NUCLEO144)
     oscInit.PLL.PLLState = RCC_PLL_ON;
     oscInit.PLL.PLLSource = RCC_PLLSOURCE_HSI; /* HSI = 64 MHz */
     oscInit.PLL.PLLM = 4; /* 64 MHz / 4 = 16 MHz */
@@ -114,7 +124,12 @@ static bool configureSystemClock()
     oscInit.PLL.PLLVCOSEL = RCC_PLL1VCOMEDIUM;
     oscInit.PLL.PLLFRACN = 0;
 #else
-    oscInit.PLL.PLLState = RCC_PLL_NONE;
+    oscInit.PLL.PLLState = RCC_PLL_ON;
+    oscInit.PLL.PLLSource = RCC_PLLSOURCE_HSE; /* HSE = 25 MHz */
+    oscInit.PLL.PLLM = 15; /* 25 MHz / 15 = 5/3 MHz */
+    oscInit.PLL.PLLN = 144; /* 5/3 MHz * 144 = 240 MHz */
+    oscInit.PLL.PLLP = RCC_PLLP_DIV2; /* 240 / 2 = 120 MHz */
+    oscInit.PLL.PLLQ = 5; /* 240 / 5 = 48 MHz */
 #endif
 
     if (HAL_RCC_OscConfig(&oscInit) != HAL_OK) {

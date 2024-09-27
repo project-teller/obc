@@ -36,6 +36,7 @@ else()
         stm32/storage.cpp
         stm32/system.cpp
         stm32/uart.cpp
+        stm32/usb.cpp
         stm32/utils.cpp
         stm32/watchdog.cpp
     )
@@ -51,6 +52,9 @@ else()
         ${HAL_NAMESPACE}::DMA
         ${HAL_NAMESPACE}::GPIO
         ${HAL_NAMESPACE}::IWDG
+        ${HAL_NAMESPACE}::LL_USB
+        ${HAL_NAMESPACE}::PCD
+        ${HAL_NAMESPACE}::PCDEx
         ${HAL_NAMESPACE}::PWR
         ${HAL_NAMESPACE}::PWREx
         ${HAL_NAMESPACE}::RCC
@@ -63,6 +67,7 @@ else()
         ${CMSIS_NAMESPACE}::RTOS_V2
     )
     list(APPEND HAL_LIBRARIES lwrb)
+    list(APPEND HAL_LIBRARIES stm32-usbd-cdc)
 
     if(TARGET_MCU STREQUAL "STM32H7")
         list(APPEND HAL_LIBRARIES

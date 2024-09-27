@@ -26,6 +26,7 @@ void init(void);
 void destroy(void);
 
 bool get(led_t led);
+bool has(led_t led);
 void set(led_t led, bool value = true);
 void clear(led_t led);
 
