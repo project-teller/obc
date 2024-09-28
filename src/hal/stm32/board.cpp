@@ -126,7 +126,7 @@ static bool configureSystemClock()
 #else
     oscInit.PLL.PLLState = RCC_PLL_ON;
     oscInit.PLL.PLLSource = RCC_PLLSOURCE_HSE; /* HSE = 12 MHz */
-    oscInit.PLL.PLLM = 12; /* 12 MHz / 6 = 2 MHz */
+    oscInit.PLL.PLLM = 6; /* 12 MHz / 6 = 2 MHz */
     oscInit.PLL.PLLN = 168; /* 2 MHz * 168 = 336 MHz */
     oscInit.PLL.PLLP = RCC_PLLP_DIV2; /* 336 / 2 = 168 MHz */
     oscInit.PLL.PLLQ = 7; /* 336 / 7 = 48 MHz */
