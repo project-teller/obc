@@ -7,7 +7,7 @@
 #include "usbd_desc.h"
 
 extern PCD_HandleTypeDef hpcd_USB_OTG_FS;
-static USBD_HandleTypeDef usb_device_handle;
+extern USBD_HandleTypeDef hUsbDeviceFS;
 
 namespace teller::hal::usb {
 
@@ -26,19 +26,19 @@ void destroy()
 
 bool setup()
 {
-    if (USBD_Init(&usb_device_handle, &FS_Desc, DEVICE_FS) != USBD_OK) {
+    if (USBD_Init(&hUsbDeviceFS, &FS_Desc, DEVICE_FS) != USBD_OK) {
         return false;
     }
 
-    if (USBD_RegisterClass(&usb_device_handle, &USBD_CDC) != USBD_OK) {
+    if (USBD_RegisterClass(&hUsbDeviceFS, &USBD_CDC) != USBD_OK) {
         return false;
     }
 
-    if (USBD_CDC_RegisterInterface(&usb_device_handle, &USBD_Interface_fops_FS) != USBD_OK) {
+    if (USBD_CDC_RegisterInterface(&hUsbDeviceFS, &USBD_Interface_fops_FS) != USBD_OK) {
         return false;
     }
 
-    if (USBD_Start(&usb_device_handle) != USBD_OK) {
+    if (USBD_Start(&hUsbDeviceFS) != USBD_OK) {
         return false;
     }
 
