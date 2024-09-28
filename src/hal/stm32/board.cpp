@@ -139,7 +139,9 @@ static bool configureSystemClock()
     /* Initializes the CPU, AHB and APB bus clocks */
     clkInit.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
         | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
+
 #if defined(TELLER_BOARD_NUCLEO144)
+    /* System clock runs from HSI @ 64 MHz, requiring 1 wait cycle */
     clkInit.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
     clkInit.ClockType |= RCC_CLOCKTYPE_D3PCLK1 | RCC_CLOCKTYPE_D1PCLK1;
     clkInit.SYSCLKDivider = RCC_SYSCLK_DIV1;
@@ -148,19 +150,16 @@ static bool configureSystemClock()
     clkInit.APB2CLKDivider = RCC_APB2_DIV1;
     clkInit.APB3CLKDivider = RCC_APB3_DIV1;
     clkInit.APB4CLKDivider = RCC_APB4_DIV1;
-#else
-    clkInit.SYSCLKSource = RCC_SYSCLKSOURCE_HSE;
-    clkInit.AHBCLKDivider = RCC_HCLK_DIV1;
-    clkInit.APB1CLKDivider = RCC_HCLK_DIV1;
-    clkInit.APB2CLKDivider = RCC_HCLK_DIV1;
-#endif
-
-#if defined(TELLER_BOARD_NUCLEO144)
     if (HAL_RCC_ClockConfig(&clkInit, FLASH_LATENCY_1) != HAL_OK) {
         return false;
     }
 #else
-    if (HAL_RCC_ClockConfig(&clkInit, FLASH_LATENCY_0) != HAL_OK) {
+    /* System clock runs from PLL @ 168 MHz, requiring 5 wait cycles */
+    clkInit.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
+    clkInit.AHBCLKDivider = RCC_HCLK_DIV1;
+    clkInit.APB1CLKDivider = RCC_HCLK_DIV4;
+    clkInit.APB2CLKDivider = RCC_HCLK_DIV2;
+    if (HAL_RCC_ClockConfig(&clkInit, FLASH_LATENCY_5) != HAL_OK) {
         return false;
     }
 #endif
