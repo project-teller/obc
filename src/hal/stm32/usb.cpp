@@ -45,6 +45,12 @@ bool setup()
     return true;
 }
 
+bool isConnected()
+{
+    // TODO
+    return false;
+}
+
 }
 
 /* ************************************************************************** */

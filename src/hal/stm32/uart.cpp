@@ -11,6 +11,7 @@
 #include "hal/stm32/utils.h"
 #include "hal/system.h"
 #include "hal/uart.h"
+#include "hal/usb.h"
 
 using namespace std;
 using namespace teller::hal::uart;
@@ -26,6 +27,9 @@ static const uint32_t EVT_READ = 0x00000001U;
 static const uint32_t EVT_WRITTEN = 0x00000002U;
 
 #define NUM_GPIO_PINS_PER_UART 2
+
+#define UART_NOT_CONNECTED -1
+#define UART_OVER_USB -2
 
 typedef struct {
     /** The physical STM32 HAL UART instance being configured by this entry */
@@ -140,10 +144,10 @@ const uart_phy_config_t uart_phy_config[] = {
 };
 const int8_t uart_map[NUM_UARTS] = {
     0,   /* RXSM --> USART2 */
-    -1,  /* GMM --> not connected */
-    -1,  /* SCM --> not connected */
+    UART_NOT_CONNECTED,  /* GMM --> not connected */
+    UART_NOT_CONNECTED,  /* SCM --> not connected */
     1,   /* DEBUG --> USART3 */
-    -1   /* SINK --> not connected */
+    UART_NOT_CONNECTED   /* SINK --> not connected */
 };
 #elif defined TELLER_BOARD_STM32F4
 // STM32F415RG TELLER OBC
@@ -200,7 +204,7 @@ const int8_t uart_map[NUM_UARTS] = {
     1,   /* RXSM --> UART4 */
     2,  /* GMM --> UART6 */
     0,  /* SCM --> USART1 */
-    -1,   /* DEBUG --> not connected, USB-OTG */
+    UART_OVER_USB,   /* DEBUG --> USB-OTG */
     -1   /* SINK --> not connected */
 };
 #else
@@ -221,7 +225,7 @@ static bool isUARTAlwaysConnected(uart_t index);
 
 static UART_HandleTypeDef* uart_handle_ptrs[10];
 static uart_phy_state_t uart_phy_state[NUM_PHY_UARTS];
-
+static uart_phy_state_t* uart_phy_from_index[NUM_UARTS];
 #define DMA_BUFFER_SIZE 256
 
 static DMA_BUFFER uint8_t uart_rx_buffers[NUM_PHY_UARTS][DMA_BUFFER_SIZE];
@@ -235,6 +239,17 @@ bool teller::hal::uart::init()
         }
     }
 
+    for (size_t i = 0; i < NUM_UARTS; i++) {
+        uart_phy_from_index[i] = nullptr;
+
+        if (uart_map[i] >= 0) {
+            uart_phy_state_t* phy_state = &uart_phy_state[uart_map[i]];
+            if (phy_state->initialized) {
+                uart_phy_from_index[i] = phy_state;
+            }
+        }
+    }
+
     return true;
 }
 
@@ -245,16 +260,11 @@ void teller::hal::uart::destroy()
 
 bool teller::hal::uart::isConnected(uart_t index)
 {
-    if (uart_map[index] < 0) {
-        return false;
+    if (uart_map[index] == UART_OVER_USB) {
+        return usb::isConnected();
+    } else {
+        return isUARTAlwaysConnected(index);
     }
-
-    if (isUARTAlwaysConnected(index)) {
-        return true;
-    }
-
-    /* TODO: detect when the debug UART is connected or disconnected */
-    return index != DEBUG;
 }
 
 bool teller::hal::uart::readInto(uart_t index, uint8_t* data, uint16_t size, uint16_t* bytes_read)
@@ -440,14 +450,12 @@ cleanup:
 static uart_phy_state_t* find_phy_for_uart(int8_t index)
 {
     assert(index >= 0 && index < NUM_UARTS);
-
-    int8_t uart_phy_index = uart_map[index];
-    return uart_phy_index >= 0 ? &uart_phy_state[uart_phy_index] : nullptr;
+    return uart_phy_from_index[index];
 }
 
 static bool isUARTAlwaysConnected(uart_t index)
 {
-    return true; // index != DEBUG;
+    return index >= 0;
 }
 
 /* Finds the UART configuration corresponding to the given physical UART */

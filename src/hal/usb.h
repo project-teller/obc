@@ -26,4 +26,9 @@ void destroy(void);
  */
 [[nodiscard]] bool setup(void);
 
+/**
+ * @brief Returns whether the USB cable is connected.
+ */
+bool isConnected(void);
+
 }
