@@ -77,7 +77,7 @@ bool update(uint8_t* payload, bool& updated)
     uint16_t bytes_read;
 
     updated = false;
-    if (uart::readInto(uart::GMM, &ch, 1, &bytes_read)) {
+    if (uart::read(uart::GMM, &ch, 1, &bytes_read)) {
         if (ch == '$') {
             lastMessageStartedAt = system::getTimeSinceBootMsec();
         }

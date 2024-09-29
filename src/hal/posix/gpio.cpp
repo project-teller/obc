@@ -15,7 +15,7 @@ static uint32_t edgeTimestamps[NUM_GPIO_PINS * 2];
 
 static const uint32_t digitalPinInitialValues = (
     /* Reset pins start in logical high, they must be pulled low to reset */
-    BIT(RST_GMM_LCL) | BIT(RST_SCM_LCL) | BIT(RST_SUC_LCL1) | BIT(RST_SUC_LCL2) | BIT(RST_SUC_LCL3) | BIT(RST_HVPSU_LCL) |
+    BIT(RST_GMM_LCL) | BIT(RST_SCM_LCL) | BIT(RST_SUC_LCL1) | BIT(RST_SUC_LCL2) | BIT(RST_SUC_LCL3) | BIT(RST_CAM_LCL) |
 
     /* LCL status pins start in logical high */
     BIT(STATUS_GMM_LCL) | BIT(STATUS_SCM_LCL) | BIT(STATUS_SUC_LCL1) | BIT(STATUS_SUC_LCL2) | BIT(STATUS_SUC_LCL3) | BIT(STATUS_CAM_LCL));
@@ -62,7 +62,7 @@ void write(pin_t index, bool value)
 
     /* For LCL pins, process the pulses */
     if (value && ts[0] > 0 && ts[1] > 0) {
-        if (index >= RST_GMM_LCL && index <= RST_HVPSU_LCL) {
+        if (index >= RST_GMM_LCL && index <= RST_CAM_LCL) {
             write(static_cast<pin_t>(index - (RST_GMM_LCL - STATUS_GMM_LCL)), 0);
         }
     }

@@ -52,9 +52,9 @@ bool read(uart_t index)
     uint8_t payload_length_plus_one;
     bool result = false;
 
-    /* uart::readInto() is guaranteed to yield if there are other tasks with
+    /* uart::read() is guaranteed to yield if there are other tasks with
      * higher or equal priorities */
-    if (uart::readInto(index, rx_buf, sizeof(rx_buf), &bytes_read)) {
+    if (uart::read(index, rx_buf, sizeof(rx_buf), &bytes_read)) {
         for (i = 0; i < bytes_read; i++) {
             parser = &parsers[index];
             payload_length_plus_one = parser->feed(rx_buf[i]);

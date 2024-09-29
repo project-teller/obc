@@ -115,7 +115,7 @@ TEST(TelemetryTest, heartbeatFrameEncoding)
             .suc1 = true,
             .suc2 = true,
             .suc3 = false,
-            .hvpsu = false
+            .cam = false
         }
     };
     uint8_t encoded[MAX_MESSAGE_LENGTH];

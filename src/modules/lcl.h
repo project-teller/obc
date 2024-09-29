@@ -13,7 +13,7 @@ typedef enum {
     SUC_LCL1,
     SUC_LCL2,
     SUC_LCL3,
-    HVPSU_LCL,
+    CAM_LCL,
     NUM_LCLS,
 } lcl_t;
 

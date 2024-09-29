@@ -267,7 +267,7 @@ bool teller::hal::uart::isConnected(uart_t index)
     }
 }
 
-bool teller::hal::uart::readInto(uart_t index, uint8_t* data, uint16_t size, uint16_t* bytes_read)
+bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_t* bytes_read)
 {
     uint32_t flags = 0;
     uart_phy_state_t* state;
@@ -280,7 +280,11 @@ bool teller::hal::uart::readInto(uart_t index, uint8_t* data, uint16_t size, uin
 
     state = find_phy_for_uart(index);
     if (!state) {
-        teller::hal::system::yield();
+        if (uart_map[index] == UART_OVER_USB) {
+            return usb::read(data, size, bytes_read);
+        } else {
+            teller::hal::system::yield();
+        }
         goto exit;
     }
 
@@ -334,7 +338,11 @@ bool teller::hal::uart::write(uart_t index, uint8_t* data, uint16_t size)
 
     state = find_phy_for_uart(index);
     if (!state) {
-        teller::hal::system::yield();
+        if (uart_map[index] == UART_OVER_USB) {
+            return usb::write(data, size);
+        } else {
+            teller::hal::system::yield();
+        }
         goto exit;
     }
 

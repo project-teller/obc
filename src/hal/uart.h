@@ -44,10 +44,10 @@ void destroy(void);
 bool isConnected(uart_t index);
 
 /**
- * @brief Reads exactly a given number of raw bytes from a UART.
+ * @brief Reads at most a given number of raw bytes from a UART.
  *
- * The function will block and yield to other tasks until the given number of
- * bytes were read from the UART.
+ * The function will block and yield to other tasks until at least one byte is
+ * available to read from the UART.
  *
  * @param index the index of the UART to read from
  * @param data the buffer to read into
@@ -56,7 +56,7 @@ bool isConnected(uart_t index);
  *        size when EOF is reached or when an IO error occurred.
  * @return whether the read was successful
  */
-bool readInto(uart_t index, std::uint8_t* data, std::uint16_t size, std::uint16_t* bytes_read);
+bool read(uart_t index, std::uint8_t* data, std::uint16_t size, std::uint16_t* bytes_read);
 
 /**
  * @brief Waits until the given UART becomes connected.

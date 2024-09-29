@@ -48,7 +48,7 @@ void updateHeartbeatData(frames::heartbeat_data_t* data)
     data->lclStatusBits.suc1 = teller::lcl::triggered(teller::lcl::SUC_LCL1);
     data->lclStatusBits.suc2 = teller::lcl::triggered(teller::lcl::SUC_LCL2);
     data->lclStatusBits.suc3 = teller::lcl::triggered(teller::lcl::SUC_LCL3);
-    data->lclStatusBits.hvpsu = teller::lcl::triggered(teller::lcl::HVPSU_LCL);
+    data->lclStatusBits.cam = teller::lcl::triggered(teller::lcl::CAM_LCL);
 }
 
 void updateClockStatusData(frames::clock_status_data_t* data)

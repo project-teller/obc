@@ -36,7 +36,7 @@ typedef struct {
         bool suc1;
         bool suc2;
         bool suc3;
-        bool hvpsu;
+        bool cam;
     } lclStatusBits;
 } heartbeat_data_t;
 

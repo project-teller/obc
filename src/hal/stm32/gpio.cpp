@@ -11,6 +11,7 @@ typedef struct {
     GPIO_TypeDef* port;
     uint32_t pin;
     GPIO_InitTypeDef init;
+    uint8_t flags;
 } gpio_config_t;
 
 #define UNMAPPED   \
@@ -22,6 +23,14 @@ typedef struct {
     {                                                                              \
         .Mode = GPIO_MODE_INPUT, .Pull = GPIO_NOPULL, .Speed = GPIO_SPEED_FREQ_LOW \
     }
+#define INPUT_PIN_PULLDOWN                                                           \
+    {                                                                                \
+        .Mode = GPIO_MODE_INPUT, .Pull = GPIO_PULLDOWN, .Speed = GPIO_SPEED_FREQ_LOW \
+    }
+#define INPUT_PIN_PULLUP                                                           \
+    {                                                                              \
+        .Mode = GPIO_MODE_INPUT, .Pull = GPIO_PULLUP, .Speed = GPIO_SPEED_FREQ_LOW \
+    }
 #define OUTPUT_PIN_ACTIVE_HIGH                                                         \
     {                                                                                  \
         .Mode = GPIO_MODE_OUTPUT_PP, .Pull = GPIO_NOPULL, .Speed = GPIO_SPEED_FREQ_LOW \
@@ -30,6 +39,8 @@ typedef struct {
     {                                                                              \
         .Mode = GPIO_MODE_INPUT, .Pull = GPIO_NOPULL, .Speed = GPIO_SPEED_FREQ_LOW \
     }
+
+#define FLAG_INVERTED 1
 
 const gpio_config_t gpio_configs[NUM_GPIO_PINS] = {
 #if defined(TELLER_BOARD_NUCLEO144)
@@ -63,25 +74,25 @@ const gpio_config_t gpio_configs[NUM_GPIO_PINS] = {
 
     /* RXSM signals */
     /* - SODS */
-    { GPIOA, GPIO_PIN_3, INPUT_PIN },
+    { GPIOA, GPIO_PIN_3, INPUT_PIN, FLAG_INVERTED },
     /* - SOE */
-    { GPIOB, GPIO_PIN_8, INPUT_PIN },
+    { GPIOB, GPIO_PIN_8, INPUT_PIN, FLAG_INVERTED },
     /* - LO */
-    { GPIOD, GPIO_PIN_2, INPUT_PIN },
+    { GPIOD, GPIO_PIN_2, INPUT_PIN, FLAG_INVERTED },
 
     /* LCL signals */
     /* - STATUS_GMM_LCL */
-    { GPIOA, GPIO_PIN_7, INPUT_PIN },
+    { GPIOA, GPIO_PIN_7, INPUT_PIN_PULLUP, FLAG_INVERTED },
     /* - STATUS_SCM_LCL */
-    { GPIOC, GPIO_PIN_4, INPUT_PIN },
+    { GPIOC, GPIO_PIN_4, INPUT_PIN_PULLUP, FLAG_INVERTED },
     /* - STATUS_SUC_LCL1 */
-    { GPIOB, GPIO_PIN_1, INPUT_PIN },
+    { GPIOB, GPIO_PIN_1, INPUT_PIN_PULLUP, FLAG_INVERTED },
     /* - STATUS_SUC_LCL2 */
-    { GPIOB, GPIO_PIN_0, INPUT_PIN },
+    { GPIOB, GPIO_PIN_0, INPUT_PIN_PULLUP, FLAG_INVERTED },
     /* - STATUS_SUC_LCL3 */
-    { GPIOC, GPIO_PIN_5, INPUT_PIN },
+    { GPIOC, GPIO_PIN_5, INPUT_PIN_PULLUP, FLAG_INVERTED },
     /* - STATUS_CAM_LCL */
-    { GPIOC, GPIO_PIN_8, INPUT_PIN },
+    { GPIOC, GPIO_PIN_8, INPUT_PIN_PULLUP, FLAG_INVERTED },
 
     /* LCL reset */
     /* - RST_GMM_LCL */
@@ -165,7 +176,7 @@ bool read(pin_t index)
 {
     const gpio_config_t* cfg = findPin(index);
     if (cfg) {
-        return HAL_GPIO_ReadPin(cfg->port, cfg->pin) != GPIO_PIN_RESET;
+        return HAL_GPIO_ReadPin(cfg->port, cfg->pin) == ((cfg->flags & FLAG_INVERTED) ? GPIO_PIN_RESET : GPIO_PIN_SET);
     } else {
         return false;
     }
@@ -175,6 +186,9 @@ void write(pin_t index, bool value)
 {
     const gpio_config_t* cfg = findPin(index);
     if (cfg) {
+        if (cfg->flags & FLAG_INVERTED) {
+            value = !value;
+        }
         HAL_GPIO_WritePin(cfg->port, cfg->pin, value ? GPIO_PIN_SET : GPIO_PIN_RESET);
     };
 }

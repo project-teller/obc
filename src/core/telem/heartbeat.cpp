@@ -23,7 +23,7 @@ using namespace teller::telem;
 #define LCL_STATUS_SUC1_BIT_INDEX 2
 #define LCL_STATUS_SUC2_BIT_INDEX 3
 #define LCL_STATUS_SUC3_BIT_INDEX 4
-#define LCL_STATUS_HVPSU_BIT_INDEX 5
+#define LCL_STATUS_CAM_BIT_INDEX 5
 
 namespace teller::telem::frames {
 
@@ -93,7 +93,7 @@ uint8_t encodeHeartbeatFrame(const heartbeat_data_t* data, uint8_t* encoded)
         (data->lclStatusBits.suc1 << LCL_STATUS_SUC1_BIT_INDEX) |
         (data->lclStatusBits.suc2 << LCL_STATUS_SUC2_BIT_INDEX) |
         (data->lclStatusBits.suc3 << LCL_STATUS_SUC3_BIT_INDEX) |
-        (data->lclStatusBits.hvpsu << LCL_STATUS_HVPSU_BIT_INDEX) |
+        (data->lclStatusBits.cam << LCL_STATUS_CAM_BIT_INDEX) |
         0
     );
     /* clang-format on */
@@ -134,7 +134,7 @@ void decodeHeartbeatFrame(const uint8_t* encoded, heartbeat_data_t* decoded)
     decoded->lclStatusBits.suc1 = frame->lclStatusBits & (1 << LCL_STATUS_SUC1_BIT_INDEX);
     decoded->lclStatusBits.suc2 = frame->lclStatusBits & (1 << LCL_STATUS_SUC2_BIT_INDEX);
     decoded->lclStatusBits.suc3 = frame->lclStatusBits & (1 << LCL_STATUS_SUC3_BIT_INDEX);
-    decoded->lclStatusBits.hvpsu = frame->lclStatusBits & (1 << LCL_STATUS_HVPSU_BIT_INDEX);
+    decoded->lclStatusBits.cam = frame->lclStatusBits & (1 << LCL_STATUS_CAM_BIT_INDEX);
 }
 
 }
