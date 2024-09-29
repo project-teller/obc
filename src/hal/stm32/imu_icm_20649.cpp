@@ -123,7 +123,8 @@ bool setup()
 
 bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
 {
-    std::uint8_t buf[13] = { 0x80 + REG_ACCEL_XOUT_H };
+    std::uint8_t txBuf[13] = { 0x80 + REG_ACCEL_XOUT_H };
+    std::uint8_t rxBuf[13] = { 0x00 };
     std::uint32_t now;
 
     /* TODO: periodically check configuration registers */
@@ -133,7 +134,7 @@ bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
 
     /* Read accelerometer and gyro measurements */
     now = system::getTimeSinceBootMsec();
-    if (!spi::transfer(address, buf, sizeof(buf))) {
+    if (!spi::transfer(address, txBuf, rxBuf, sizeof(txBuf))) {
         logger->error("SPI transfer failed");
         return false;
     }
@@ -141,15 +142,15 @@ bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
     /* TODO(ntamas): lock for atomic modification? */
     acceleration.timestampInMsec = now;
     acceleration.value.set(
-        static_cast<std::int8_t>((buf[1] << 8) + buf[2]) * ACCEL_SCALE,
-        static_cast<std::int8_t>((buf[3] << 8) + buf[4]) * ACCEL_SCALE,
-        static_cast<std::int8_t>((buf[5] << 8) + buf[6]) * ACCEL_SCALE);
+        static_cast<std::int8_t>((rxBuf[1] << 8) + rxBuf[2]) * ACCEL_SCALE,
+        static_cast<std::int8_t>((rxBuf[3] << 8) + rxBuf[4]) * ACCEL_SCALE,
+        static_cast<std::int8_t>((rxBuf[5] << 8) + rxBuf[6]) * ACCEL_SCALE);
 
     angularVelocity.timestampInMsec = now;
     angularVelocity.value.set(
-        static_cast<std::int8_t>((buf[7] << 8) + buf[8]) * GYRO_SCALE,
-        static_cast<std::int8_t>((buf[9] << 8) + buf[10]) * GYRO_SCALE,
-        static_cast<std::int8_t>((buf[11] << 8) + buf[12]) * GYRO_SCALE);
+        static_cast<std::int8_t>((rxBuf[7] << 8) + rxBuf[8]) * GYRO_SCALE,
+        static_cast<std::int8_t>((rxBuf[9] << 8) + rxBuf[10]) * GYRO_SCALE,
+        static_cast<std::int8_t>((rxBuf[11] << 8) + rxBuf[12]) * GYRO_SCALE);
 
     return true;
 }
@@ -157,11 +158,12 @@ bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
 
 static bool readRegisterByte(uint8_t index, uint8_t& result)
 {
-    uint8_t buf[] = { READ_REGISTER(index), 0x00 };
-    if (!spi::transfer(address, buf, sizeof(buf))) {
+    uint8_t txBuf[] = { READ_REGISTER(index), 0x00 };
+    uint8_t rxBuf[] = { 0x00, 0x00 };
+    if (!spi::transfer(address, txBuf, rxBuf, sizeof(txBuf))) {
         return false;
     }
-    result = buf[1];
+    result = rxBuf[1];
     return true;
 }
 
