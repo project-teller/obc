@@ -11,8 +11,16 @@ using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::telem;
 
+#if defined(TELLER_BOARD_NUCLEO144)
+// STM32H743ZI Nucleo-144 dev board, for testing purposes
 static const spi::address_t address = { .bus = 0, .device = 0 };
-// static const spi::address_t address = spi::NO_ADDRESS;
+#elif defined(TELLER_BOARD_STM32F4)
+// STM32F415RG TELLER OBC board
+static const spi::address_t address = { .bus = 0, .device = 0 };
+#else
+// No flash memory on this board
+static const spi::address_t address = spi::NO_ADDRESS;
+#endif
 
 /* Constants for size conversions */
 #define BLOCK_SIZE_IN_KB 64
@@ -67,7 +75,8 @@ static const flashmem_w25qxx_cfg_t known_devices[] = {
     { "W25Q64", 0x4017, 128 },
     { "W25Q128", 0x4018, 256 },
     { "W25Q256", 0x4019, 512 },
-    { "W25Q512", 0x401A, 1024 },
+    { "W25Q512", 0x4020, 1024 },
+    { "W25Q01", 0x4021, 2048 },
     NO_MORE_ENTRIES
 };
 

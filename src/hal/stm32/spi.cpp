@@ -525,7 +525,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
         /* Peripheral clock enable */
         __HAL_RCC_SPI2_CLK_ENABLE();
     } else if (hspi->Instance == SPI3) {
-        gpioFunc = GPIO_AF5_SPI2;
+        gpioFunc = GPIO_AF6_SPI3;
 
 #ifdef STM32H7
         RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = { 0 };
@@ -548,7 +548,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
             GPIO_InitStruct.Pin = cfg->gpio.by_index[i].pins;
             GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
             GPIO_InitStruct.Pull = GPIO_NOPULL;
-            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW; // VERY_HIGH;
             GPIO_InitStruct.Alternate = gpioFunc;
             HAL_GPIO_Init(cfg->gpio.by_index[i].port, &GPIO_InitStruct);
         }
@@ -561,7 +561,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
             GPIO_InitStruct.Pin = cfg->cs[i].pins;
             GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
             GPIO_InitStruct.Pull = GPIO_NOPULL;
-            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW; // VERY_HIGH;
             HAL_GPIO_Init(cfg->cs[i].port, &GPIO_InitStruct);
             HAL_GPIO_WritePin(cfg->cs[i].port, cfg->cs[i].pins, GPIO_PIN_SET);
         }
