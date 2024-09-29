@@ -42,7 +42,9 @@ static const spi::address_t address = spi::NO_ADDRESS;
 #define CMD_SECTOR_ERASE_4K 0x20
 #define CMD_READ_STATUS_REGISTER_2 0x35
 #define CMD_READ_JEDEC_ID 0x9F
+#define CMD_ENTER_4_BYTE_MODE 0xB7
 #define CMD_BLOCK_ERASE_64K 0xD8
+#define CMD_EXIT_4_BYTE_MODE 0xE9
 
 /* List of supported JEDEC IDs and the corresponding block sizes.
  *
@@ -88,6 +90,7 @@ static bool readIntoBuffer(uint32_t offset, uint8_t* buf, uint16_t length);
 static uint32_t readJEDECId(void);
 static int16_t readStatusRegister(uint8_t index);
 static uint32_t sectorToAddress(uint32_t sector, uint32_t off = 0);
+static bool setFourByteAddressingMode(bool enabled = true);
 static bool waitWhileBusy(void);
 
 /** The logger used by the driver */
@@ -239,6 +242,11 @@ const flashmem_w25qxx_cfg_t* identify()
         jedec_id &= 0xFFFF;
         for (cfg = known_devices; cfg->jedec_id; cfg++) {
             if (cfg->jedec_id == jedec_id) {
+                if (cfg->block_count >= 512) {
+                    if (!setFourByteAddressingMode(true)) {
+                        cfg = nullptr;
+                    }
+                }
                 return cfg;
             }
         }
@@ -331,6 +339,26 @@ static bool waitWhileBusy()
 static uint32_t sectorToAddress(uint32_t sector, uint32_t off)
 {
     return sector * SECTOR_SIZE + off;
+}
+
+/**
+ * @brief Turns on four-byte addressing mode on the flash memory.
+ *
+ * Four-byte addressing is required for memories with at least 512 blocks.
+ *
+ * @param enabled  whether to enable four-byte addresses
+ * @return whether the operation was successful
+ */
+static bool setFourByteAddressingMode(bool enabled)
+{
+    uint8_t cmd = enabled ? CMD_ENTER_4_BYTE_MODE : CMD_EXIT_4_BYTE_MODE;
+    uint8_t response = 0;
+
+    if (!spi::transfer(address, &cmd, &response, 1, 0)) {
+        return false;
+    }
+
+    return readStatusRegister(3) & 0x01;
 }
 
 /**
