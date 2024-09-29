@@ -11,8 +11,14 @@ using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::telem;
 
-// static const spi::address_t address = { .bus = 0, .device = 0 };
+#if defined(TELLER_BOARD_NUCLEO144)
 static const spi::address_t address = spi::NO_ADDRESS;
+#elif defined(TELLER_BOARD_STM32F4)
+/* SPI bus 3, CS pin 2 */
+static const spi::address_t address = { .bus = 2, .device = 1 };
+#else
+static const spi::address_t address = spi::NO_ADDRESS;
+#endif
 
 /* Registers in user bank 0 */
 #define REG_WHO_AM_I 0x00

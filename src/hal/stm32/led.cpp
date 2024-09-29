@@ -15,14 +15,14 @@ typedef struct {
     bool inverted;
 } led_config_t;
 
-#if defined TELLER_BOARD_NUCLEO144
+#if defined(TELLER_BOARD_NUCLEO144)
 // STM32H743ZI Nucleo-144 dev board, for testing purposes
 const led_config_t led_config[NUM_LEDS] = {
     { GPIOB, GPIO_PIN_0 }, /* Heartbeat LED */
     { GPIOB, GPIO_PIN_14 }, /* Error LED */
     { GPIOE, GPIO_PIN_1 }, /* Debug LED */
 };
-#elif defined TELLER_BOARD_STM32F4
+#elif defined(TELLER_BOARD_STM32F4)
 // STM32F415RG TELLER OBC
 const led_config_t led_config[NUM_LEDS] = {
     { GPIOA, GPIO_PIN_6 }, /* Heartbeat LED */

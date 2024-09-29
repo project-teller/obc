@@ -17,7 +17,7 @@ static const uint32_t EVT_DONE = 0x00000001U;
 static const uint32_t EVT_ERROR = 0x00000002U;
 
 #define NUM_GPIO_PINS_PER_BUS 3
-#define NUM_CS_PINS_PER_BUS 4
+#define NUM_CS_PINS_PER_BUS 6
 
 typedef struct {
     SPI_TypeDef* instance;
@@ -54,7 +54,7 @@ typedef struct {
     }
 
 /* clang-format off */
-#if defined TELLER_BOARD_NUCLEO144
+#if defined(TELLER_BOARD_NUCLEO144)
 // STM32H743ZI Nucleo-144 dev board, for testing purposes
 #define NUM_SPI_BUSES 2
 const spi_bus_config_t spi_config[] = {
@@ -76,10 +76,61 @@ const spi_bus_config_t spi_config[] = {
     },
     NO_MORE_SPI_BUSES
 };
-#elif defined TELLER_BOARD_STM32F4
-// TELLER OBC board
-#define NUM_SPI_BUSES 0
+#elif defined(TELLER_BOARD_STM32F4)
+// STM32F415RG TELLER OBC board
+#define NUM_SPI_BUSES 3
 const spi_bus_config_t spi_config[] = {
+    {
+        .instance = SPI1,
+        .gpio = {
+            .by_name = {
+                .clk = { GPIOB, GPIO_PIN_3 },
+                .miso = { GPIOB, GPIO_PIN_4 },
+                .mosi = { GPIOB, GPIO_PIN_5 }
+            }
+        },
+        .cs = {
+            // Device 0
+            { GPIOA, GPIO_PIN_15 },
+            NO_MORE_GPIO_CFG
+        },
+        .irq = SPI1_IRQn,
+    },
+    {
+        .instance = SPI2,
+        .gpio = {
+            .by_name = {
+                .clk = { GPIOB, GPIO_PIN_10 },
+                .miso = { GPIOC, GPIO_PIN_2 },
+                .mosi = { GPIOC, GPIO_PIN_3 }
+            }
+        },
+        .cs = {
+            // Device 0
+            { GPIOB, GPIO_PIN_9 },
+            NO_MORE_GPIO_CFG
+        },
+        .irq = SPI2_IRQn,
+    },
+    {
+        .instance = SPI3,
+        .gpio = {
+            .by_name = {
+                .clk = { GPIOC, GPIO_PIN_10 },
+                .miso = { GPIOC, GPIO_PIN_11 },
+                .mosi = { GPIOC, GPIO_PIN_12 }
+            }
+        },
+        .cs = {
+            { GPIOB, GPIO_PIN_15 },
+            { GPIOB, GPIO_PIN_14 },
+            { GPIOB, GPIO_PIN_13 },
+            { GPIOB, GPIO_PIN_12 },
+            { GPIOA, GPIO_PIN_4 },
+            NO_MORE_GPIO_CFG
+        },
+        .irq = SPI3_IRQn,
+    },
     NO_MORE_SPI_BUSES
 };
 #elif defined STM32F4

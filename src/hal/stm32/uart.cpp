@@ -107,7 +107,7 @@ typedef struct {
     }
 
 /* clang-format off */
-#if defined TELLER_BOARD_NUCLEO144
+#if defined(TELLER_BOARD_NUCLEO144)
 // STM32H743ZI Nucleo-144 dev board, for testing purposes
 #define NUM_PHY_UARTS 2
 const uart_phy_config_t uart_phy_config[] = {
@@ -149,7 +149,7 @@ const int8_t uart_map[NUM_UARTS] = {
     1,   /* DEBUG --> USART3 */
     UART_NOT_CONNECTED   /* SINK --> not connected */
 };
-#elif defined TELLER_BOARD_STM32F4
+#elif defined(TELLER_BOARD_STM32F4)
 // STM32F415RG TELLER OBC
 #define NUM_PHY_UARTS 3
 const uart_phy_config_t uart_phy_config[] = {
@@ -463,7 +463,7 @@ static uart_phy_state_t* find_phy_for_uart(int8_t index)
 
 static bool isUARTAlwaysConnected(uart_t index)
 {
-    return index >= 0;
+    return index >= 0 && index != DEBUG;
 }
 
 /* Finds the UART configuration corresponding to the given physical UART */

@@ -73,8 +73,38 @@ bool isConnected()
 
 bool read(std::uint8_t* data, std::uint16_t size, std::uint16_t* bytes_read)
 {
-    teller::hal::system::sleepForever();
-    return false;
+    uint16_t read = 0;
+    uint16_t available = 0;
+    // uint32_t flags = 0;
+
+    if (size == 0) {
+        teller::hal::system::yield();
+        goto exit;
+    }
+
+    if (!isConnected()) {
+        return false;
+    }
+
+    do {
+        available = CDC_GetRxBufferBytesAvailable_FS();
+        read = available > size ? size : available;
+        if (read > 0) {
+            break;
+        }
+
+        /* Wait until there is something in the buffer */
+        teller::hal::system::delayMsec(50);
+        // flags = osEventFlagsWait(events, EVT_READ, osFlagsWaitAny, osWaitForever);
+    } while (true);
+
+    CDC_ReadRxBuffer_FS(data, read);
+
+exit:
+    if (bytes_read) {
+        *bytes_read = read;
+    }
+    return true;
 }
 
 bool write(std::uint8_t* data, std::uint16_t size)
