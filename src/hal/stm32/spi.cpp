@@ -30,6 +30,7 @@ typedef struct {
         } by_name;
     } gpio;
     gpio_port_and_pins_t cs[NUM_CS_PINS_PER_BUS];
+    uint8_t mode;
     IRQn_Type irq;
 
     uint32_t baud_rate;
@@ -72,6 +73,7 @@ const spi_bus_config_t spi_config[] = {
             { GPIOD, GPIO_PIN_14 },
             NO_MORE_GPIO_CFG
         },
+        .mode = 0,
         .irq = SPI1_IRQn,
     },
     NO_MORE_SPI_BUSES
@@ -94,6 +96,7 @@ const spi_bus_config_t spi_config[] = {
             { GPIOA, GPIO_PIN_15 },
             NO_MORE_GPIO_CFG
         },
+        .mode = 0,
         .irq = SPI1_IRQn,
     },
     {
@@ -110,6 +113,7 @@ const spi_bus_config_t spi_config[] = {
             { GPIOB, GPIO_PIN_9 },
             NO_MORE_GPIO_CFG
         },
+        .mode = 0,
         .irq = SPI2_IRQn,
     },
     {
@@ -129,6 +133,7 @@ const spi_bus_config_t spi_config[] = {
             { GPIOA, GPIO_PIN_4 },
             NO_MORE_GPIO_CFG
         },
+        .mode = 3,
         .irq = SPI3_IRQn,
     },
     NO_MORE_SPI_BUSES
@@ -392,16 +397,32 @@ static bool configure_spi_bus(spi_bus_state_t* state, const spi_bus_config_t* cf
     /* SPI peripheral clock speed is set in board.cpp, here we divide it by
      * the baud rate prescaler.
      *
-     * Preipheral clock runs at 40 MHz.
-     * Prescaler = 8: SPI bus will run at 5 MHz
-     * Prescaler = 256: SPI bus will run at 160 kHz
+     * On the TELLER OBC board, the peripheral clock runs at 84 MHz for SPI1 and
+     * 42 MHz for SPI2 and SPI3.
+     *
+     * For SPI1:
+     *
+     * Prescaler = 2: SPI bus will run at 42 MHz
+     * Prescaler = 256: SPI bus will run at 328.125 kHz
      */
 
+    /* Comment on converting SPI modes to CLKPolarity and CLKPhase.
+     *
+     * In SPI mode 0 and mode 1, the clock idles low. So the LSB of the mode
+     * number determines the phase, and the other bit determines the polarity.
+     *
+     * CLKPolarity is SPI CPOL; CPOL=0 means that the clock idles low, so
+     * that belongs to SPI_POLARITY_LOW.
+     *
+     * CLKPhase means whether we are sampling on the first or the second edge.
+     * This is SPI CPHA; CPHA=0 means that we are sampling on the first edge,
+     * so that belongs to SPI_PHASE_1EDGE.
+     */
     pHandle->Init.Mode = SPI_MODE_MASTER;
     pHandle->Init.Direction = SPI_DIRECTION_2LINES;
     pHandle->Init.DataSize = SPI_DATASIZE_8BIT;
-    pHandle->Init.CLKPolarity = SPI_POLARITY_LOW;
-    pHandle->Init.CLKPhase = SPI_PHASE_1EDGE;
+    pHandle->Init.CLKPolarity = (cfg->mode & 0x02) ? SPI_POLARITY_HIGH : SPI_POLARITY_LOW;
+    pHandle->Init.CLKPhase = (cfg->mode & 0x01) ? SPI_PHASE_2EDGE : SPI_PHASE_1EDGE;
     pHandle->Init.NSS = SPI_NSS_SOFT;
     pHandle->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
     pHandle->Init.FirstBit = SPI_FIRSTBIT_MSB;
@@ -548,7 +569,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
             GPIO_InitStruct.Pin = cfg->gpio.by_index[i].pins;
             GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
             GPIO_InitStruct.Pull = GPIO_NOPULL;
-            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW; // VERY_HIGH;
+            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
             GPIO_InitStruct.Alternate = gpioFunc;
             HAL_GPIO_Init(cfg->gpio.by_index[i].port, &GPIO_InitStruct);
         }
@@ -561,7 +582,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
             GPIO_InitStruct.Pin = cfg->cs[i].pins;
             GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
             GPIO_InitStruct.Pull = GPIO_NOPULL;
-            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW; // VERY_HIGH;
+            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
             HAL_GPIO_Init(cfg->cs[i].port, &GPIO_InitStruct);
             HAL_GPIO_WritePin(cfg->cs[i].port, cfg->cs[i].pins, GPIO_PIN_SET);
         }
