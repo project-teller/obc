@@ -2,7 +2,7 @@
 #include <limits>
 
 #include "config.h"
-#include "hal/imu.h"
+#include "drivers/imu.h"
 #include "hal/spi.h"
 #include "hal/system.h"
 #include "modules/log.h"
@@ -92,7 +92,7 @@ static bool configure(void);
 
 static Logger* logger;
 
-namespace teller::hal::imu {
+namespace teller::drivers::imu {
 
 bool init()
 {

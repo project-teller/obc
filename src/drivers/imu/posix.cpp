@@ -1,6 +1,6 @@
 #include "core/utils/random.h"
 
-#include "hal/imu.h"
+#include "drivers/imu.h"
 #include "hal/system.h"
 
 #include "config.h"
@@ -10,7 +10,7 @@ using teller::telem::measurement_3d_t;
 
 static measurement_3d_t gyroOffset;
 
-namespace teller::hal::imu {
+namespace teller::drivers::imu {
 
 /**
  * @def UPDATE_FREQUENCY_HZ

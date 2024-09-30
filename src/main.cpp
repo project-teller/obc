@@ -4,6 +4,9 @@
 #include "hal/hal.h"
 #include "hal/system.h"
 
+#include "drivers/flashmem.h"
+#include "drivers/imu.h"
+#include "drivers/sdcard.h"
 #include "drivers/temperature.h"
 
 #include "modules/cmd.h"
@@ -136,6 +139,9 @@ void bootSystem(void)
     teller::errors::init();
 
     /* Initialize the drivers */
+    inited &= teller::drivers::flashmem::init();
+    inited &= teller::drivers::imu::init();
+    inited &= teller::drivers::sdcard::init();
     inited &= teller::drivers::temperature::init();
 
     /* Initialize modules */

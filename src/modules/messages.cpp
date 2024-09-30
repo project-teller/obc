@@ -1,7 +1,8 @@
 #include <algorithm>
 
+#include "drivers/imu.h"
+
 #include "hal/board.h"
-#include "hal/imu.h"
 #include "hal/rtc.h"
 #include "hal/system.h"
 

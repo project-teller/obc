@@ -4,7 +4,7 @@
 #include "core/math/running_mean.hpp"
 #include "core/math/vector.hpp"
 
-#include "hal/imu.h"
+#include "drivers/imu.h"
 #include "hal/system.h"
 
 #include "modules/edr.hpp"
@@ -133,7 +133,7 @@ subsystem_status_t getSubsystemStatus()
 
 bool setup()
 {
-    status = teller::hal::imu::setup()
+    status = teller::drivers::imu::setup()
         ? SUBSYSTEM_STATUS_OK
         : SUBSYSTEM_STATUS_ERROR;
     return status == SUBSYSTEM_STATUS_OK;
@@ -149,7 +149,7 @@ void startGyroCalibration(void)
 
 bool update()
 {
-    status = teller::hal::imu::update(acceleration, rawAngularVelocity)
+    status = teller::drivers::imu::update(acceleration, rawAngularVelocity)
         ? SUBSYSTEM_STATUS_OK
         : SUBSYSTEM_STATUS_ERROR;
 

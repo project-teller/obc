@@ -1,11 +1,11 @@
 #include "config.h"
-#include "hal/imu.h"
+#include "drivers/imu.h"
 #include "hal/system.h"
 
 using namespace teller::hal::system;
 using teller::telem::measurement_3d_t;
 
-namespace teller::hal::imu {
+namespace teller::drivers::imu {
 
 bool init()
 {

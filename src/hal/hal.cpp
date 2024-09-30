@@ -3,7 +3,6 @@
 #include "board.h"
 #include "dma.h"
 #include "gpio.h"
-#include "imu.h"
 #include "led.h"
 #include "rtc.h"
 #include "spi.h"
@@ -38,18 +37,12 @@ bool teller::hal::init()
     /* Storage devices */
     success &= storage::init();
 
-    /* Sensors */
-    success &= imu::init(); /* depends on SPI */
-
     return success;
 }
 
 void teller::hal::destroy()
 {
     /* Reverse order compared to ::init() */
-
-    /* Sensors */
-    imu::destroy();
 
     /* Storage devices */
     storage::destroy();

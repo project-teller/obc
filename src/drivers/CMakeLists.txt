@@ -7,6 +7,7 @@ endif()
 add_library(
     obc-drivers
     flashmem.cpp
+    imu.cpp
     sdcard.cpp
     temperature.cpp
 )

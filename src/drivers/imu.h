@@ -4,7 +4,7 @@
 
 #include "core/telem/generic.h"
 
-namespace teller::hal::imu {
+namespace teller::drivers::imu {
 
 /**
  * @brief Initialization function for the IMU.
