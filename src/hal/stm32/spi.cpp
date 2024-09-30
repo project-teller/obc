@@ -404,6 +404,16 @@ static bool configure_spi_bus(spi_bus_state_t* state, const spi_bus_config_t* cf
      *
      * Prescaler = 2: SPI bus will run at 42 MHz
      * Prescaler = 256: SPI bus will run at 328.125 kHz
+     *
+     * For SPI2:
+     *
+     * Prescaler = 2: SPI bus will run at 21 MHz
+     * Prescaler = 256: SPI bus will run at 164.0625 kHz
+     *
+     * Note that a low clock rate is required to communicate with SD cards
+     * in order to bring them into SPI mode. Online sources suggest a clock
+     * rate between 100 and 400 kHz, so we cannot bump the initial clock rate
+     * of the SPI2 bus higher.
      */
 
     /* Comment on converting SPI modes to CLKPolarity and CLKPhase.
