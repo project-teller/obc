@@ -34,7 +34,7 @@ void updateHeartbeatData(frames::heartbeat_data_t* data)
     data->mode = getMode();
 
     data->voltageInVolts = board::getBoardVoltage();
-    data->temperateInCelsius = board::getBoardTemperature();
+    data->temperatureInCelsius = board::getBoardTemperature();
 
     data->rxsmStatusBits.lo = state.lo;
     data->rxsmStatusBits.sods = state.sods;

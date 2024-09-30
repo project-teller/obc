@@ -96,7 +96,7 @@ TEST(TelemetryTest, heartbeatFrameEncoding)
         .error = 42,
         .mode = OBC_MODE_MISSION,
         .voltageInVolts = 4.2,
-        .temperateInCelsius = -42.42,
+        .temperatureInCelsius = -42.42,
         .rxsmStatusBits = {
             .sods = false,
             .soe = true,
@@ -131,7 +131,7 @@ TEST(TelemetryTest, heartbeatFrameEncoding)
     EXPECT_EQ(decoded.timestampInMsec, heartbeat.timestampInMsec);
     EXPECT_EQ(decoded.error, heartbeat.error);
     EXPECT_EQ(decoded.voltageInVolts, heartbeat.voltageInVolts);
-    EXPECT_EQ(decoded.temperateInCelsius, std::roundf(heartbeat.temperateInCelsius));
+    EXPECT_EQ(decoded.temperatureInCelsius, std::roundf(heartbeat.temperatureInCelsius));
     EXPECT_EQ(decoded.rxsmStatusBits.lo, heartbeat.rxsmStatusBits.lo);
     EXPECT_EQ(decoded.rxsmStatusBits.sods, heartbeat.rxsmStatusBits.sods);
     EXPECT_EQ(decoded.rxsmStatusBits.soe, heartbeat.rxsmStatusBits.soe);

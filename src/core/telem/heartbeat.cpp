@@ -61,7 +61,7 @@ uint8_t encodeHeartbeatFrame(const heartbeat_data_t* data, uint8_t* encoded)
      * according to the requirements, with a resolution of 1 degree, so we are
      * fine with encoding them as signed integers between -128 and 127 degrees Celsius */
     frame->temperature = clamp(
-        static_cast<int>(roundf(clamp(data->temperateInCelsius, -128.0f, 127.0f))),
+        static_cast<int>(roundf(clamp(data->temperatureInCelsius, -128.0f, 127.0f))),
         -128, 127);
 
     /* clang-format off */
@@ -109,7 +109,7 @@ void decodeHeartbeatFrame(const uint8_t* encoded, heartbeat_data_t* decoded)
     decoded->timestampInMsec = frame->timestamp;
     decoded->error = frame->error;
     decoded->voltageInVolts = frame->voltage / 10.0f;
-    decoded->temperateInCelsius = frame->temperature;
+    decoded->temperatureInCelsius = frame->temperature;
 
     decoded->rxsmStatusBits.lo = frame->rxsmStatusBits & (1 << RXSM_LO_BIT_INDEX);
     decoded->rxsmStatusBits.sods = frame->rxsmStatusBits & (1 << RXSM_SODS_BIT_INDEX);

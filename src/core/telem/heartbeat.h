@@ -16,7 +16,7 @@ typedef struct {
     std::uint8_t error;
     obc_mode_t mode;
     float voltageInVolts;
-    float temperateInCelsius;
+    float temperatureInCelsius;
     struct {
         bool sods;
         bool soe;
