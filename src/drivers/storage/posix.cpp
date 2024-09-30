@@ -5,6 +5,7 @@
 #include "drivers/flashmem/posix_debug.h"
 #include "drivers/sdcard.h"
 #include "drivers/sdcard/posix_debug.h"
+#include "drivers/storage.h"
 #include "drivers/storage/posix_debug.h"
 
 using namespace littlefs;

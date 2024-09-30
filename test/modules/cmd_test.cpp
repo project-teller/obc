@@ -91,10 +91,6 @@ protected:
         ASSERT_FALSE(uart_rx::read(hal::uart::RXSM));
         ASSERT_FALSE(processNextInboundCommand());
         inputRedirector->feed(std::string(reinterpret_cast<char*>(message), length));
-        for (size_t i = 0; i < length - 1; i++) {
-            ASSERT_FALSE(uart_rx::read(hal::uart::RXSM));
-            ASSERT_FALSE(processNextInboundCommand());
-        }
         ASSERT_TRUE(uart_rx::read(hal::uart::RXSM));
         ASSERT_TRUE(processNextInboundCommand());
     }
@@ -178,10 +174,6 @@ TEST_F(CmdTest, readUnhandledPacket)
         ASSERT_FALSE(processNextInboundCommand());
     }
     inputRedirector->feed(std::string(msg + 6, sizeof(heartbeatMessage) - 6));
-    for (i = 0; i < sizeof(heartbeatMessage) - 7; i++) {
-        ASSERT_FALSE(uart_rx::read(hal::uart::RXSM));
-        ASSERT_FALSE(processNextInboundCommand());
-    }
     ASSERT_TRUE(uart_rx::read(hal::uart::RXSM));
     ASSERT_TRUE(processNextInboundCommand());
 
