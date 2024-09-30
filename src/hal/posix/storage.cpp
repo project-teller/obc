@@ -1,15 +1,17 @@
 #include <fstream>
 
-#include "hal/flashmem.h"
-#include "hal/posix/flashmem_debug.h"
-#include "hal/posix/sdcard_debug.h"
-#include "hal/sdcard.h"
+#include "drivers/flashmem.h"
+#include "drivers/flashmem/posix_debug.h"
+#include "drivers/sdcard.h"
+#include "drivers/sdcard/posix_debug.h"
 #include "hal/storage.h"
-#include "lfs_filebd.h"
 
 using namespace littlefs;
+using namespace teller::drivers;
 using namespace teller::hal::storage;
 using namespace teller::telem;
+
+extern "C" int lfs_filebd_destroy(const struct lfs_config* cfg);
 
 /**
  * @brief Filesystem configuration objects for the simulated storage devices.
@@ -80,11 +82,11 @@ bool initArea(storage_area_t area_to_init)
 
     switch (area_to_init) {
     case STORAGE_AREA_FLASH_MEMORY:
-        this_cfg = teller::hal::flashmem::createFilesystemConfiguration();
+        this_cfg = flashmem::createFilesystemConfiguration();
         break;
 
     case STORAGE_AREA_SD_CARD:
-        this_cfg = teller::hal::sdcard::createFilesystemConfiguration();
+        this_cfg = sdcard::createFilesystemConfiguration();
         break;
 
     default:

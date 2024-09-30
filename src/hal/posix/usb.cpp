@@ -11,7 +11,11 @@ void destroy()
 {
 }
 
-/* TODO: move the handling of the USB debug port via sockets here */
+bool setup()
+{
+    return true;
+}
+
 bool isConnected()
 {
     return false;

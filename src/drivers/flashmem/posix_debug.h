@@ -1,6 +1,6 @@
 #pragma once
 
-namespace teller::hal::flashmem {
+namespace teller::drivers::flashmem {
 
 /**
  * @brief Returns the name of the file that is used to store the flash memory image.

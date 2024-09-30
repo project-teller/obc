@@ -28,7 +28,7 @@ protected:
 
 TEST_F(LogTest, sendRawMessage)
 {
-    hal::uart::UARTOutputRedirector redirect(hal::uart::TELEMETRY);
+    hal::uart::UARTOutputRedirector redirect(hal::uart::RXSM);
 
     ASSERT_TRUE(log::sendToTelemetry(
         telem::MODULE_ID_GMM, telem::LOG_LEVEL_WARNING, "dummy message"));
@@ -43,7 +43,7 @@ TEST_F(LogTest, sendRawMessage)
 
 TEST_F(LogTest, getLogger)
 {
-    hal::uart::UARTOutputRedirector redirect(hal::uart::TELEMETRY);
+    hal::uart::UARTOutputRedirector redirect(hal::uart::RXSM);
 
     ASSERT_TRUE(log::getLogger(telem::MODULE_ID_GMM)->warning("dummy message"));
     ASSERT_TRUE(telem::processNext());

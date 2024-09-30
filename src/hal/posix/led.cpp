@@ -30,6 +30,11 @@ bool teller::hal::led::get(led_t led)
     return led_state[led];
 }
 
+bool teller::hal::led::has(led_t led)
+{
+    return led >= 0 && led < NUM_LEDS;
+}
+
 void teller::hal::led::set(led_t led, bool value)
 {
     assert(led >= 0 && led < NUM_LEDS);

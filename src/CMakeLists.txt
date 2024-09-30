@@ -128,7 +128,6 @@ target_include_directories(
 )
 target_link_libraries(
 	${TARGET_NAME} PRIVATE
-	obc-drivers
 	obc-modules
 )
 

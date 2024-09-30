@@ -3,9 +3,9 @@
 #include <memory>
 
 #include "core/telem/binary_data.h"
+#include "drivers/flashmem.h"
+#include "drivers/sdcard.h"
 #include "hal/event_flags.hpp"
-#include "hal/flashmem.h"
-#include "hal/sdcard.h"
 #include "hal/storage.h"
 #include "hal/system.h"
 #include "modules/log.h"
@@ -110,9 +110,9 @@ public:
     {
         switch (_area) {
         case STORAGE_AREA_FLASH_MEMORY:
-            return teller::hal::flashmem::getTotalSize();
+            return teller::drivers::flashmem::getTotalSize();
         case STORAGE_AREA_SD_CARD:
-            return teller::hal::sdcard::getTotalSize();
+            return teller::drivers::sdcard::getTotalSize();
         default:
             return 0;
         }
@@ -165,10 +165,10 @@ public:
     {
         switch (_area) {
         case STORAGE_AREA_FLASH_MEMORY:
-            return teller::hal::flashmem::readData(buf, address, length);
+            return teller::drivers::flashmem::readData(buf, address, length);
 
         case STORAGE_AREA_SD_CARD:
-            return teller::hal::sdcard::readData(buf, address, length);
+            return teller::drivers::sdcard::readData(buf, address, length);
 
         default:
             return false;

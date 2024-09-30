@@ -1,7 +1,7 @@
 #include <cassert>
 
 #include "config.h"
-#include "hal/flashmem.h"
+#include "drivers/flashmem.h"
 #include "hal/spi.h"
 #include "hal/system.h"
 #include "modules/log.h"
@@ -148,7 +148,7 @@ private:
     bool enabled = false;
 };
 
-namespace teller::hal::flashmem {
+namespace teller::drivers::flashmem {
 
 bool init()
 {

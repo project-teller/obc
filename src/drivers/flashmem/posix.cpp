@@ -1,33 +1,33 @@
-#include "hal/sdcard.h"
-#include "hal/posix/sdcard_debug.h"
+#include "drivers/flashmem.h"
+#include "drivers/flashmem/posix_debug.h"
 #include "lfs_filebd.h"
+#include <cstdio>
 #include <memory>
 #include <unistd.h>
 
 using namespace littlefs;
-using namespace teller::hal;
 
 /**
- * @brief Block size of the simulated SD card
+ * @brief Block size of the simulated flash memory device
  */
-#define SD_CARD_BLOCK_SIZE 512
+#define FLASH_MEMORY_BLOCK_SIZE 512
 
 /**
- * @brief Total size of the simulated SD card
+ * @brief Total size of the simulated flash memory device
  */
-#define SD_CARD_SIZE (4 * 1024 * 1024)
+#define FLASH_MEMORY_SIZE (4 * 1024 * 1024)
 
-static struct lfs_filebd_config filebd_config = { .read_size = SD_CARD_BLOCK_SIZE,
-    .prog_size = SD_CARD_BLOCK_SIZE,
-    .erase_size = 4 * SD_CARD_BLOCK_SIZE,
-    .erase_count = SD_CARD_SIZE / (4 * SD_CARD_BLOCK_SIZE) };
+static struct lfs_filebd_config filebd_config = { .read_size = FLASH_MEMORY_BLOCK_SIZE,
+    .prog_size = FLASH_MEMORY_BLOCK_SIZE,
+    .erase_size = 4 * FLASH_MEMORY_BLOCK_SIZE,
+    .erase_count = FLASH_MEMORY_SIZE / (4 * FLASH_MEMORY_BLOCK_SIZE) };
 
 /**
- * @brief Block device for the simulated SD card.
+ * @brief Block device for the flash memory.
  */
 static lfs_filebd_t filebd;
 
-namespace teller::hal::sdcard {
+namespace teller::drivers::flashmem {
 
 bool init()
 {
@@ -74,12 +74,12 @@ std::unique_ptr<FilesystemConfig> createFilesystemConfiguration(void)
 
 const char* getFilename()
 {
-    return "sdcard.bin";
+    return "flash.bin";
 }
 
 uint32_t getTotalSize()
 {
-    return SD_CARD_SIZE;
+    return FLASH_MEMORY_SIZE;
 }
 
 bool readData(uint8_t* buf, uint32_t address, size_t length)

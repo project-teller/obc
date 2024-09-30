@@ -1,7 +1,7 @@
+#include "hal/spi.h"
 #include "config.h"
 #include "core/utils/crc.h"
-#include "hal/sdcard.h"
-#include "hal/spi.h"
+#include "drivers/sdcard.h"
 #include "hal/system.h"
 #include "modules/debug.h"
 #include "modules/log.h"
@@ -10,8 +10,13 @@ using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::telem;
 
-// static const spi::address_t address = { .bus = 0, .device = 0 };
+#if defined(TELLER_BOARD_NUCLEO144)
 static const spi::address_t address = spi::NO_ADDRESS;
+#elif defined(TELLER_BOARD_STM32F4)
+static const spi::address_t address = { .bus = 1, .device = 0 };
+#else
+static const spi::address_t address = spi::NO_ADDRESS;
+#endif
 
 /** Default timeout to use when sending SD card commands */
 static const uint32_t DEFAULT_SD_CARD_TIMEOUT = 250;
@@ -46,7 +51,7 @@ static Logger* logger;
 /** Stores whether the SD card was initialized successfully */
 static bool cardFound;
 
-namespace teller::hal::sdcard {
+namespace teller::drivers::sdcard {
 
 bool init()
 {
@@ -61,8 +66,6 @@ bool init()
      */
     cardFound = false;
 
-    /* cardFound == false is okay, we still want to report that we did not find
-     * the card in setup() */
     success = (logger != nullptr);
     if (!success) {
         destroy();

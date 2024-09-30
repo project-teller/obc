@@ -42,8 +42,8 @@ protected:
         ASSERT_TRUE(uart_rx::init());
         ASSERT_TRUE(cmd::init());
 
-        inputRedirector = std::make_unique<hal::uart::UARTInputRedirector>(hal::uart::TELEMETRY);
-        outputRedirector = std::make_unique<hal::uart::UARTOutputRedirector>(hal::uart::TELEMETRY);
+        inputRedirector = std::make_unique<hal::uart::UARTInputRedirector>(hal::uart::RXSM);
+        outputRedirector = std::make_unique<hal::uart::UARTOutputRedirector>(hal::uart::RXSM);
     }
 
     void TearDown() override
@@ -88,14 +88,14 @@ protected:
             message[length - 1] = crc >> 8;
         }
 
-        ASSERT_FALSE(uart_rx::read(hal::uart::TELEMETRY));
+        ASSERT_FALSE(uart_rx::read(hal::uart::RXSM));
         ASSERT_FALSE(processNextInboundCommand());
         inputRedirector->feed(std::string(reinterpret_cast<char*>(message), length));
         for (size_t i = 0; i < length - 1; i++) {
-            ASSERT_FALSE(uart_rx::read(hal::uart::TELEMETRY));
+            ASSERT_FALSE(uart_rx::read(hal::uart::RXSM));
             ASSERT_FALSE(processNextInboundCommand());
         }
-        ASSERT_TRUE(uart_rx::read(hal::uart::TELEMETRY));
+        ASSERT_TRUE(uart_rx::read(hal::uart::RXSM));
         ASSERT_TRUE(processNextInboundCommand());
     }
 
@@ -169,20 +169,20 @@ TEST_F(CmdTest, readUnhandledPacket)
     size_t i;
 
     /* Feed a heartbeat message into the task */
-    ASSERT_FALSE(uart_rx::read(hal::uart::TELEMETRY));
+    ASSERT_FALSE(uart_rx::read(hal::uart::RXSM));
     ASSERT_FALSE(processNextInboundCommand());
     msg = reinterpret_cast<char*>(heartbeatMessage);
     inputRedirector->feed(std::string(msg, 6));
     for (i = 0; i < 6; i++) {
-        ASSERT_FALSE(uart_rx::read(hal::uart::TELEMETRY));
+        ASSERT_FALSE(uart_rx::read(hal::uart::RXSM));
         ASSERT_FALSE(processNextInboundCommand());
     }
     inputRedirector->feed(std::string(msg + 6, sizeof(heartbeatMessage) - 6));
     for (i = 0; i < sizeof(heartbeatMessage) - 7; i++) {
-        ASSERT_FALSE(uart_rx::read(hal::uart::TELEMETRY));
+        ASSERT_FALSE(uart_rx::read(hal::uart::RXSM));
         ASSERT_FALSE(processNextInboundCommand());
     }
-    ASSERT_TRUE(uart_rx::read(hal::uart::TELEMETRY));
+    ASSERT_TRUE(uart_rx::read(hal::uart::RXSM));
     ASSERT_TRUE(processNextInboundCommand());
 
     /* We expect to receive a warning message in response */

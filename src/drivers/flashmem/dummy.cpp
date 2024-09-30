@@ -1,7 +1,7 @@
 #include "config.h"
-#include "hal/flashmem.h"
+#include "drivers/flashmem.h"
 
-namespace teller::hal::flashmem {
+namespace teller::drivers::flashmem {
 
 bool init()
 {

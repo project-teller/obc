@@ -1,8 +1,8 @@
 #pragma once
 
-#include "littlefs-cpp.h"
+#include <littlefs-cpp.h>
 
-namespace teller::hal::sdcard {
+namespace teller::drivers::sdcard {
 
 /**
  * @brief Initialization function for the SD card reader.

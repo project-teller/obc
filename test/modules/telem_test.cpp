@@ -25,7 +25,7 @@ protected:
 
 TEST_F(TelemetryModuleTest, sendWithEnvelope)
 {
-    hal::uart::UARTOutputRedirector redirect(hal::uart::TELEMETRY);
+    hal::uart::UARTOutputRedirector redirect(hal::uart::RXSM);
     const char* test_string = "spam ham bacon";
     const char* too_long_test_string = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

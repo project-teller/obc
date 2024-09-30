@@ -215,7 +215,7 @@ static istream& uartToInputStream(uart_t index)
     }
 
     switch (index) {
-    case TELEMETRY:
+    case RXSM:
         return cin;
     case DEBUG:
         return debugClientSocket ? *debugClientSocket : nullStream;
@@ -232,7 +232,7 @@ static ostream& uartToOutputStream(uart_t index)
     }
 
     switch (index) {
-    case TELEMETRY:
+    case RXSM:
         return cout;
     case DEBUG:
         return debugClientSocket ? *debugClientSocket : nullStream;
@@ -250,7 +250,7 @@ static int uartToInputFileDescriptor(uart_t index)
     }
 
     switch (index) {
-    case TELEMETRY:
+    case RXSM:
         return STDIN_FILENO;
     case GMM:
         return gmmFileDescriptor > 0 ? gmmFileDescriptor : NEVER_READABLE_FILE_DESCRIPTOR;

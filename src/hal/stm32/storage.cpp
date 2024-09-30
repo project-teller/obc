@@ -1,10 +1,11 @@
 #include "hal/storage.h"
-#include "hal/flashmem.h"
+#include "drivers/flashmem.h"
 
 #include "stm32_hal.h"
 #include <littlefs-cpp.h>
 
 using namespace littlefs;
+using namespace teller::drivers;
 using namespace teller::hal;
 using namespace teller::telem;
 

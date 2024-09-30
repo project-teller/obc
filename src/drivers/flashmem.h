@@ -3,7 +3,7 @@
 #include "littlefs-cpp.h"
 #include <memory>
 
-namespace teller::hal::flashmem {
+namespace teller::drivers::flashmem {
 
 /**
  * @brief Initialization function for the flash memory.

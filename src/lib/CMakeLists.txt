@@ -74,7 +74,9 @@ target_include_directories(
 #############################################################################
 
 # STM32 USB CDC library
-add_subdirectory(usb-cdc)
+if(TARGET_MCU_CMSIS_MODULE)
+    add_subdirectory(usb-cdc)
+endif()
 
 #############################################################################
 

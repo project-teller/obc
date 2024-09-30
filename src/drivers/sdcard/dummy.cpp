@@ -1,7 +1,7 @@
 #include "config.h"
-#include "hal/sdcard.h"
+#include "drivers/sdcard.h"
 
-namespace teller::hal::sdcard {
+namespace teller::drivers::sdcard {
 
 bool init()
 {

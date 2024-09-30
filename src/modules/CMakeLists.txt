@@ -26,6 +26,7 @@ target_include_directories(
 target_link_libraries(
     obc-modules PUBLIC
     obc-core
+    obc-drivers
     obc-hal
     lfs
     sdlog
