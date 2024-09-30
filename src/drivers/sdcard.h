@@ -7,7 +7,7 @@ namespace teller::drivers::sdcard {
 /**
  * @brief Initialization function for the SD card reader.
  *
- * This function is called from the global HAL initialization function at
+ * This function is called from the global initialization function at
  * startup time.
  */
 [[nodiscard]] bool init(void);
@@ -15,7 +15,7 @@ namespace teller::drivers::sdcard {
 /**
  * @brief Destructor function for the SD card reader.
  *
- * This function is called from tests to reset the LED subsystem to a known
+ * This function is called from tests to reset the SD card reader to a known
  * base state.
  */
 void destroy(void);
@@ -35,7 +35,7 @@ bool setup(void);
  * caller.
  *
  * @return a new LittleFS filesystem configuration object, or a null pointer if
- * the flash memory is not initialized yet.
+ * the SD card is not initialized yet.
  */
 std::unique_ptr<littlefs::FilesystemConfig> createFilesystemConfiguration(void);
 

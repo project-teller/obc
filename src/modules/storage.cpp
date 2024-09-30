@@ -5,14 +5,14 @@
 #include "core/telem/binary_data.h"
 #include "drivers/flashmem.h"
 #include "drivers/sdcard.h"
+#include "drivers/storage.h"
 #include "hal/event_flags.hpp"
-#include "hal/storage.h"
 #include "hal/system.h"
 #include "modules/log.h"
 #include "modules/storage.h"
 #include "modules/telem.h"
 
-using namespace teller::hal::storage;
+using namespace teller::drivers::storage;
 using namespace teller::hal::system;
 using namespace teller::telem;
 

@@ -6,7 +6,6 @@
 #include "led.h"
 #include "rtc.h"
 #include "spi.h"
-#include "storage.h"
 #include "system.h"
 #include "uart.h"
 #include "usb.h"
@@ -34,18 +33,12 @@ bool teller::hal::init()
     success &= uart::init();
     success &= usb::init();
 
-    /* Storage devices */
-    success &= storage::init();
-
     return success;
 }
 
 void teller::hal::destroy()
 {
     /* Reverse order compared to ::init() */
-
-    /* Storage devices */
-    storage::destroy();
 
     /* I/O devices and buses */
     usb::destroy();

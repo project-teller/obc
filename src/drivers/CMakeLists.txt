@@ -9,6 +9,7 @@ add_library(
     flashmem.cpp
     imu.cpp
     sdcard.cpp
+    storage.cpp
     temperature.cpp
 )
 target_include_directories(

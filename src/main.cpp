@@ -7,6 +7,7 @@
 #include "drivers/flashmem.h"
 #include "drivers/imu.h"
 #include "drivers/sdcard.h"
+#include "drivers/storage.h"
 #include "drivers/temperature.h"
 
 #include "modules/cmd.h"
@@ -143,6 +144,7 @@ void bootSystem(void)
     inited &= teller::drivers::imu::init();
     inited &= teller::drivers::sdcard::init();
     inited &= teller::drivers::temperature::init();
+    inited &= teller::drivers::storage::init(); /* later than flashmem and sdcard */
 
     /* Initialize modules */
     inited &= teller::log::init();

@@ -16,7 +16,7 @@ namespace teller::drivers::flashmem {
 /**
  * @brief Destructor function for the flash memory.
  *
- * This function is called from tests to reset the LED subsystem to a known
+ * This function is called from tests to reset the flash memory to a known
  * base state.
  */
 void destroy(void);

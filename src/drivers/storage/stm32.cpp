@@ -1,12 +1,11 @@
-#include "hal/storage.h"
 #include "drivers/flashmem.h"
+#include "drivers/storage.h"
 
 #include "stm32_hal.h"
 #include <littlefs-cpp.h>
 
 using namespace littlefs;
 using namespace teller::drivers;
-using namespace teller::hal;
 using namespace teller::telem;
 
 /**
@@ -17,7 +16,7 @@ static std::unique_ptr<FilesystemConfig> cfg[NUM_STORAGE_AREAS];
 static bool initArea(storage_area_t area_to_init);
 static void destroyArea(storage_area_t area_to_destroy);
 
-namespace teller::hal::storage {
+namespace teller::drivers::storage {
 
 bool init()
 {

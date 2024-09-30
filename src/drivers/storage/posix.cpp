@@ -1,14 +1,14 @@
 #include <fstream>
 
+#include "core/telem/generic.h"
 #include "drivers/flashmem.h"
 #include "drivers/flashmem/posix_debug.h"
 #include "drivers/sdcard.h"
 #include "drivers/sdcard/posix_debug.h"
-#include "hal/storage.h"
+#include "drivers/storage/posix_debug.h"
 
 using namespace littlefs;
 using namespace teller::drivers;
-using namespace teller::hal::storage;
 using namespace teller::telem;
 
 extern "C" int lfs_filebd_destroy(const struct lfs_config* cfg);
@@ -21,7 +21,7 @@ static std::unique_ptr<FilesystemConfig> cfg[NUM_STORAGE_AREAS];
 static bool initArea(storage_area_t area_to_init);
 static void destroyArea(storage_area_t area_to_destroy);
 
-namespace teller::hal::storage {
+namespace teller::drivers::storage {
 
 bool init()
 {

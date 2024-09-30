@@ -1,8 +1,8 @@
 #include <cstring>
 #include <gtest/gtest.h>
 
-#include "hal/posix/storage_debug.h"
-#include "hal/storage.h"
+#include "drivers/storage.h"
+#include "drivers/storage/posix_debug.h"
 #include "modules/storage.h"
 #include "modules/telem.h"
 
@@ -13,16 +13,16 @@ protected:
     void SetUp() override
     {
         ASSERT_TRUE(telem::init());
-        hal::storage::removeAllFiles();
-        ASSERT_TRUE(hal::storage::init());
+        drivers::storage::removeAllFiles();
+        ASSERT_TRUE(drivers::storage::init());
         ASSERT_TRUE(storage::init(/* format = */ storage::INIT_MODE_FORMAT));
     }
 
     void TearDown() override
     {
         storage::destroy();
-        hal::storage::destroy();
-        hal::storage::removeAllFiles();
+        drivers::storage::destroy();
+        drivers::storage::removeAllFiles();
         telem::destroy();
     }
 };

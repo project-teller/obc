@@ -12,7 +12,6 @@ if(TARGET_MCU STREQUAL "POSIX")
         posix/memory.cpp
         posix/rtc.cpp
         posix/spi.cpp
-        posix/storage.cpp
         posix/system.cpp
         posix/uart.cpp
         posix/usb.cpp
@@ -27,7 +26,6 @@ else()
         stm32/memory.cpp
         stm32/rtc.cpp
         stm32/spi.cpp
-        stm32/storage.cpp
         stm32/system.cpp
         stm32/uart.cpp
         stm32/usb.cpp

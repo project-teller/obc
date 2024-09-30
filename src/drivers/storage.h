@@ -3,20 +3,20 @@
 #include "core/telem/generic.h"
 #include "littlefs-cpp.h"
 
-namespace teller::hal::storage {
+namespace teller::drivers::storage {
 
 /**
- * @brief Initialization function for the storage subsystem.
+ * @brief Initialization function for the storage driver.
  *
- * This function is called from the global HAL initialization function at
+ * This function is called from the global initialization function at
  * startup time.
  */
 [[nodiscard]] bool init(void);
 
 /**
- * @brief Destructor function for the stoage subsystem.
+ * @brief Destructor function for the storage driver.
  *
- * This function is called from tests to reset the storage subsystem to a known
+ * This function is called from tests to reset the storage driver to a known
  * base state.
  */
 void destroy(void);

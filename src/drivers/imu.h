@@ -9,7 +9,7 @@ namespace teller::drivers::imu {
 /**
  * @brief Initialization function for the IMU.
  *
- * This function is called from the global HAL initialization function at
+ * This function is called from the global initialization function at
  * startup time.
  */
 [[nodiscard]] bool init(void);
@@ -17,8 +17,7 @@ namespace teller::drivers::imu {
 /**
  * @brief Destructor function for the IMU.
  *
- * This function is called from tests to reset the LED subsystem to a known
- * base state.
+ * This function is called from tests to reset the IMU to a known base state.
  */
 void destroy(void);
 

@@ -7,6 +7,6 @@
 // STM32F415RG TELLER OBC board
 #include "temperature/adt7301.cpp"
 #else
-// No SD card on this board
+// No temperature sensor on this board
 #include "temperature/dummy.cpp"
 #endif
