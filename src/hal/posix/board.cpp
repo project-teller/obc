@@ -3,6 +3,8 @@
 namespace teller::hal::board {
 
 static bool resetRequested = false;
+static float temperature = 25.0f;
+static float voltage = 3.3f;
 static reset_reason_t reasonOfLastReset = RESET_REASON_NORMAL;
 
 bool init()
@@ -29,6 +31,16 @@ float getBoardTemperature(void)
 float getBoardVoltage(void)
 {
     return 3.3f;
+}
+
+void updateBoardTemperature(float temperature_)
+{
+    temperature = temperature_;
+}
+
+void updateBoardVoltage(float voltage_)
+{
+    voltage = voltage_;
 }
 
 }

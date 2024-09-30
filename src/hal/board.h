@@ -46,4 +46,14 @@ float getBoardVoltage(void);
  */
 reset_reason_t getReasonOfLastReset(void);
 
+/**
+ * @brief Updates the board temperature measurement.
+ */
+void updateBoardTemperature(float temperature);
+
+/**
+ * @brief Updates the board voltage measurement.
+ */
+void updateBoardVoltage(float voltage);
+
 }

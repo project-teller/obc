@@ -7,6 +7,9 @@ typedef enum {
     SYSTEM_INIT_ERROR = 1,
     NOT_ENOUGH_MEMORY = 2,
     QUEUE_FULL = 3,
+
+    /* Non-fatal errors have codes >= 100 */
+    TEMPERATURE_SENSOR_FAILED = 100,
 } error_t;
 
 void init(void);

@@ -6,6 +6,8 @@
 using namespace teller::hal::board;
 
 static reset_reason_t reasonOfLastReset = RESET_REASON_UNKNOWN;
+static float temperature = 0.0f;
+static float voltage = 0.0f;
 static TIM_HandleTypeDef tickTimer;
 
 static bool handleResetFlags(void);
@@ -28,17 +30,27 @@ void destroy()
 
 float getBoardTemperature()
 {
-    return 0.0f;
+    return temperature;
 }
 
 float getBoardVoltage()
 {
-    return 0.0f;
+    return voltage;
 }
 
 reset_reason_t getReasonOfLastReset(void)
 {
     return reasonOfLastReset;
+}
+
+void updateBoardTemperature(float temperature_)
+{
+    temperature = temperature_;
+}
+
+void updateBoardVoltage(float voltage_)
+{
+    voltage = voltage_;
 }
 
 }

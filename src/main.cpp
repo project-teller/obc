@@ -4,6 +4,8 @@
 #include "hal/hal.h"
 #include "hal/system.h"
 
+#include "drivers/temperature.h"
+
 #include "modules/cmd.h"
 #include "modules/debug.h"
 #include "modules/edr.hpp"
@@ -34,6 +36,7 @@
 #include "tasks/storage.h"
 #include "tasks/supervisor.h"
 #include "tasks/telem.h"
+#include "tasks/temperature.h"
 #include "tasks/uart_rx.h"
 #include "tasks/uart_tx.h"
 #include "tasks/usb.h"
@@ -83,6 +86,7 @@ static uart_rx_task_args_t uart_debug_task_args = {
 static const task_definition_t tasks[] = {
     { .func = blinkTask, .name = "blinker", .priority = LOW, .stack_size = 1024 },
     { .func = pinsTask, .name = "pins", .priority = NORMAL, .stack_size = 1024 },
+    { .func = temperatureTask, .name = "temperature", .priority = LOW, .stack_size = 1024 },
     { .func = uartTxTask, .name = "uartTx", .priority = HIGH, .stack_size = 2048 },
     { .func = supervisorTask, .name = "supervisor", .priority = LOW, .stack_size = 1024 },
     { .func = telemetryTask, .name = "telem", .priority = NORMAL, .stack_size = 2048 },
@@ -131,8 +135,10 @@ void bootSystem(void)
      * error LED won't work but at least we are still logging the errors */
     teller::errors::init();
 
-    /* The remaining modules are initialized only if the HAL initialization
-     * was successful */
+    /* Initialize the drivers */
+    inited &= teller::drivers::temperature::init();
+
+    /* Initialize modules */
     inited &= teller::log::init();
     inited &= teller::supervisor::init();
     inited &= teller::lcl::init();
@@ -147,8 +153,7 @@ void bootSystem(void)
     inited &= teller::gmm::init();
     inited &= teller::scm::init();
 
-    /* The remaining tasks are started only if the HAL and the module
-     * initialization was successful */
+    /* Start tasks */
     inited &= startTasks();
 
     /* Set an error code if the initialization failed */

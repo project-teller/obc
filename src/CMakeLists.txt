@@ -88,6 +88,7 @@ endif()
 
 # Create libraries
 add_subdirectory(core)
+add_subdirectory(drivers)
 add_subdirectory(hal)
 add_subdirectory(lib)
 add_subdirectory(modules)
@@ -115,6 +116,7 @@ add_executable(
 	tasks/storage.cpp
 	tasks/supervisor.cpp
 	tasks/telem.cpp
+	tasks/temperature.cpp
 	tasks/uart_rx.cpp
 	tasks/uart_tx.cpp
 	tasks/usb.cpp
@@ -126,6 +128,7 @@ target_include_directories(
 )
 target_link_libraries(
 	${TARGET_NAME} PRIVATE
+	obc-drivers
 	obc-modules
 )
 
