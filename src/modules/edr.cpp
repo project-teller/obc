@@ -224,8 +224,10 @@ static sdlog_error_t log_writer_write(
 
 static sdlog_error_t log_writer_flush(sdlog_ostream_t* self)
 {
+    /*
     LogWriter* writer = reinterpret_cast<LogWriter*>(self->context);
     writer->_flush_raw();
+    */
     return SDLOG_SUCCESS;
 }
 
