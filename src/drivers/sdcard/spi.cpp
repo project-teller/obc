@@ -31,6 +31,7 @@ static const uint32_t DEFAULT_SD_CARD_TIMEOUT = 250;
 #define CMD_APP_SEND_OP_COND 41
 
 /* SD card common responses */
+#define RESPONSE_OK 0x00
 #define RESPONSE_IDLE 0x01
 #define RESPONSE_ERASE_RESET 0x02
 #define RESPONSE_ILLEGAL_COMMAND 0x04
@@ -41,8 +42,9 @@ static const uint32_t DEFAULT_SD_CARD_TIMEOUT = 250;
 
 static bool tryInitialization(void);
 static void prepareCommand(uint8_t* buf, uint8_t cmd, uint32_t arg);
-static uint8_t sendCommand(uint8_t cmd, uint32_t arg = 0, uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
-static bool readR4Response(uint8_t* buf, uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
+static uint8_t sendCommand(
+    uint8_t cmd, uint32_t arg = 0, uint8_t* buf = nullptr, uint8_t size = 0,
+    uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
 static bool waitUntilIdle(uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
 
 /** The logger used by the driver */
@@ -137,38 +139,67 @@ static void prepareCommand(uint8_t* buf, uint8_t cmd, uint32_t arg)
  *
  * @param cmd  the command code between 0 and 63, inclusive
  * @param arg  the argument of the command
+ * @param buf  buffer in which to place the part of the response after the
+ *        initial response byte. null for R1 responses that have no additional
+ *        content
+ * @param size size of the buffer, i.e. the expected number of additional bytes
+ *        after the first response byte
  * @param timeout  maximum number of milliseconds to wait for the SD card to
  *        become ready
  * @return the response byte; 0xFF if the command failed
  */
-static uint8_t sendCommand(uint8_t cmd, uint32_t arg, uint32_t timeout)
+static uint8_t sendCommand(uint8_t cmd, uint32_t arg, uint8_t* buf, uint8_t size, uint32_t timeout)
 {
-    uint8_t buf[10];
+    uint8_t txBuf[10];
+    uint8_t rxBuf[10];
     uint8_t i;
+    uint8_t response = 0xff;
+
+    if (size > sizeof(rxBuf)) {
+        size = sizeof(rxBuf);
+    }
 
     if (!waitUntilIdle(timeout)) {
-        return 0xFF;
+        goto exit;
     }
 
     for (uint8_t tries = 0; tries < 5; tries++) {
-        memset(buf, 0xff, sizeof(buf));
-        prepareCommand(buf, cmd, arg);
+        memset(txBuf, 0xff, sizeof(txBuf));
+        prepareCommand(txBuf, cmd, arg);
 
-        /* Response should arrive within 16 clock cycles so it should be enough
-         * to send 8 bytes. We send 10 nevertheless and look for the response
-         * byte at the end */
-        if (!spi::transfer(address, buf, sizeof(buf), spi::NO_CHIP_SELECT)) {
-            return 0xff;
+        /* Send the command -- 6 bytes long */
+        if (!spi::transfer(address, txBuf, rxBuf, 6, spi::NO_CHIP_SELECT)) {
+            goto exit;
         }
 
-        for (i = 6; i < 10; i++) {
-            if ((buf[i] & 0x80) == 0) {
-                return buf[i];
+        /* Response should arrive within 16 clock cycles so it is enough
+         * to wait for 2 more bytes, but let's be on the safe side and wait for
+         * at most 4 bytes. We send the bytes one by one, reading one byte in
+         * the response until we get a byte where the MSB is zero -- this will
+         * be the response code */
+        for (i = 0; i < 4; i++) {
+            txBuf[0] = 0xff;
+            if (!spi::transfer(address, txBuf, rxBuf, 1, spi::NO_CHIP_SELECT)) {
+                goto exit;
+            }
+            if ((rxBuf[0] & 0x80) == 0) {
+                response = rxBuf[0];
+                goto readRest;
             }
         }
     }
 
-    return 0xFF;
+readRest:
+    if (buf != nullptr && size > 0) {
+        memset(txBuf, 0xff, size);
+        if (!spi::transfer(address, txBuf, buf, size, spi::NO_CHIP_SELECT)) {
+            response = 0xff;
+            goto exit;
+        }
+    }
+
+exit:
+    return response;
 }
 
 /**
@@ -185,17 +216,6 @@ static uint8_t sendAppCommand(uint8_t cmd, uint32_t arg)
     } else {
         return sendCommand(cmd, arg);
     }
-}
-
-/**
- * @brief Reads an R4 response.
- *
- * @param buf  the buffer to read the response into. It must be at least 4 bytes long.
- */
-static bool readR4Response(uint8_t* buf, uint32_t timeout)
-{
-    memset(buf, 0xff, 4);
-    return spi::transfer(address, buf, 4, spi::NO_CHIP_SELECT);
 }
 
 static bool tryInitialization(void)
@@ -228,30 +248,56 @@ static bool tryInitialization(void)
 
     /* Step 3: send CMD8 with argument of 0x1AA. If this is rejected with an
      * illegal command response, the card is SDC v1 or MMC v3 so it is not an
-     * SDHC/SDXC card */
-    if (sendCommand(CMD_SEND_IF_COND, 0x1aa) != RESPONSE_IDLE) {
+     * SDHC/SDXC card. Expected response is an R4 response.
+     *
+     * In 0x1aa, the 0x1.. part checks whether the voltage of 2.7-3.6V is
+     * accepted. The 0xaa part is a random check pattern. The check pattern
+     * will be sent back as-is. The byte in front of it will be set in a way
+     * that indicates the supported voltages; here we need to check the presence
+     * of the bit we have sent.
+     *
+     * Source: https://luckyresistor.me/cat-protector/software/sdcard-2/
+     */
+    if (sendCommand(CMD_SEND_IF_COND, 0x1aa, buf, 4) != RESPONSE_IDLE) {
         logger->error("%s: not an SD card", name);
         goto cleanup;
     }
-    if (!readR4Response(buf) || (buf[2] & 0x01) != 1 || buf[3] != 0xaa) {
+    if ((buf[2] & 0x01) != 1 || buf[3] != 0xaa) {
         logger->error("%s: not an SD card", name);
         goto cleanup;
     }
 
-    /* Step 4: initiate initialization */
-    if (sendAppCommand(CMD_APP_SEND_OP_COND, 0x40000000) != RESPONSE_IDLE) {
-        goto cleanup;
+    /* Step 4: initiate initialization, setting the HCS flag, which corresponds
+     * to fast transfer rates. */
+    for (uint8_t i = 0; i < 10; i++) {
+        uint8_t response = sendAppCommand(CMD_APP_SEND_OP_COND, 0x40000000);
+        if (response == RESPONSE_IDLE) {
+            /* this is okay, repeat the command */
+        } else if (response == RESPONSE_OK) {
+            /* this is what we were waiting for; see:
+             * https://electronics.stackexchange.com/a/238217
+             */
+            break;
+        } else {
+            /* unexpected response, bail out */
+            goto cleanup;
+        }
     }
 
-    /* Step 5: read OCR register */
-    if (sendCommand(CMD_READ_OCR) != RESPONSE_IDLE) {
+    /* Step 5: read OCR register. We are expecting an R3 response, which is
+     * 4 bytes long. During initialization, bit 31 of the OCR register
+     * (Card Power Up Status) must be 1. At that point we can check bit 30,
+     * which should also be 1 for an SDHC/SDXC card. */
+    if (sendCommand(CMD_READ_OCR, 0x00, buf, 4) != RESPONSE_OK) {
         goto cleanup;
     }
-    if (!readR4Response(buf) || (buf[0] & 0xc0) != 0xc0) {
+    if ((buf[0] & 0xc0) != 0xc0) {
+        logger->error("%s: not an SDHC/SDXC card", name);
         goto cleanup;
     }
 
     /* Success! */
+    /* TODO: bump the clock of the SPI bus to 32 MHz */
     success = true;
 
 cleanup:
