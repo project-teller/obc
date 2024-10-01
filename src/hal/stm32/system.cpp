@@ -54,7 +54,9 @@ extern "C" {
 void HAL_MspInit(void)
 {
     __HAL_RCC_SYSCFG_CLK_ENABLE();
+#ifdef STM32F4
     __HAL_RCC_PWR_CLK_ENABLE();
+#endif
 
     /* System interrupt init*/
     /* PendSV_IRQn interrupt configuration */
