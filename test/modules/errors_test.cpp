@@ -26,27 +26,27 @@ TEST_F(ErrorTest, setAndClear)
     EXPECT_FALSE(hasAnyErrors());
     EXPECT_EQ(NO_ERROR, getError());
 
-    setError(SYSTEM_INIT_ERROR);
+    setError(NOT_ENOUGH_MEMORY);
     EXPECT_TRUE(hasAnyErrors());
-    EXPECT_TRUE(hasError(SYSTEM_INIT_ERROR));
-    EXPECT_FALSE(hasError(NOT_ENOUGH_MEMORY));
-    EXPECT_EQ(SYSTEM_INIT_ERROR, getError());
-
-    setError(SYSTEM_INIT_ERROR);
-    EXPECT_TRUE(hasAnyErrors());
-    EXPECT_TRUE(hasError(SYSTEM_INIT_ERROR));
-    EXPECT_FALSE(hasError(NOT_ENOUGH_MEMORY));
-    EXPECT_EQ(SYSTEM_INIT_ERROR, getError());
+    EXPECT_TRUE(hasError(NOT_ENOUGH_MEMORY));
+    EXPECT_FALSE(hasError(SYSTEM_INIT_ERROR));
+    EXPECT_EQ(NOT_ENOUGH_MEMORY, getError());
 
     setError(NOT_ENOUGH_MEMORY);
     EXPECT_TRUE(hasAnyErrors());
-    EXPECT_TRUE(hasError(SYSTEM_INIT_ERROR));
     EXPECT_TRUE(hasError(NOT_ENOUGH_MEMORY));
+    EXPECT_FALSE(hasError(SYSTEM_INIT_ERROR));
     EXPECT_EQ(NOT_ENOUGH_MEMORY, getError());
 
-    clearError(NOT_ENOUGH_MEMORY);
+    setError(SYSTEM_INIT_ERROR);
     EXPECT_TRUE(hasAnyErrors());
+    EXPECT_TRUE(hasError(NOT_ENOUGH_MEMORY));
     EXPECT_TRUE(hasError(SYSTEM_INIT_ERROR));
-    EXPECT_FALSE(hasError(NOT_ENOUGH_MEMORY));
     EXPECT_EQ(SYSTEM_INIT_ERROR, getError());
+
+    clearError(SYSTEM_INIT_ERROR);
+    EXPECT_TRUE(hasAnyErrors());
+    EXPECT_TRUE(hasError(NOT_ENOUGH_MEMORY));
+    EXPECT_FALSE(hasError(SYSTEM_INIT_ERROR));
+    EXPECT_EQ(NOT_ENOUGH_MEMORY, getError());
 }
