@@ -17,6 +17,7 @@ add_library(
     telem/storage.cpp
     telem/text_message.cpp
 
+    utils/block_cache.cpp
     utils/crc.c
     utils/histogram.c
     utils/majority_voter.cpp
