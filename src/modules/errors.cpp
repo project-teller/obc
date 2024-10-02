@@ -45,10 +45,14 @@ void teller::errors::setError(teller::errors::error_t code, bool present)
     bool notify = false;
     lock_guard<mutex> lock(errorCodeMutex);
 
+    if (code == NO_ERROR) {
+        return;
+    }
+
     oldErrorCodes = errorCodes;
     if (present) {
         errorCodes |= ERROR_BIT(code);
-        if (code > singleError) {
+        if (singleError == 0 || code < singleError) {
             singleError = code;
         }
     } else {

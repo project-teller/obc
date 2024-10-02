@@ -2,14 +2,21 @@
 
 namespace teller::errors {
 
+/**
+ * @brief Enum containing the error codes of the OBC.
+ *
+ * Error codes should be organized in a way that more severe errors should have
+ * smaller numeric IDs. In particular, insignificant (informational) error codes
+ * should be greater than or equal to 32.
+ */
 typedef enum {
     NO_ERROR = 0,
     SYSTEM_INIT_ERROR = 1,
     NOT_ENOUGH_MEMORY = 2,
     QUEUE_FULL = 3,
 
-    /* Non-fatal errors have codes >= 100 */
-    TEMPERATURE_SENSOR_FAILED = 100,
+    /* Insignificant errors have codes >= 32 */
+    TEMPERATURE_SENSOR_FAILED = 32,
 } error_t;
 
 void init(void);
