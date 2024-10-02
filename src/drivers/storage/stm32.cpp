@@ -1,4 +1,5 @@
 #include "drivers/flashmem.h"
+#include "drivers/sdcard.h"
 #include "drivers/storage.h"
 
 #include "stm32_hal.h"
@@ -20,21 +21,15 @@ namespace teller::drivers::storage {
 
 bool init()
 {
-    bool ok = true;
+    initArea(STORAGE_AREA_FLASH_MEMORY);
+    initArea(STORAGE_AREA_SD_CARD);
 
-    ok &= initArea(STORAGE_AREA_FLASH_MEMORY);
-    // ok &= initArea(STORAGE_AREA_SD_CARD);
-
-    if (!ok) {
-        destroy();
-    }
-
-    return ok;
+    return true;
 }
 
 void destroy()
 {
-    // destroyArea(STORAGE_AREA_SD_CARD);
+    destroyArea(STORAGE_AREA_SD_CARD);
     destroyArea(STORAGE_AREA_FLASH_MEMORY);
 }
 
@@ -47,18 +42,19 @@ littlefs::FilesystemConfig* getFilesystemConfig(storage_area_t area)
 
 bool initArea(storage_area_t area_to_init)
 {
-    bool result = false;
-
     try {
         if (area_to_init == STORAGE_AREA_FLASH_MEMORY) {
             cfg[area_to_init] = flashmem::createFilesystemConfiguration();
-            result = true;
+        } else if (area_to_init == STORAGE_AREA_SD_CARD) {
+            cfg[area_to_init] = sdcard::createFilesystemConfiguration();
+        } else {
+            return false;
         }
     } catch (std::bad_alloc&) {
         /* nothing to do */
     }
 
-    return result;
+    return cfg[area_to_init] != nullptr;
 }
 
 void destroyArea(storage_area_t area_to_destroy)

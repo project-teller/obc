@@ -205,7 +205,7 @@ bool setup(void)
     }
 
     if (cfg) {
-        logger->info("%s: %s (%dKB)", name, cfg->name, cfg->block_count * BLOCK_SIZE_IN_KB);
+        logger->info("%s: %s (%d KB)", name, cfg->name, cfg->block_count * BLOCK_SIZE_IN_KB);
     } else {
         logger->error("%s: not found", name);
     }

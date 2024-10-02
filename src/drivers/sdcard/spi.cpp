@@ -6,6 +6,9 @@
 #include "modules/debug.h"
 #include "modules/log.h"
 
+#include "stm32_hal.h"
+
+using namespace littlefs;
 using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::telem;
@@ -18,12 +21,26 @@ static const spi::address_t address = { .bus = 1, .device = 0 };
 static const spi::address_t address = spi::NO_ADDRESS;
 #endif
 
-/** Default timeout to use when sending SD card commands */
-static const uint32_t DEFAULT_SD_CARD_TIMEOUT = 250;
+/**
+ * Default timeout to use when sending SD card commands.
+ * This is according to section 4.6.2.1 of the physical spec.
+ */
+static const uint32_t DEFAULT_SD_CARD_TIMEOUT = 100;
+
+/* Constants for size conversions */
+#define BLOCK_SIZE 512
 
 /* SD card command set */
 #define CMD_GO_IDLE_STATE 0
 #define CMD_SEND_IF_COND 8
+#define CMD_SEND_CSD 9
+#define CMD_READ_SINGLE_BLOCK 17
+#define CMD_READ_MULTIPLE_BLOCK 18
+#define CMD_WRITE_SINGLE_BLOCK 24
+#define CMD_WRITE_MULTIPLE_BLOCK 25
+#define CMD_ERASE_WR_BLK_START_ADDR 32
+#define CMD_ERASE_WR_BLK_END_ADDR 33
+#define CMD_ERASE 38
 #define CMD_APP_CMD 55
 #define CMD_READ_OCR 58
 
@@ -40,18 +57,39 @@ static const uint32_t DEFAULT_SD_CARD_TIMEOUT = 250;
 #define RESPONSE_ADDRESS_ERROR 0x20
 #define RESPONSE_PARAMETER_ERROR 0x40
 
-static bool tryInitialization(void);
+/* Data tokens */
+#define DATA_TOKEN 0xfe
+
+static uint32_t tryInitialization(void);
+static bool eraseBlock(uint32_t block);
 static void prepareCommand(uint8_t* buf, uint8_t cmd, uint32_t arg);
+static bool programBlockFromBuffer(uint32_t block, const uint8_t* buf);
+static bool readBlockIntoBuffer(uint32_t block, uint8_t* buf);
+static bool readResponseData(
+    uint8_t* buf, size_t size, uint8_t token = DATA_TOKEN,
+    uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
 static uint8_t sendCommand(
     uint8_t cmd, uint32_t arg = 0, uint8_t* buf = nullptr, uint8_t size = 0,
     uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
-static bool waitUntilIdle(uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
+static bool waitForDataToken(uint8_t token = DATA_TOKEN,
+    uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
+static bool waitWhileBusy(uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
+
+/* LittleFS handler functions */
+static int sdcard_spi_read(
+    const struct lfs_config* cfg, lfs_block_t block, lfs_off_t off,
+    void* buffer, lfs_size_t size);
+static int sdcard_spi_write(
+    const struct lfs_config* cfg, lfs_block_t block, lfs_off_t off,
+    const void* buffer, lfs_size_t size);
+static int sdcard_spi_erase(const struct lfs_config* cfg, lfs_block_t block);
+static int sdcard_spi_sync(const struct lfs_config* cfg);
 
 /** The logger used by the driver */
 static Logger* logger;
 
-/** Stores whether the SD card was initialized successfully */
-static bool cardFound;
+/** Stores the number of blocks on the SD card. Zero if no card was found. */
+static uint32_t blockCount;
 
 namespace teller::drivers::sdcard {
 
@@ -61,14 +99,12 @@ bool init()
 
     /* TODO: ensure that the clock frequency is between 100 kHz and 400 kHz */
     logger = getLogger(MODULE_ID_EDR);
+    blockCount = tryInitialization();
 
-    /* We cannot call tryInitialization() here because we do not have the
-     * facilities of FreeRTOS at our disposal yet. It will be called later
-     * in setup()
-     */
-    cardFound = false;
-
+    /* blockCount == 0 is okay, we still want to report that we did not find the
+     * SD card in setup() */
     success = (logger != nullptr);
+
     if (!success) {
         destroy();
     }
@@ -78,11 +114,29 @@ bool init()
 
 void destroy()
 {
+    blockCount = 0;
 }
 
-std::unique_ptr<littlefs::FilesystemConfig> createFilesystemConfiguration(void)
+std::unique_ptr<FilesystemConfig> createFilesystemConfiguration(void)
 {
-    return nullptr;
+    if (blockCount <= 0) {
+        return nullptr;
+    }
+
+    auto new_config = std::make_unique<FilesystemConfig>(
+        sdcard_spi_read, /* read */
+        sdcard_spi_write, /* prog */
+        sdcard_spi_erase, /* erase */
+        sdcard_spi_sync, /* sync */
+        /* read_size = */ BLOCK_SIZE,
+        /* prog_size = */ BLOCK_SIZE,
+        /* erase_size = */ BLOCK_SIZE,
+        /* erase_count = */ blockCount,
+        /* block_cycles = */ 500,
+        /* cache_size = */ BLOCK_SIZE,
+        /* lookahead_size = */ BLOCK_SIZE);
+
+    return new_config;
 }
 
 bool setup(void)
@@ -93,10 +147,10 @@ bool setup(void)
         return false;
     }
 
-    cardFound = tryInitialization();
+    blockCount = tryInitialization();
 
-    if (cardFound) {
-        logger->info("%s: found", name);
+    if (blockCount > 0) {
+        logger->info("%s: found (%d MB)", name, (blockCount >> 11));
     } else {
         logger->error("%s: not found", name);
     }
@@ -106,13 +160,13 @@ bool setup(void)
 
 uint32_t getTotalSize()
 {
-    return 0;
+    return blockCount * BLOCK_SIZE;
 }
 
 bool readData(uint8_t* buf, uint32_t address, size_t length)
 {
-    memset(buf, 0, length);
-    return true;
+    /* TODO: address is byte-aligned, but we can only read entire blocks */
+    return false;
 }
 
 }
@@ -159,7 +213,7 @@ static uint8_t sendCommand(uint8_t cmd, uint32_t arg, uint8_t* buf, uint8_t size
         size = sizeof(rxBuf);
     }
 
-    if (!waitUntilIdle(timeout)) {
+    if (!waitWhileBusy(timeout)) {
         goto exit;
     }
 
@@ -218,26 +272,26 @@ static uint8_t sendAppCommand(uint8_t cmd, uint32_t arg)
     }
 }
 
-static bool tryInitialization(void)
+static uint32_t tryInitialization(void)
 {
-    uint8_t buf[10];
-    bool success = false;
+    uint8_t buf[16]; /* 16 bytes are needed for the CSD register */
     const char* name = getStorageAreaName(STORAGE_AREA_SD_CARD);
 
+    blockCount = 0;
+
     if (!spi::unselect(address)) {
-        return false;
+        return 0;
     }
 
     /* Step 1: set MOSI and CS to high and apply 74 or more clock pulses to
      * SCLK */
     memset(buf, 0xff, sizeof(buf));
-    if (!spi::transfer(address, buf, sizeof(buf), spi::NO_CHIP_SELECT)) {
+    if (!spi::transfer(address, buf, 10, spi::NO_CHIP_SELECT)) {
         goto cleanup;
     }
 
     if (!spi::select(address)) {
         goto cleanup;
-        return false;
     }
 
     /* Step 2: send reset command and read response */
@@ -296,20 +350,77 @@ static bool tryInitialization(void)
         goto cleanup;
     }
 
+    /* Step 6: read CSD register to determine the size of the card */
+    if (sendCommand(CMD_SEND_CSD, 0x00) != RESPONSE_OK) {
+        goto cleanup;
+    }
+    if (!readResponseData(buf, 16)) {
+        goto cleanup;
+    }
+
+    /* Parse card size from CSD register */
+    if ((buf[0] & 0xC0) != 0x40) {
+        /* Not a CSD register value; it must start with 0b01xxxxxx */
+        goto cleanup;
+    }
+
+    /* TODO: validate CRC at the end of the packet */
+
     /* Success! */
-    /* TODO: bump the clock of the SPI bus to 32 MHz */
-    success = true;
+    blockCount = buf[7] & 0x3F; // two bits are reserved
+    blockCount = (blockCount << 8) | buf[8];
+    blockCount = (blockCount << 8) | buf[9];
+    blockCount = (blockCount + 1) << 10; /* assert BLOCK_SIZE == (1 << 9) */
 
 cleanup:
     spi::unselect(address);
 
-    return success;
+    return blockCount;
 }
 
-static bool waitUntilIdle(uint32_t timeout)
+/**
+ * @brief Reads bytes from the device until the given data token is received.
+ *
+ * @param token  the data token to expect
+ * @param timeout  timeout for the operation in milliseconds
+ * @return whether the data token was received successfully
+ */
+static bool waitForDataToken(uint8_t token, uint32_t timeout)
 {
+    /* Do not use system::getTimeSinceBootMsec() here -- this function is
+     * called during initialization when the FreeRTOS facilities are not
+     * available yet */
+    uint8_t data;
+    uint32_t now = HAL_GetTick();
+    uint32_t deadline = (timeout < std::numeric_limits<uint32_t>::max())
+        ? now + timeout
+        : std::numeric_limits<uint32_t>::max();
+
+    do {
+        data = 0xff;
+        if (!spi::transfer(address, &data, sizeof(data), spi::NO_CHIP_SELECT)) {
+            return false;
+        }
+        now = HAL_GetTick();
+    } while (data == 0xff && now < deadline);
+
+    return data == token;
+}
+
+/**
+ * @brief Reads bytes from the device until the device indicates that it is
+ *        not busy any more.
+ *
+ * @param timeout  timeout for the operation in milliseconds
+ * @return whether the device is ready for a new command
+ */
+static bool waitWhileBusy(uint32_t timeout)
+{
+    /* Do not use system::getTimeSinceBootMsec() here -- this function is
+     * called during initialization when the FreeRTOS facilities are not
+     * available yet */
     uint8_t busy;
-    uint32_t now = system::getTimeSinceBootMsec();
+    uint32_t now = HAL_GetTick();
     uint32_t deadline = (timeout < std::numeric_limits<uint32_t>::max())
         ? now + timeout
         : std::numeric_limits<uint32_t>::max();
@@ -319,8 +430,106 @@ static bool waitUntilIdle(uint32_t timeout)
         if (!spi::transfer(address, &busy, sizeof(busy), spi::NO_CHIP_SELECT)) {
             return false;
         }
-        now = system::getTimeSinceBootMsec();
+        now = HAL_GetTick();
     } while (busy != 0xff && now < deadline);
 
     return busy == 0xff;
+}
+
+/**
+ * @brief Reads a block of bytes from the device, expecting a data token in
+ *        front of the block and a 16-bit CRC at the end.
+ *
+ * Also validates the CRC at the end of the block.
+ *
+ * @param buf      the buffer to read the block into
+ * @param size     expected size of the block to read
+ * @param token    expected data token in front of the data block
+ * @param timeout  timeout for the operation in milliseconds
+ * @return whether the read was successful
+ */
+static bool readResponseData(uint8_t* buf, size_t size, uint8_t token, uint32_t timeout)
+{
+    uint8_t crcBuf[2];
+
+    /* Wait for data token */
+    if (!waitForDataToken(token, timeout)) {
+        return false;
+    }
+
+    /* Read the block */
+    memset(buf, 0xff, size);
+    if (!spi::transfer(address, buf, size, spi::NO_CHIP_SELECT)) {
+        return false;
+    }
+
+    /* Read the CRC */
+    memset(crcBuf, 0xff, sizeof(crcBuf));
+    if (!spi::transfer(address, crcBuf, sizeof(crcBuf), spi::NO_CHIP_SELECT)) {
+        return false;
+    }
+
+    /* TODO(ntamas): check CRC */
+
+    return true;
+}
+
+static bool readBlockIntoBuffer(uint32_t block, uint8_t* buf)
+{
+    bool success = false;
+
+    if (!spi::select(address)) {
+        return false;
+    }
+
+    /* Send the command to read a block */
+    if (sendCommand(CMD_READ_SINGLE_BLOCK, block) != RESPONSE_OK) {
+        goto cleanup;
+    }
+
+    /* Read the block itself */
+    if (!readResponseData(buf, BLOCK_SIZE)) {
+        goto cleanup;
+    }
+
+    success = true;
+
+cleanup:
+    if (!spi::unselect(address)) {
+        return false;
+    }
+
+    return success;
+}
+
+/* ************************************************************************** */
+/* LittleFS handler function implementations                                  */
+/* ************************************************************************** */
+
+static int sdcard_spi_read(
+    const struct lfs_config* cfg, lfs_block_t block, lfs_off_t off,
+    void* buffer, lfs_size_t size)
+{
+    /* TODO(ntamas) */
+    return LFS_ERR_IO;
+}
+
+static int sdcard_spi_write(
+    const struct lfs_config* cfg, lfs_block_t sector, lfs_off_t off,
+    const void* buffer, lfs_size_t size)
+{
+    /* TODO(ntamas) */
+    return LFS_ERR_IO;
+}
+
+static int sdcard_spi_erase(const struct lfs_config* cfg, lfs_block_t sector)
+{
+    /* TODO(ntamas) */
+    return LFS_ERR_IO;
+}
+
+static int sdcard_spi_sync(const struct lfs_config* cfg)
+{
+    /* No write-through cache so we can return immediately */
+    return LFS_ERR_OK;
 }
