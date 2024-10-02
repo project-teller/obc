@@ -187,9 +187,12 @@ void destroy()
 bool select(address_t address, bool value)
 {
     const spi_bus_config_t* pCfg;
+    const gpio_port_and_pins_t* csPinCfg;
+
     if (is_spi_address_valid(address)) {
         pCfg = &spi_config[address.bus];
-        HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, value ? GPIO_PIN_RESET : GPIO_PIN_SET);
+        csPinCfg = &pCfg->cs[address.device];
+        HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, value ? GPIO_PIN_RESET : GPIO_PIN_SET);
         return true;
     } else {
         return false;
@@ -207,6 +210,7 @@ bool transfer(
     std::uint8_t flags)
 {
     const spi_bus_config_t* pCfg;
+    const gpio_port_and_pins_t* csPinCfg;
     spi_bus_state_t* pState;
     bool success = false;
     std::uint32_t events;
@@ -220,6 +224,8 @@ bool transfer(
     }
 
     pCfg = &spi_config[address.bus];
+    csPinCfg = &pCfg->cs[address.device];
+
     pState = &spi_state[address.bus];
 
     if (osKernelGetState() == osKernelRunning) {
@@ -227,7 +233,7 @@ bool transfer(
         lock_guard lock(pState->in_use);
 
         if ((flags & NO_CHIP_SELECT) == 0) {
-            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_RESET);
         }
         if (HAL_SPI_TransmitReceive_IT(&pState->handle, txBuf, rxBuf, size) == HAL_OK) {
             events = osEventFlagsWait(pState->event, EVT_DONE | EVT_ERROR, osFlagsWaitAny, SPI_TIMEOUT_MSEC);
@@ -238,19 +244,19 @@ bool transfer(
             }
         }
         if ((flags & NO_CHIP_SELECT) == 0) {
-            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+            HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_SET);
         }
     } else {
         // Simplified implementation for the initialization where we cannot
         // use RTOS primitives yet
         if ((flags & NO_CHIP_SELECT) == 0) {
-            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_RESET);
         }
         if (HAL_SPI_TransmitReceive(&pState->handle, txBuf, rxBuf, size, SPI_TIMEOUT_MSEC) == HAL_OK) {
             success = true;
         }
         if ((flags & NO_CHIP_SELECT) == 0) {
-            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+            HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_SET);
         }
     }
 
@@ -263,6 +269,7 @@ bool transfer(
 {
     const transfer_t* transfer;
     const spi_bus_config_t* pCfg;
+    const gpio_port_and_pins_t* csPinCfg;
     spi_bus_state_t* pState;
     HAL_StatusTypeDef hal_status;
     std::uint32_t events;
@@ -273,6 +280,8 @@ bool transfer(
     }
 
     pCfg = &spi_config[address.bus];
+    csPinCfg = &pCfg->cs[address.device];
+
     pState = &spi_state[address.bus];
 
     if (count == 0) {
@@ -285,7 +294,7 @@ bool transfer(
         lock_guard lock(pState->in_use);
 
         if ((flags & NO_CHIP_SELECT) == 0) {
-            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_RESET);
         }
 
         transfer = transfers;
@@ -317,13 +326,13 @@ bool transfer(
         }
 
         if ((flags & NO_CHIP_SELECT) == 0) {
-            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+            HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_SET);
         }
     } else {
         // Simplified implementation for the initialization where we cannot
         // use RTOS primitives yet
         if ((flags & NO_CHIP_SELECT) == 0) {
-            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_RESET);
         }
 
         transfer = transfers;
@@ -353,7 +362,7 @@ bool transfer(
         }
 
         if ((flags & NO_CHIP_SELECT) == 0) {
-            HAL_GPIO_WritePin(pCfg->cs->port, pCfg->cs->pins, GPIO_PIN_SET);
+            HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_SET);
         }
     }
 
