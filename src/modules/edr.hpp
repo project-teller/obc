@@ -187,13 +187,13 @@ public:
         uint8_t id, const char* msg_type, const char* names,
         const char* types, const char* units, const char* multipliers)
     {
-        if (sdlog_message_format_init(&_format, id, msg_type) != SDLOG_SUCCESS) {
-            throw std::runtime_error("Cannot create log record");
-        }
+        sdlog_error_t err;
 
-        if (sdlog_message_format_add_columns(&_format, names, types, units) != SDLOG_SUCCESS) {
-            throw std::runtime_error("Cannot create log record");
-        }
+        err = sdlog_message_format_init(&_format, id, msg_type);
+        assert(err == SDLOG_SUCCESS);
+
+        err = sdlog_message_format_add_columns(&_format, names, types, units);
+        assert(err != SDLOG_SUCCESS);
     }
 
     ~FormattedLogRecord()

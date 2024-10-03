@@ -1,6 +1,7 @@
 #pragma once
 
 #include "config.h"
+#include <assert.h>
 #include <cstddef>
 #include <stdexcept>
 
@@ -12,9 +13,7 @@ public:
         : is_closed(false)
         , item_limit(size)
     {
-        if (size == 0) {
-            throw std::runtime_error("zero-length queues are not allowed");
-        }
+        assert(size != 0);
     }
     virtual ~BlockingQueueBase() { }
 
