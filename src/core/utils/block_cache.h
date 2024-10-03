@@ -64,6 +64,13 @@ public:
      */
     uint8_t* getScratchArea();
 
+    /**
+     * @brief Evicts the block with the given index from the cache if it is cached.
+     *
+     * No-op if the block is not in the cache.
+     */
+    void evict(BlockIndex blockIndex_);
+
 private:
     /** The size of each block in the cache */
     std::size_t blockSize;

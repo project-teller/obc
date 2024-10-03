@@ -53,3 +53,24 @@ TEST(BlockCacheTest, readWriteCycle)
     EXPECT_EQ(nullptr, cache.getBlock(18));
     expectCounters(cache, 0, 2);
 }
+
+TEST(BlockCacheTest, evict)
+{
+    BlockCache cache(4);
+    uint8_t* buf;
+
+    buf = cache.getScratchArea();
+    EXPECT_NE(nullptr, buf);
+    EXPECT_NE(nullptr, cache.commit(17));
+
+    EXPECT_NE(nullptr, cache.getBlock(17));
+    expectCounters(cache, 1, 0);
+
+    cache.evict(18);
+    EXPECT_NE(nullptr, cache.getBlock(17));
+    expectCounters(cache, 2, 0);
+
+    cache.evict(17);
+    EXPECT_EQ(nullptr, cache.getBlock(17));
+    expectCounters(cache, 2, 1);
+}

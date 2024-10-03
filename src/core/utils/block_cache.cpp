@@ -28,8 +28,15 @@ void BlockCache::clear()
 const uint8_t* BlockCache::commit(BlockIndex blockIndex_)
 {
     this->blockIndex = blockIndex_;
-    isValid = true;
+    this->isValid = true;
     return this->block;
+}
+
+void BlockCache::evict(BlockIndex blockIndex_)
+{
+    if (this->blockIndex == blockIndex_) {
+        this->isValid = false;
+    }
 }
 
 void BlockCache::getCounters(uint32_t& hit, uint32_t& miss) const
