@@ -8,6 +8,7 @@ extern "C" {
 #endif
 
 uint16_t crc_ccitt(uint16_t crc, const uint8_t* buf, size_t len);
+uint16_t crc_xmodem(uint16_t crc, const uint8_t* buf, size_t len);
 uint8_t crc7_sd(uint8_t crc, const uint8_t* buf, size_t len);
 
 #ifdef __cplusplus

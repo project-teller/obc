@@ -423,8 +423,6 @@ static uint32_t tryInitialization(void)
         goto cleanup;
     }
 
-    /* TODO: validate CRC at the end of the packet */
-
     /* Success! */
     blockCount = buf[7] & 0x3F; // two bits are reserved
     blockCount = (blockCount << 8) | buf[8];
@@ -528,7 +526,8 @@ static bool readResponseData(uint8_t* buf, size_t size, uint8_t token, uint32_t 
         return false;
     }
 
-    return true;
+    /* Compare the observed CRC with the expected one */
+    return ((crcBuf[0] << 8) | crcBuf[1]) == crc_xmodem(0, buf, size);
 }
 
 /**
