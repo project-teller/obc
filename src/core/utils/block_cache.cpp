@@ -15,7 +15,7 @@ BlockCache::BlockCache(std::size_t blockSize_)
 
 BlockCache::~BlockCache()
 {
-    delete this->block;
+    delete[] this->block;
 }
 
 void BlockCache::clear()
