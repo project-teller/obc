@@ -1,5 +1,6 @@
 #include "hal/spi.h"
 #include "config.h"
+#include "core/utils/block_cache.h"
 #include "core/utils/crc.h"
 #include "drivers/sdcard.h"
 #include "hal/system.h"
@@ -12,6 +13,7 @@ using namespace littlefs;
 using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::telem;
+using teller::utils::BlockCache;
 
 #if defined(TELLER_BOARD_NUCLEO144)
 static const spi::address_t address = spi::NO_ADDRESS;
@@ -60,7 +62,10 @@ static const uint32_t DEFAULT_SD_CARD_TIMEOUT = 100;
 /* Data tokens */
 #define DATA_TOKEN 0xfe
 
-static uint32_t tryInitialization(void);
+static uint32_t addressToBlock(uint32_t address);
+static void convertAddressToBlockAndOffset(
+    uint32_t address, uint32_t& block, uint32_t& offset);
+static const uint8_t* ensureBlockIsCached(uint32_t block);
 static bool eraseBlock(uint32_t block);
 static void prepareCommand(uint8_t* buf, uint8_t cmd, uint32_t arg);
 static bool programBlockFromBuffer(uint32_t block, const uint8_t* buf);
@@ -71,6 +76,7 @@ static bool readResponseData(
 static uint8_t sendCommand(
     uint8_t cmd, uint32_t arg = 0, uint8_t* buf = nullptr, uint8_t size = 0,
     uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
+static uint32_t tryInitialization(void);
 static bool waitForDataToken(uint8_t token = DATA_TOKEN,
     uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
 static bool waitWhileBusy(uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
@@ -88,6 +94,9 @@ static int sdcard_spi_sync(const struct lfs_config* cfg);
 /** The logger used by the driver */
 static Logger* logger;
 
+/** Block cache for the driver */
+static BlockCache blockCache(BLOCK_SIZE);
+
 /** Stores the number of blocks on the SD card. Zero if no card was found. */
 static uint32_t blockCount;
 
@@ -97,9 +106,9 @@ bool init()
 {
     bool success;
 
-    /* TODO: ensure that the clock frequency is between 100 kHz and 400 kHz */
     logger = getLogger(MODULE_ID_EDR);
     blockCount = tryInitialization();
+    // blockCount = 0;
 
     /* blockCount == 0 is okay, we still want to report that we did not find the
      * SD card in setup() */
@@ -165,10 +174,60 @@ uint32_t getTotalSize()
 
 bool readData(uint8_t* buf, uint32_t address, size_t length)
 {
-    /* TODO: address is byte-aligned, but we can only read entire blocks */
-    return false;
+    /* The address is byte-aligned, and the region to read may span multiple
+     * blocks, but we can only read entire blocks */
+    uint32_t block, offset;
+    uint16_t toReadNow;
+    const uint8_t* cachePtr;
+
+    convertAddressToBlockAndOffset(address, block, offset);
+
+    while (length > 0) {
+        toReadNow = BLOCK_SIZE - offset;
+        if (length < toReadNow) {
+            toReadNow = length;
+        }
+
+        cachePtr = ensureBlockIsCached(block);
+        if (!cachePtr) {
+            return false;
+        }
+
+        memcpy(buf, cachePtr + offset, toReadNow);
+
+        length -= toReadNow;
+        buf += toReadNow;
+
+        block++;
+        offset = 0;
+    }
+
+    return true;
 }
 
+}
+
+/**
+ * @brief Converts an address on the SD card to the index of the corresponding block.
+ *
+ * @param address  the address to convert
+ * @return the index of the block containing the address
+ */
+static uint32_t addressToBlock(uint32_t address)
+{
+    return address / BLOCK_SIZE; // will be compiled down to a bit shift
+}
+
+/**
+ * @brief Converts an address on the SD card to the index of the corresponding block and offset.
+ *
+ * @param address  the address to convert
+ * @return the index of the block containing the address
+ */
+static void convertAddressToBlockAndOffset(uint32_t address, uint32_t& block, uint32_t& offset)
+{
+    block = address / BLOCK_SIZE;
+    offset = address % BLOCK_SIZE;
 }
 
 /**
@@ -469,11 +528,18 @@ static bool readResponseData(uint8_t* buf, size_t size, uint8_t token, uint32_t 
         return false;
     }
 
-    /* TODO(ntamas): check CRC */
-
     return true;
 }
 
+/**
+ * @brief Reads the contents of a block from the SD card to the given buffer.
+ *
+ * The buffer must be large enough to hold the entire block.
+ *
+ * @param block  the index of the block
+ * @param buf    the buffer to fill
+ * @return whether the operation was successful
+ */
 static bool readBlockIntoBuffer(uint32_t block, uint8_t* buf)
 {
     bool success = false;
@@ -500,6 +566,28 @@ cleanup:
     }
 
     return success;
+}
+
+/**
+ * @brief Ensures that the block with the given index is in the block cache.
+ */
+static const uint8_t* ensureBlockIsCached(uint32_t block)
+{
+    const uint8_t* ptr = blockCache.getBlock(block);
+    uint8_t* buf;
+
+    if (ptr) {
+        // Block is already in the cache
+        return ptr;
+    } else {
+        // Block is not in the cache yet so load it
+        buf = blockCache.getScratchArea();
+        if (readBlockIntoBuffer(block, buf)) {
+            return blockCache.commit(block);
+        }
+    }
+
+    return nullptr;
 }
 
 /* ************************************************************************** */
