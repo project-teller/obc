@@ -4,9 +4,11 @@ using namespace std;
 using namespace teller::utils;
 
 BlockCache::BlockCache(std::size_t blockSize_)
-    : blockSize(blockSize)
+    : blockSize(blockSize_)
     , blockIndex(0)
     , isValid(false)
+    , hitCounter(0)
+    , missCounter(0)
 {
     this->block = new uint8_t[blockSize_];
 }
@@ -18,22 +20,26 @@ BlockCache::~BlockCache()
 
 void BlockCache::clear()
 {
+    this->hitCounter = 0;
+    this->missCounter = 0;
     this->isValid = false;
 }
 
-void BlockCache::commit(BlockIndex blockIndex_)
+const uint8_t* BlockCache::commit(BlockIndex blockIndex_)
 {
     this->blockIndex = blockIndex_;
     isValid = true;
+    return this->block;
 }
 
-uint8_t* BlockCache::evict()
+void BlockCache::getCounters(uint32_t& hit, uint32_t& miss) const
 {
-    this->isValid = false;
-    return block;
+    hit = this->hitCounter;
+    miss = this->missCounter;
 }
 
 uint8_t* BlockCache::getScratchArea()
 {
-    return evict();
+    this->isValid = false;
+    return block;
 }

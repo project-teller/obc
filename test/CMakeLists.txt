@@ -6,6 +6,7 @@ set(TARGET_NAME teller-obc-test)
 
 add_executable(
     ${TARGET_NAME}
+    core/block_cache_test.cpp
     core/crc_test.cpp
     core/majority_voter_test.cpp
     core/nmea_test.cpp
