@@ -99,7 +99,7 @@ public:
         case 2:
             return z;
         default:
-            throw std::runtime_error("index out of range");
+            return T();
         }
     }
 
@@ -113,7 +113,7 @@ public:
         case 2:
             return z;
         default:
-            throw std::runtime_error("index out of range");
+            return T();
         }
     }
 

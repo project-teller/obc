@@ -139,15 +139,18 @@ public:
      * @brief Attaches the experiment data recorder to the given filesystem and runs its main loop.
      *
      * The function returns when the experiment data recorder was closed from another
-     * task with its \ref close() method.
+     * task with its \ref close() method or when an error occurs.
      *
      * The experiment data recorder is detached from the filesystem when this
      * function returns normally or with an exception.
      *
      * @param fs  the filesystem to attach the experiment data recorder to
      * @param area  the storage area to attach the experiment data recorder to
+     * @return  an optional error code
      */
-    void run(littlefs::Filesystem* fs, teller::telem::storage_area_t area = teller::telem::STORAGE_AREA_UNKNOWN);
+    [[nodiscard]] std::optional<littlefs::Error> run(
+        littlefs::Filesystem* fs,
+        teller::telem::storage_area_t area = teller::telem::STORAGE_AREA_UNKNOWN);
 
     /**
      * @brief Returns whether the experiment data recorder is currently running.
@@ -168,9 +171,9 @@ private:
     bool _running;
     teller::hal::BlockingQueue<LogRequest> _queue;
 
-    size_t _getLastLogIndex();
-    void _run(teller::telem::storage_area_t area);
-    void _updateLastLogIndex(size_t index);
+    [[nodiscard]] std::variant<littlefs::Error, size_t> _getLastLogIndex();
+    [[nodiscard]] std::optional<littlefs::Error> _run(teller::telem::storage_area_t area);
+    [[nodiscard]] std::optional<littlefs::Error> _updateLastLogIndex(size_t index);
 };
 
 /**

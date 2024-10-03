@@ -8,7 +8,6 @@ class SmartFileHandle {
 public:
     explicit SmartFileHandle(littlefs::Filesystem* fs, int fd);
     explicit SmartFileHandle(littlefs::Filesystem* fs, littlefs::FileHandle fd);
-    explicit SmartFileHandle(littlefs::Filesystem* fs, std::variant<littlefs::Error, littlefs::FileHandle> fd);
 
     SmartFileHandle(SmartFileHandle&& that);
     ~SmartFileHandle();
@@ -26,9 +25,9 @@ public:
      *
      * @param read_buf   the buffer to read into
      * @param bytes_to_read  the number of bytes to read
-     * @return the number of bytes that were read
+     * @return the number of bytes that were read or a LittleFS error code
      */
-    size_t read(void* read_buf, size_t bytes_to_read);
+    std::variant<littlefs::Error, size_t> read(void* read_buf, size_t bytes_to_read);
 
     /**
      * @brief Syncs the file handle with the on-disk representation.
@@ -40,9 +39,9 @@ public:
      *
      * @param buf   the buffer to write
      * @param bytes_to_write  the size of the buffer
-     * @return the number of bytes that were written
+     * @return the number of bytes that were written or a LittleFS error code
      */
-    size_t write(void* conwrite_buf, size_t bytes_to_write);
+    std::variant<littlefs::Error, size_t> write(void* conwrite_buf, size_t bytes_to_write);
 
 private:
     littlefs::Filesystem* _fs;

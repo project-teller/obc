@@ -57,14 +57,11 @@ static std::list<event_callback_t*> callbacks;
         fs = storage::waitUntilMounted(area);
         log->info("%s: mounted", name);
 
-        try {
-            recorders[area].run(fs, area);
-        } catch (littlefs::Error& err) {
+        auto maybeError = recorders[area].run(fs, area);
+        if (maybeError.has_value()) {
             log->error(
                 "%s: IO error, code = %d", name,
-                teller::storage::convertLittleFSErrorCode(err));
-        } catch (...) {
-            log->error("%s: unknown error", name);
+                teller::storage::convertLittleFSErrorCode(*maybeError));
         }
 
         retval = storage::unmountStorage(area);
@@ -137,11 +134,11 @@ public:
     LogWriter(const LogWriter&) = delete;
     LogWriter& operator=(const LogWriter&) = delete;
 
-    void flush();
-    void write(const LogRequest& request);
+    [[nodiscard]] std::optional<littlefs::Error> flush();
+    [[nodiscard]] std::optional<littlefs::Error> write(const LogRequest& request);
 
-    void _flush_raw();
-    size_t _write_raw(const uint8_t* data, size_t length);
+    [[nodiscard]] std::optional<littlefs::Error> _flush_raw();
+    [[nodiscard]] std::variant<littlefs::Error, size_t> _write_raw(const uint8_t* data, size_t length);
 
 private:
     SmartFileHandle& _handle;
@@ -154,14 +151,15 @@ LogWriter::LogWriter(SmartFileHandle& handle)
     : _handle(handle)
     , _init_state(0)
 {
-    if (sdlog_ostream_init(&_stream, &log_writer_spec, this)) {
-        throw bad_alloc();
-    }
+    sdlog_error_t err;
+
+    err = sdlog_ostream_init(&_stream, &log_writer_spec, this);
+    assert(err == SDLOG_SUCCESS);
     _init_state++;
 
-    if (sdlog_writer_init(&_writer, &_stream)) {
-        throw bad_alloc();
-    }
+    err = sdlog_writer_init(&_writer, &_stream);
+    assert(err == SDLOG_SUCCESS);
+
     _init_state++;
 }
 
@@ -177,21 +175,23 @@ LogWriter::~LogWriter()
     }
 }
 
-void LogWriter::flush()
+std::optional<littlefs::Error> LogWriter::flush()
 {
     if (sdlog_writer_flush(&_writer) != SDLOG_SUCCESS) {
-        throw littlefs::Error::IO;
+        return littlefs::Error::IO;
+    } else {
+        return {};
     }
 }
 
-void LogWriter::write(const LogRequest& request)
+std::optional<littlefs::Error> LogWriter::write(const LogRequest& request)
 {
     sdlog_error_t err;
 
     err = sdlog_writer_write_encoded(
         &_writer, request.format, request.message, request.length);
     if (err != SDLOG_SUCCESS) {
-        throw littlefs::Error::IO;
+        return littlefs::Error::IO;
     }
 
     /* TODO(ntamas): we are currently flushing after every request. Check
@@ -200,16 +200,18 @@ void LogWriter::write(const LogRequest& request)
 
     err = sdlog_writer_flush(&_writer);
     if (err != SDLOG_SUCCESS) {
-        throw littlefs::Error::IO;
+        return littlefs::Error::IO;
     }
+
+    return {};
 }
 
-void LogWriter::_flush_raw()
+std::optional<littlefs::Error> LogWriter::_flush_raw()
 {
-    _handle.sync();
+    return _handle.sync();
 }
 
-size_t LogWriter::_write_raw(const uint8_t* data, size_t length)
+std::variant<littlefs::Error, size_t> LogWriter::_write_raw(const uint8_t* data, size_t length)
 {
     return _handle.write(const_cast<uint8_t*>(data), length);
 }
@@ -218,15 +220,21 @@ static sdlog_error_t log_writer_write(
     sdlog_ostream_t* self, const uint8_t* data, size_t length, size_t* bytes_written)
 {
     LogWriter* writer = reinterpret_cast<LogWriter*>(self->context);
-    *bytes_written = writer->_write_raw(data, length);
-    return SDLOG_SUCCESS;
+    auto result = writer->_write_raw(data, length);
+    if (std::holds_alternative<littlefs::Error>(result)) {
+        return SDLOG_EIO;
+    } else {
+        *bytes_written = std::get<size_t>(result);
+        return SDLOG_SUCCESS;
+    }
 }
 
 static sdlog_error_t log_writer_flush(sdlog_ostream_t* self)
 {
     /*
     LogWriter* writer = reinterpret_cast<LogWriter*>(self->context);
-    writer->_flush_raw();
+    auto result = writer->_flush_raw();
+    return std::holds_alternative<littlefs::Error>(result) ? SDLOG_EIO : SDLOG_SUCCESS;
     */
     return SDLOG_SUCCESS;
 }
@@ -242,33 +250,28 @@ ExperimentDataRecorder::~ExperimentDataRecorder()
     stop();
 }
 
-void ExperimentDataRecorder::run(littlefs::Filesystem* fs, storage_area_t area)
+std::optional<littlefs::Error> ExperimentDataRecorder::run(littlefs::Filesystem* fs, storage_area_t area)
 {
     void* buffer = nullptr;
 
     assert(!running() && !_queue.closed());
 
     buffer = teller::hal::memory::malloc(fs->cache_size());
-    if (buffer == nullptr) {
-        throw std::bad_alloc();
-    }
+    assert(buffer != nullptr);
 
     this->_fs = fs;
     _queue.clear();
 
-    try {
-        this->_file_config = make_unique<littlefs::FileConfig>(buffer);
-        _run(area);
-    } catch (...) {
-        this->_file_config = nullptr;
-        this->_fs = nullptr;
-        teller::hal::memory::free(buffer);
-        throw;
-    }
+    this->_file_config = make_unique<littlefs::FileConfig>(buffer);
+    assert(this->_file_config != nullptr);
+
+    auto result = _run(area);
 
     this->_file_config = nullptr;
     this->_fs = nullptr;
     teller::hal::memory::free(buffer);
+
+    return result;
 }
 
 void ExperimentDataRecorder::stop()
@@ -279,9 +282,10 @@ void ExperimentDataRecorder::stop()
 /**
  * @brief Returns the index of the last log file.
  *
- * @return the index of the last log file; zero if no log file was created yet
+ * @return the index of the last log file; zero if no log file was created yet,
+ * or a LittleFS error code.
  */
-size_t ExperimentDataRecorder::_getLastLogIndex()
+std::variant<littlefs::Error, size_t> ExperimentDataRecorder::_getLastLogIndex()
 {
     /* Find and read LASTLOG.TXT, increase the counter by 1 */
     char buf[32];
@@ -290,17 +294,22 @@ size_t ExperimentDataRecorder::_getLastLogIndex()
     /* Check if LASTLOG.TXT exists */
     if (this->_fs->stat(LASTLOG_FILE, &info)) {
         /* File does not exist, return 0 */
-        return 0;
+        return static_cast<size_t>(0);
     }
 
     /* Check if LASTLOG.TXT is a regular file */
     if (info.type != LFS_TYPE_REG) {
-        throw littlefs::Error::ISDIR;
+        return littlefs::Error::ISDIR;
     }
 
     /* Open LASTLOG.TXT */
     long int index;
-    SmartFileHandle fd(this->_fs, this->_fs->opencfg(LASTLOG_FILE, littlefs::OpenFlag::RDONLY, *this->_file_config));
+    auto maybe_handle = this->_fs->opencfg(LASTLOG_FILE, littlefs::OpenFlag::RDONLY, *this->_file_config);
+    if (std::holds_alternative<littlefs::Error>(maybe_handle)) {
+        return std::get<littlefs::Error>(maybe_handle);
+    }
+
+    SmartFileHandle fd(this->_fs, std::get<littlefs::FileHandle>(maybe_handle));
 
     /* Read file contents */
     memset(buf, 0, sizeof(buf));
@@ -309,31 +318,47 @@ size_t ExperimentDataRecorder::_getLastLogIndex()
         index = 0;
     }
 
-    return index < 0 ? 0 : index;
+    return static_cast<size_t>(index < 0 ? 0 : index);
 }
 
 #define IS_END_OF_QUEUE(request) (request.format == nullptr)
+#define RETURN_IF_ERROR(x)   \
+    {                        \
+        if (x.has_value()) { \
+            return x;        \
+        }                    \
+    }
+#define RETURN_IF_ERROR_VARIANT(x)                        \
+    {                                                     \
+        if (std::holds_alternative<littlefs::Error>(x)) { \
+            return std::get<littlefs::Error>(x);          \
+        }                                                 \
+    }
 
-void ExperimentDataRecorder::_run(storage_area_t area)
+std::optional<littlefs::Error> ExperimentDataRecorder::_run(storage_area_t area)
 {
-    ssize_t logIndex;
+    size_t logIndex;
     char fname[32];
     LogRequest request;
 
     assert(this->_file_config);
 
-    logIndex = _getLastLogIndex();
-    logIndex = logIndex < 0 ? 0 : (logIndex + 1);
-    _updateLastLogIndex(logIndex);
+    auto maybeLogIndex = _getLastLogIndex();
+    RETURN_IF_ERROR_VARIANT(maybeLogIndex);
+
+    logIndex = std::get<size_t>(maybeLogIndex);
+    auto result = _updateLastLogIndex(logIndex);
+    RETURN_IF_ERROR(result);
 
     snprintf(fname, sizeof(fname), "%08ld.BIN", static_cast<long int>(logIndex));
 
-    SmartFileHandle fd(
-        this->_fs,
-        this->_fs->opencfg(
-            fname,
-            littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC,
-            *_file_config));
+    auto maybeFileHandle = this->_fs->opencfg(
+        fname,
+        littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC,
+        *_file_config);
+    RETURN_IF_ERROR_VARIANT(maybeFileHandle);
+
+    SmartFileHandle fd(this->_fs, std::get<littlefs::FileHandle>(maybeFileHandle));
     LogWriter writer(fd);
 
     /* Call all callbacks to let modules print initial log records. We have to
@@ -349,17 +374,15 @@ void ExperimentDataRecorder::_run(storage_area_t area)
     }
 
     /* Enter the main loop and start processing requests */
-    try {
-        _running = true;
-        while (_queue.receive(request) && !IS_END_OF_QUEUE(request)) {
-            writer.write(request);
-        }
-    } catch (...) {
-        _running = false;
-        throw;
-    }
+    std::optional<littlefs::Error> maybeError = std::nullopt;
 
+    _running = true;
+    while (_queue.receive(request) && !IS_END_OF_QUEUE(request) && !maybeError) {
+        maybeError = writer.write(request);
+    }
     _running = false;
+
+    return maybeError;
 }
 
 #undef IS_END_OF_QUEUE
@@ -368,20 +391,29 @@ void ExperimentDataRecorder::_run(storage_area_t area)
  * @brief Updates the index of the last log file.
  * @return whether the operation was successful
  */
-void ExperimentDataRecorder::_updateLastLogIndex(size_t index)
+std::optional<littlefs::Error> ExperimentDataRecorder::_updateLastLogIndex(size_t index)
 {
     /* Open LASTLOG.TXT */
-    SmartFileHandle fd(
-        this->_fs,
-        this->_fs->opencfg(
-            LASTLOG_FILE,
-            littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC,
-            *_file_config));
+    auto maybeFileHandle = this->_fs->opencfg(
+        LASTLOG_FILE,
+        littlefs::OpenFlag::WRONLY | littlefs::OpenFlag::CREAT | littlefs::OpenFlag::TRUNC,
+        *_file_config);
+    RETURN_IF_ERROR_VARIANT(maybeFileHandle);
+
+    SmartFileHandle fd(this->_fs, std::get<littlefs::FileHandle>(maybeFileHandle));
     char buf[32];
     int num_printed = snprintf(buf, sizeof(buf), "%lu", static_cast<long unsigned int>(index));
-    if (num_printed < 0 || fd.write(buf, num_printed) != static_cast<size_t>(num_printed)) {
-        throw littlefs::Error::IO;
+    if (num_printed < 0) {
+        return littlefs::Error::IO;
     }
-}
 
+    auto result = fd.write(buf, num_printed);
+    RETURN_IF_ERROR_VARIANT(result);
+
+    if (std::get<size_t>(result) != static_cast<size_t>(num_printed)) {
+        return littlefs::Error::IO;
+    }
+
+    return {};
+}
 }
