@@ -74,17 +74,17 @@ private:
     /** Memory area holding the cached block */
     uint8_t* block;
 
-    /** Counter of cache hits */
-    mutable uint32_t hitCounter;
-
-    /** Counter of cache missees */
-    mutable uint32_t missCounter;
-
     /**
      * Stores whether there is a block in the cache (i.e. whether the block
      * index is valid.
      */
     bool isValid;
+
+    /** Counter of cache hits */
+    mutable uint32_t hitCounter;
+
+    /** Counter of cache missees */
+    mutable uint32_t missCounter;
 };
 
 }
