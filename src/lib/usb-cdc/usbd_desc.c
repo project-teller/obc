@@ -103,7 +103,7 @@
   */
 
 static void Get_SerialNum(void);
-static void IntToUnicode(uint32_t value, uint8_t * pbuf, uint8_t len);
+// static void IntToUnicode(uint32_t value, uint8_t * pbuf, uint8_t len);
 
 /**
   * @}
@@ -387,6 +387,8 @@ uint8_t * USBD_FS_USR_BOSDescriptor(USBD_SpeedTypeDef speed, uint16_t *length)
   */
 static void Get_SerialNum(void)
 {
+  static uint8_t serialNum[] = { 'T', 0, 'E', 0, 'L', 0, 'L', 0, 'E', 0, 'R', 0 };
+  /*
   uint32_t deviceserial0;
   uint32_t deviceserial1;
   uint32_t deviceserial2;
@@ -402,6 +404,8 @@ static void Get_SerialNum(void)
     IntToUnicode(deviceserial0, &USBD_StringSerial[2], 8);
     IntToUnicode(deviceserial1, &USBD_StringSerial[18], 4);
   }
+  */
+  memcpy(USBD_StringSerial + 2, serialNum, USB_SIZ_STRING_SERIAL - 2);
 }
 
 /**
@@ -411,6 +415,7 @@ static void Get_SerialNum(void)
   * @param  len: buffer length
   * @retval None
   */
+/*
 static void IntToUnicode(uint32_t value, uint8_t * pbuf, uint8_t len)
 {
   uint8_t idx = 0;
@@ -431,6 +436,7 @@ static void IntToUnicode(uint32_t value, uint8_t * pbuf, uint8_t len)
     pbuf[2 * idx + 1] = 0;
   }
 }
+*/
 /**
   * @}
   */
