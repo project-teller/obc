@@ -8,6 +8,7 @@ add_library(
     obc-drivers
     flashmem.cpp
     imu.cpp
+    mag.cpp
     sdcard.cpp
     storage.cpp
     temperature.cpp

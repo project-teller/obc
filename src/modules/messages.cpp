@@ -10,6 +10,7 @@
 #include "modules/gmm.h"
 #include "modules/imu.h"
 #include "modules/lcl.h"
+#include "modules/mag.h"
 #include "modules/messages.h"
 #include "modules/mode.h"
 #include "modules/rxsm.h"
@@ -42,6 +43,7 @@ void updateHeartbeatData(frames::heartbeat_data_t* data)
 
     data->subsystemStatus.gmm = teller::gmm::getSubsystemStatus();
     data->subsystemStatus.imu = teller::imu::getSubsystemStatus();
+    data->subsystemStatus.mag = teller::mag::getSubsystemStatus();
     data->subsystemStatus.sto = teller::storage::getSubsystemStatus();
 
     data->lclStatusBits.gmm = teller::lcl::triggered(teller::lcl::GMM_LCL);

@@ -6,6 +6,7 @@
 
 #include "drivers/flashmem.h"
 #include "drivers/imu.h"
+#include "drivers/mag.h"
 #include "drivers/sdcard.h"
 #include "drivers/storage.h"
 #include "drivers/temperature.h"
@@ -18,6 +19,7 @@
 #include "modules/imu.h"
 #include "modules/lcl.h"
 #include "modules/log.h"
+#include "modules/mag.h"
 #include "modules/mode.h"
 #include "modules/rxsm.h"
 #include "modules/scm.h"
@@ -33,6 +35,7 @@
 #include "tasks/gmm.h"
 #include "tasks/imu.h"
 #include "tasks/logger.h"
+#include "tasks/mag.h"
 #include "tasks/mode.h"
 #include "tasks/pins.h"
 #include "tasks/scm.h"
@@ -98,6 +101,7 @@ static const task_definition_t tasks[] = {
     { .func = flashMemoryTask, .name = "flashmem", .priority = HIGH, .stack_size = 4096 },
     { .func = sdCardTask, .name = "sdcard", .priority = HIGH, .stack_size = 4096 },
     { .func = imuTask, .name = "imu", .priority = NORMAL, .stack_size = 1024 },
+    { .func = magTask, .name = "mag", .priority = NORMAL, .stack_size = 1024 },
     { .func = loggerTask, .name = "log", .priority = NORMAL, .stack_size = 2048 },
     { .func = modeManagerTask, .name = "mode", .priority = NORMAL, .stack_size = 1024 },
     { .func = debugTask, .name = "debug", .priority = NORMAL, .stack_size = 1024 },
@@ -142,6 +146,7 @@ void bootSystem(void)
     /* Initialize the drivers */
     inited &= teller::drivers::flashmem::init();
     inited &= teller::drivers::imu::init();
+    inited &= teller::drivers::mag::init();
     inited &= teller::drivers::sdcard::init();
     inited &= teller::drivers::temperature::init();
     inited &= teller::drivers::storage::init(); /* later than flashmem and sdcard */
@@ -158,6 +163,7 @@ void bootSystem(void)
     inited &= teller::cmd::init();
     inited &= teller::edr::init();
     inited &= teller::imu::init();
+    inited &= teller::mag::init();
     inited &= teller::gmm::init();
     inited &= teller::scm::init();
 

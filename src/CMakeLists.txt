@@ -109,6 +109,7 @@ add_executable(
 	tasks/gmm.cpp
 	tasks/imu.cpp
 	tasks/logger.cpp
+	tasks/mag.cpp
 	tasks/mode.cpp
 	tasks/pins.cpp
 	tasks/scm.cpp

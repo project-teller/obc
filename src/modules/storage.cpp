@@ -31,7 +31,7 @@ bool isStorageAreaMandatory(size_t area)
  */
 bool shouldMountStorageAreaAtBoot(size_t area)
 {
-    return area == STORAGE_AREA_FLASH_MEMORY;
+    return area == STORAGE_AREA_FLASH_MEMORY || area == STORAGE_AREA_SD_CARD;
 }
 
 /**

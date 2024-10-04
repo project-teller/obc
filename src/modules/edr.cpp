@@ -7,6 +7,7 @@
 #include "core/utils/smart_file_handle.h"
 #include "drivers/storage.h"
 #include "hal/memory.h"
+#include "hal/system.h"
 #include "modules/edr.hpp"
 #include "modules/log.h"
 #include "modules/storage.h"
@@ -49,6 +50,10 @@ static std::list<event_callback_t*> callbacks;
 {
     teller::log::Logger* log = teller::log::getLogger(MODULE_ID_EDR);
     const char* name = getStorageAreaName(area);
+
+    /* Apparently a small delay is needed at boot to avoid problems with
+     * the initialization */
+    teller::hal::system::delayMsec(1000);
 
     for (;;) {
         littlefs::Filesystem* fs;

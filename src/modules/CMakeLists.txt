@@ -9,6 +9,7 @@ add_library(
     imu.cpp
     lcl.cpp
     log.cpp
+    mag.cpp
     messages.cpp
     mode.cpp
     rxsm.cpp

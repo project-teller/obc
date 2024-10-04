@@ -2,6 +2,6 @@
 
 namespace teller::tasks {
 
-[[noreturn]] void imuTask(void* args);
+[[noreturn]] void magTask(void* args);
 
 }
