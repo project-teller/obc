@@ -125,4 +125,45 @@ bool unselect(address_t address);
 
 int getLastErrorCode(void);
 
+/**
+ * @brief RAII helper class that selects an SPI device.
+ */
+class DeviceSelector {
+public:
+    explicit DeviceSelector(address_t address_)
+        : address(address_)
+        , selected(false)
+    {
+    }
+
+    ~DeviceSelector()
+    {
+        if (selected) {
+            unselect(address);
+        }
+    }
+
+    bool ensureSelected()
+    {
+        /* TODO(ntamas): make sure that the SPI bus is locked to this device
+         * selector until we destroy the selector */
+        if (!selected && select(address)) {
+            selected = true;
+        }
+        return selected;
+    }
+
+    bool ensureUnselected()
+    {
+        if (selected && unselect(address)) {
+            selected = false;
+        }
+        return !selected;
+    }
+
+private:
+    address_t address;
+    bool selected;
+};
+
 }
