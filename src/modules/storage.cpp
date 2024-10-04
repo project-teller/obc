@@ -19,6 +19,22 @@ using namespace teller::telem;
 static teller::log::Logger* logger = nullptr;
 
 /**
+ * @brief Returns whether the given storage area is expected to be present.
+ */
+bool isStorageAreaMandatory(size_t area)
+{
+    return area == STORAGE_AREA_FLASH_MEMORY || area == STORAGE_AREA_SD_CARD;
+}
+
+/**
+ * @brief Returns whether the given storage area should be mounted at boot.
+ */
+bool shouldMountStorageAreaAtBoot(size_t area)
+{
+    return area == STORAGE_AREA_FLASH_MEMORY;
+}
+
+/**
  * @brief Tracks the state of a single filesystem in the storage module.
  */
 class FilesystemState {
@@ -260,8 +276,14 @@ public:
     bool allMounted() const
     {
         for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
-            if (_filesystems[i] && (!_filesystems[i]->isMounted() || _filesystems[i]->isErrored())) {
-                return false;
+            if (_filesystems[i]) {
+                if (!_filesystems[i]->isMounted() || _filesystems[i]->isErrored()) {
+                    return false;
+                }
+            } else {
+                if (isStorageAreaMandatory(i)) {
+                    return false;
+                }
             }
         }
         return true;
@@ -350,14 +372,34 @@ public:
     }
 
     /**
-     * @brief Attempts to mount all filesystems.
+     * @brief Attempts to format filesystems that failed to mount at boot but
+     * should be mounted.
      */
-    bool mountAll()
+    bool formatAtBoot()
     {
         bool success = true;
 
         for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
-            if (_filesystems[i]) {
+            auto fs = _filesystems[i];
+            if (fs && !fs->isMounted() && shouldMountStorageAreaAtBoot(i)) {
+                if (fs->_fs.format().has_value()) {
+                    success = false;
+                }
+            }
+        }
+
+        return success;
+    }
+
+    /**
+     * @brief Attempts to mount the filesystems that should be mounted at boot.
+     */
+    bool mountAtBoot()
+    {
+        bool success = true;
+
+        for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
+            if (_filesystems[i] && shouldMountStorageAreaAtBoot(i)) {
                 if (!_filesystems[i]->ensureMounted()) {
                     success = false;
                 }
@@ -490,11 +532,11 @@ bool init(InitMode mode)
         }
     }
 
-    success = fs.mountAll();
+    success = fs.mountAtBoot();
 
     if (!success && mode == INIT_MODE_FORMAT_IF_NEEDED) {
-        fs.formatAll();
-        fs.mountAll();
+        fs.formatAtBoot();
+        fs.mountAtBoot();
     }
 
     /* Formatting and mounting is on a best-effort basis so we return true
