@@ -196,7 +196,7 @@ public:
         assert(err == SDLOG_SUCCESS);
 
         err = sdlog_message_format_add_columns(&_format, names, types, units);
-        assert(err != SDLOG_SUCCESS);
+        assert(err == SDLOG_SUCCESS);
     }
 
     ~FormattedLogRecord()
