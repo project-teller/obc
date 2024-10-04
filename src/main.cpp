@@ -96,7 +96,7 @@ static const task_definition_t tasks[] = {
     { .func = telemetryTask, .name = "telem", .priority = NORMAL, .stack_size = 2048 },
     { .func = commandTask, .name = "cmd", .priority = LOW, .stack_size = 4096 },
     { .func = flashMemoryTask, .name = "flashmem", .priority = HIGH, .stack_size = 4096 },
-    { .func = sdCardTask, .name = "sdcard", .priority = HIGH, .stack_size = 1024 },
+    { .func = sdCardTask, .name = "sdcard", .priority = HIGH, .stack_size = 4096 },
     { .func = imuTask, .name = "imu", .priority = NORMAL, .stack_size = 1024 },
     { .func = loggerTask, .name = "log", .priority = NORMAL, .stack_size = 2048 },
     { .func = modeManagerTask, .name = "mode", .priority = NORMAL, .stack_size = 1024 },
@@ -525,9 +525,11 @@ extern "C" void HardFault_Handler(void)
     HANDLE_FATAL_ERROR(teller::debug::ERROR_HARD_FAULT);
 }
 
+/*
 extern "C" void HAL_Delay(uint32_t millis)
 {
     vTaskDelay(millis);
 }
+*/
 
 #endif
