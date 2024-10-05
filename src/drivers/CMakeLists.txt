@@ -6,6 +6,7 @@ endif()
 # Declare the generic module library
 add_library(
     obc-drivers
+    adc.cpp
     flashmem.cpp
     imu.cpp
     mag.cpp
