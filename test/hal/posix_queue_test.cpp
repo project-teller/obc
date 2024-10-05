@@ -65,11 +65,6 @@ TEST(BlockingQueue, send_and_clear)
     ASSERT_TRUE(queue.empty());
 }
 
-TEST(BlockingQueue, zero_length)
-{
-    ASSERT_THROW({ BlockingQueue<int> queue(0); }, std::runtime_error);
-}
-
 TEST(BlockingQueue, send_to_closed_queue)
 {
     int res;

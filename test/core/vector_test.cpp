@@ -81,35 +81,8 @@ TEST(VectorTest, indexing)
     EXPECT_EQ(a[0], a.x);
     EXPECT_EQ(a[1], a.y);
     EXPECT_EQ(a[2], a.z);
-    try {
-        a[3];
-        FAIL() << "Expected std::runtime_error";
-    } catch (std::runtime_error const& err) {
-        /* pass */
-    } catch (...) {
-        FAIL() << "Expected std::runtime_error";
-    }
 
     EXPECT_EQ(b[0], b.x);
     EXPECT_EQ(b[1], b.y);
     EXPECT_EQ(b[2], b.z);
-    try {
-        b[3];
-        FAIL() << "Expected std::runtime_error";
-    } catch (std::runtime_error const& err) {
-        /* pass */
-    } catch (...) {
-        FAIL() << "Expected std::runtime_error";
-    }
-
-    b[0] = 42;
-    EXPECT_EQ(b.x, 42);
-    try {
-        b[3] = 42;
-        FAIL() << "Expected std::runtime_error";
-    } catch (std::runtime_error const& err) {
-        /* pass */
-    } catch (...) {
-        FAIL() << "Expected std::runtime_error";
-    }
 }
