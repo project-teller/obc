@@ -15,26 +15,77 @@ using namespace teller::telem;
 static const spi::address_t address = spi::NO_ADDRESS;
 #elif defined(TELLER_BOARD_STM32F4)
 /* SPI bus 3, CS pin 2 */
-static const spi::address_t address = { .bus = 2, .device = 1 };
+static const spi::address_t address = { .bus = 2, .device = 2 };
 #else
 static const spi::address_t address = spi::NO_ADDRESS;
 #endif
 
-/* Registers in user bank 0 */
-#define REG_WHO_AM_I 0x00
-#define REG_PWR_MGMT_1 0x06
-#define REG_ACCEL_XOUT_H 0x2D
-#define REG_GYRO_XOUT_H 0x33
-#define REG_BANK_SEL 0x7F
+/* Register map */
+#define REG_WHO_AM_I 0x0F
+#define REG_CTRL_REG1 0x20
+#define REG_CTRL_REG2 0x21
+#define REG_CTRL_REG3 0x22
+#define REG_CTRL_REG4 0x23
+#define REG_CTRL_REG5 0x24
+#define REG_HP_FILTER_RESET 0x25
+#define REG_REFERENCE 0x26
+#define REG_STATUS_REG 0x27
+#define REG_OUT_X_L 0x28
+#define REG_OUT_X_H 0x29
+#define REG_OUT_Y_L 0x2A
+#define REG_OUT_Y_H 0x2B
+#define REG_OUT_Z_L 0x2C
+#define REG_OUT_Z_H 0x2D
+#define REG_INT1_CFG 0x30
+#define REG_INT1_SRC 0x31
+#define REG_INT1_THS 0x32
+#define REG_INT1_DURATION 0x33
+#define REG_INT2_CFG 0x34
+#define REG_INT2_SRC 0x35
+#define REG_INT2_THS 0x36
+#define REG_INT2_DURATION 0x37
 
-/* Registers in user bank 2 */
-#define REG_GYRO_SMPLRT_DIV 0x00
-#define REG_GYRO_CONFIG_1 0x01
-#define REG_ACCEL_SMPLRT_DIV_1 0x10
-#define REG_ACCEL_SMPLRT_DIV_2 0x11
-#define REG_ACCEL_CONFIG 0x14
+#define BIT(x) (1UL << (x))
+
+/* CTRL_REG1 register bits */
+#define BIT_XEN BIT(0)
+#define BIT_YEN BIT(1)
+#define BIT_ZEN BIT(2)
+#define BIT_DR0 BIT(3)
+#define BIT_DR1 BIT(4)
+#define BIT_PM0 BIT(5)
+#define BIT_PM1 BIT(6)
+#define BIT_PM2 BIT(7)
+
+/* Data rate bit combinations */
+#define BITS_DR_50HZ_37HZ 0
+#define BITS_DR_100HZ_74HZ BIT_DR0
+#define BITS_DR_400HZ_292HZ BIT_DR1
+#define BITS_DR_1000HZ_780HZ (BIT_DR0 | BIT_DR1)
+
+/* Power mode combinations */
+#define BITS_PM_POWERDOWN 0
+#define BITS_PM_NORMAL BIT_PM0
+#define BITS_PM_LOW_0HZ_5 BIT_PM1
+#define BITS_PM_LOW_1HZ (BIT_PM0 | BIT_PM1)
+#define BITS_PM_LOW_2HZ BIT_PM2
+#define BITS_PM_LOW_5HZ (BIT_PM2 | BIT_PM0)
+#define BITS_PM_LOW_10HZ (BIT_PM2 | BIT_PM1)
+
+/* CTRL_REG4 register bits */
+#define BIT_SIM BIT(0)
+#define BIT_FS0 BIT(4)
+#define BIT_FS1 BIT(5)
+#define BIT_BLE BIT(6)
+#define BIT_BDU BIT(7)
+
+/* Measurement scale combinations */
+#define BITS_FS_100G (0)
+#define BITS_FS_200G (BIT_FS0)
+#define BITS_FS_400G (BIT_FS0 | BIT_FS1)
 
 #define READ_REGISTER(x) (static_cast<uint8_t>(x | 0x80))
+#define READ_REGISTER_AUTO_INCREMENT(x) (static_cast<uint8_t>(x | 0xC0))
 #define WRITE_REGISTER(x) (x)
 
 [[nodiscard]] static bool readRegisterByte(uint8_t index, uint8_t& result);
@@ -45,40 +96,23 @@ static const spi::address_t address = spi::NO_ADDRESS;
  * for configuring the IMU.
  */
 typedef struct {
-    uint8_t bank;
     uint8_t reg;
     uint8_t value;
 } configuration_entry_t;
 
 #define NO_MORE_ENTRIES \
     {                   \
-        0, 0, 0         \
+        0, 0            \
     }
 
-#define GYRO_SCALE (4000.0f / std::numeric_limits<int16_t>::max())
-#define ACCEL_SCALE (30.0f * 9.81f / std::numeric_limits<int16_t>::max())
+#define ACCEL_SCALE (100.0f * 9.81f / std::numeric_limits<int16_t>::max())
 
 static const configuration_entry_t config[] = {
-    /* Wake up from sleep mode (!0x40), disable temperature sensor (0x08),
-     * select best clock source (0x01) */
-    { 0, REG_PWR_MGMT_1, 0x09 },
+    /* Set normal power mode, set data rate and enable all axes */
+    { REG_CTRL_REG1, BITS_PM_NORMAL | BITS_DR_100HZ_74HZ | BIT_XEN | BIT_YEN | BIT_ZEN },
 
-    /* Enable gyro lowpass filter (0x01), full scale = 4000 dps (0x06),
-     * lowpass filter 3dB bandwidth at 23.9 Hz (0x20), NBW at 35.9 Hz */
-    { 2, REG_GYRO_CONFIG_1, 0x27 },
-
-    /* Gyro sample rate divider = 14 = 0x0E; this yields a sample rate of
-     * 1125 / (14+1) = 75 Hz, approximately twice the NBW of the LPF */
-    { 2, REG_GYRO_SMPLRT_DIV, 0x0e },
-
-    /* Enable accelerometer lowpass filter (0x01), full scale = 30g (0x06),
-     * lowpass filter 3dB bandwidth at 23.9 Hz (0x20), NBW at 35.9 Hz */
-    { 2, REG_ACCEL_CONFIG, 0x27 },
-
-    /* Accelerometer sample rate divider = 14 = 0x0E; this yields a sample rate
-     * of 1125 / (14+1) = 75 Hz, approximately twice the NBW of the LPF */
-    { 2, REG_ACCEL_SMPLRT_DIV_1, 0x00 },
-    { 2, REG_ACCEL_SMPLRT_DIV_2, 0x0e },
+    /* Set full scale and block data update */
+    { REG_CTRL_REG4, BITS_FS_100G | BIT_BDU },
 
     NO_MORE_ENTRIES
 };
@@ -112,7 +146,7 @@ bool setup()
     uint8_t value;
 
     /* Read WHO_AM_I register, check expected value */
-    if (!readRegisterByte(REG_WHO_AM_I, value) || value != 0xe1) {
+    if (!readRegisterByte(REG_WHO_AM_I, value) || value != 0x32) {
         logger->error("IMU not found");
         return false;
     } else {
@@ -123,14 +157,14 @@ bool setup()
 
 bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
 {
-    std::uint8_t txBuf[13] = { 0x80 + REG_ACCEL_XOUT_H };
-    std::uint8_t rxBuf[13] = { 0x00 };
+    std::uint8_t txBuf[7] = { READ_REGISTER_AUTO_INCREMENT(REG_OUT_X_H) };
+    std::uint8_t rxBuf[7] = { 0x00 };
     std::uint32_t now;
 
     /* TODO: timing should be better */
     system::delayMsec(20);
 
-    /* Read accelerometer and gyro measurements */
+    /* Read accelerometer measurement */
     now = system::getTimeSinceBootMsec();
     if (!spi::transfer(address, txBuf, rxBuf, sizeof(txBuf))) {
         logger->error("SPI transfer failed");
@@ -144,11 +178,9 @@ bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
         static_cast<std::int16_t>((rxBuf[3] << 8) + rxBuf[4]) * ACCEL_SCALE,
         static_cast<std::int16_t>((rxBuf[5] << 8) + rxBuf[6]) * ACCEL_SCALE);
 
+    // No gyro in this IMU
     angularVelocity.timestampInMsec = now;
-    angularVelocity.value.set(
-        static_cast<std::int16_t>((rxBuf[7] << 8) + rxBuf[8]) * GYRO_SCALE,
-        static_cast<std::int16_t>((rxBuf[9] << 8) + rxBuf[10]) * GYRO_SCALE,
-        static_cast<std::int16_t>((rxBuf[11] << 8) + rxBuf[12]) * GYRO_SCALE);
+    angularVelocity.value.set(0.0f, 0.0f, 0.0f);
 
     return true;
 }
@@ -185,34 +217,15 @@ static bool writeRegisterByte(uint8_t index, uint8_t value, bool verify)
 static bool configure()
 {
     const configuration_entry_t* entry = config;
-    uint8_t bank = 0xff;
 
-    while (entry->bank != 0 || entry->reg != 0) {
-        /* Switch register bank if needed */
-        if (entry->bank != bank) {
-            if (!writeRegisterByte(REG_BANK_SEL, (entry->bank & 0x03) << 4, /* verify = */ true)) {
-                logger->error("Switch to bank %d failed", entry->bank & 0x03);
-                return false;
-            }
-
-            bank = entry->bank;
-        }
-
+    while (entry->reg != 0) {
         /* Write to configuration register */
         if (!writeRegisterByte(entry->reg, entry->value, /* verify = */ true)) {
-            logger->error("Setting IMU reg %d in bank %d failed", entry->reg, bank);
+            logger->error("Setting IMU reg %dfailed", entry->reg);
             return false;
         }
 
         entry++;
-    }
-
-    /* Switch back to bank 0 */
-    if (bank != 0) {
-        if (!writeRegisterByte(REG_BANK_SEL, 0, /* verify = */ true)) {
-            logger->error("Switch to bank %d failed", 0);
-            return false;
-        }
     }
 
     return true;
