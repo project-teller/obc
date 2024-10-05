@@ -4,6 +4,7 @@
 #include "hal/hal.h"
 #include "hal/system.h"
 
+#include "drivers/adc.h"
 #include "drivers/flashmem.h"
 #include "drivers/imu.h"
 #include "drivers/mag.h"
@@ -144,6 +145,7 @@ void bootSystem(void)
     teller::errors::init();
 
     /* Initialize the drivers */
+    inited &= teller::drivers::adc::init();
     inited &= teller::drivers::flashmem::init();
     inited &= teller::drivers::imu::init();
     inited &= teller::drivers::mag::init();

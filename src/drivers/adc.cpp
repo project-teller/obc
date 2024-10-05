@@ -5,7 +5,7 @@
 #include "adc/dummy.cpp"
 #elif defined(TELLER_BOARD_STM32F4)
 // STM32F415RG TELLER OBC board
-#include "adc/dummy.cpp"
+#include "adc/max11643.cpp"
 #elif defined(TELLER_BOARD_POSIX)
 // Simulator for a POSIX-compliant OS
 #include "adc/dummy.cpp"
