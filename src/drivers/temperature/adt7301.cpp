@@ -48,10 +48,10 @@ bool update(float& temperature)
 
     if (encodedTemperature & 0x2000) {
         /* negative temperature */
-        temperature = (encodedTemperature - 16384) / 32;
+        temperature = (encodedTemperature - 16384) / 32.0f;
     } else {
         /* non-negative temperature */
-        temperature = encodedTemperature / 32;
+        temperature = encodedTemperature / 32.0f;
     }
 
     return true;
