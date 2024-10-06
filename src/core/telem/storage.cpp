@@ -47,4 +47,9 @@ void decodeStorageCommandFrame(const uint8_t* encoded, storage_command_data_t* d
     decoded->length = frame->length ? frame->length : MAX_READ_LENGTH;
 }
 
+bool validateEncodedStorageCommandFrame(const uint8_t* encoded, size_t length)
+{
+    return length >= sizeof(storage_command_frame_t);
+}
+
 }

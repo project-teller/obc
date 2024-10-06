@@ -37,4 +37,13 @@ uint8_t encodeCalibrationRequestFrame(const calibration_request_data_t* data, st
  */
 void decodeCalibrationRequestFrame(const std::uint8_t* encoded, calibration_request_data_t* decoded);
 
+/**
+ * @brief Validates the wire representation of a calibration request frame without decoding it.
+ *
+ * @param encoded  the encoded representation of the telemetry frame
+ * @param length   the length of the encoded representation of the frame
+ * @return whether the frame can be considered valid and is safe to be decoded
+ */
+bool validateEncodedCalibrationRequestFrame(const uint8_t* encoded, size_t length);
+
 }

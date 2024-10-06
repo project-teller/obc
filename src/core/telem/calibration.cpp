@@ -33,4 +33,9 @@ void decodeCalibrationRequestFrame(const uint8_t* encoded, calibration_request_d
         : CALIBRATION_NOP;
 }
 
+bool validateEncodedCalibrationRequestFrame(const uint8_t* encoded, size_t length)
+{
+    return length >= sizeof(calibration_request_frame_t);
+}
+
 }

@@ -15,7 +15,7 @@ namespace teller::telem::frames {
  */
 typedef struct {
     /** Stores whether this is a request or a reply */
-    uint8_t is_reply;
+    uint8_t isReply;
 
     /** Data to send in the frame */
     uint8_t data[MAX_PAYLOAD_LENGTH];
@@ -40,5 +40,14 @@ uint8_t encodeEchoFrame(const echo_data_t* data, std::uint8_t* encoded);
  * @param decoded  the decoded representation of the echo frame
  */
 void decodeEchoFrame(const std::uint8_t* encoded, size_t length, echo_data_t* decoded);
+
+/**
+ * @brief Validates the wire representation of an echo frame without decoding it.
+ *
+ * @param encoded  the encoded representation of the telemetry frame
+ * @param length   the length of the encoded representation of the frame
+ * @return whether the frame can be considered valid and is safe to be decoded
+ */
+bool validateEncodedEchoFrame(const uint8_t* encoded, size_t length);
 
 }

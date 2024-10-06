@@ -4,6 +4,7 @@
 #include "core/telem/ack.h"
 #include "core/telem/calibration.h"
 #include "core/telem/clock_status.h"
+#include "core/telem/echo.h"
 #include "core/telem/generic.h"
 #include "core/telem/gmm.h"
 #include "core/telem/heartbeat.h"
@@ -126,6 +127,9 @@ TEST(TelemetryTest, heartbeatFrameEncoding)
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeHeartbeatFrame(&heartbeat, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
 
+    EXPECT_TRUE(frames::validateEncodedHeartbeatFrame(encoded, 11));
+    EXPECT_FALSE(frames::validateEncodedHeartbeatFrame(encoded, 10));
+
     frames::decodeHeartbeatFrame(encoded, &decoded);
 
     EXPECT_EQ(decoded.timestampInMsec, heartbeat.timestampInMsec);
@@ -168,6 +172,10 @@ TEST(TelemetryTest, textMessageFrameEncoding)
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeTextMessageFrame(&textMessage, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
 
+    EXPECT_TRUE(frames::validateEncodedTextMessageFrame(encoded, sizeof(expectedBytes)));
+    EXPECT_TRUE(frames::validateEncodedTextMessageFrame(encoded, 1));
+    EXPECT_FALSE(frames::validateEncodedTextMessageFrame(encoded, 0));
+
     frames::decodeTextMessageFrame(encoded, sizeof(expectedBytes), &decoded);
 
     EXPECT_EQ(decoded.level, textMessage.level);
@@ -192,6 +200,9 @@ TEST(TelemetryTest, clockStatusFrameEncoding)
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeClockStatusFrame(&message, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
 
+    EXPECT_TRUE(frames::validateEncodedClockStatusFrame(encoded, 12));
+    EXPECT_FALSE(frames::validateEncodedClockStatusFrame(encoded, 11));
+
     frames::decodeClockStatusFrame(encoded, &decoded);
 
     EXPECT_EQ(decoded.timestampInMsec, message.timestampInMsec);
@@ -214,6 +225,9 @@ TEST(TelemetryTest, ackFrameEncoding)
     /* Negative acknowledgment */
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeAckFrame(&message, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
+
+    EXPECT_TRUE(frames::validateEncodedAckFrame(encoded, 7));
+    EXPECT_FALSE(frames::validateEncodedAckFrame(encoded, 6));
 
     frames::decodeAckFrame(encoded, &decoded);
 
@@ -271,6 +285,9 @@ TEST(TelemetryTest, storageCommandFrameEncoding)
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeStorageCommandFrame(&message, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
 
+    EXPECT_TRUE(frames::validateEncodedStorageCommandFrame(encoded, 7));
+    EXPECT_FALSE(frames::validateEncodedStorageCommandFrame(encoded, 6));
+
     frames::decodeStorageCommandFrame(encoded, &decoded);
 
     EXPECT_EQ(decoded.area, message.area);
@@ -319,6 +336,9 @@ TEST(TelemetryTest, imuFrameEncoding)
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeIMUFrame(&message, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
 
+    EXPECT_TRUE(frames::validateEncodedIMUFrame(encoded, 28));
+    EXPECT_FALSE(frames::validateEncodedIMUFrame(encoded, 27));
+
     frames::decodeIMUFrame(encoded, &decoded);
 
     EXPECT_EQ(decoded.timestampInMsec, message.timestampInMsec);
@@ -343,6 +363,9 @@ TEST(TelemetryTest, calibrationRequestFrameEncoding)
 
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeCalibrationRequestFrame(&message, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
+
+    EXPECT_TRUE(frames::validateEncodedCalibrationRequestFrame(encoded, 1));
+    EXPECT_FALSE(frames::validateEncodedCalibrationRequestFrame(encoded, 0));
 
     frames::decodeCalibrationRequestFrame(encoded, &decoded);
 
@@ -371,11 +394,43 @@ TEST(TelemetryTest, gmmFrameEncoding)
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeGMMFrame(&message, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
 
+    EXPECT_TRUE(frames::validateEncodedGMMFrame(encoded, 14));
+    EXPECT_FALSE(frames::validateEncodedGMMFrame(encoded, 13));
+
     frames::decodeGMMFrame(encoded, &decoded);
 
     EXPECT_EQ(decoded.timestampInMsec, message.timestampInMsec);
     for (int i = 0; i < 10; i++) {
         EXPECT_EQ(decoded.hitCounts.byIndex[i], message.hitCounts.byIndex[i]);
+    }
+}
+
+TEST(TelemetryTest, echoFrameEncoding)
+{
+    /* clang-format off */
+    frames::echo_data_t message = {
+        .isReply = 1,
+        .data = { 0x0b, 0xad, 0xca, 0xfe },
+        .data_length = 4
+    };
+    uint8_t encoded[MAX_MESSAGE_LENGTH];
+    uint8_t expectedBytes[] = { 0x01, 0x0b, 0xad, 0xca, 0xfe };
+    frames::echo_data_t decoded;
+    /* clang-format on */
+
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeEchoFrame(&message, encoded));
+    EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
+
+    EXPECT_TRUE(frames::validateEncodedEchoFrame(encoded, 5));
+    EXPECT_TRUE(frames::validateEncodedEchoFrame(encoded, 1));
+    EXPECT_FALSE(frames::validateEncodedEchoFrame(encoded, 0));
+
+    frames::decodeEchoFrame(encoded, sizeof(expectedBytes), &decoded);
+
+    EXPECT_EQ(decoded.isReply, message.isReply);
+    EXPECT_EQ(decoded.data_length, message.data_length);
+    for (int i = 0; i < message.data_length; i++) {
+        EXPECT_EQ(decoded.data[i], message.data[i]);
     }
 }
 

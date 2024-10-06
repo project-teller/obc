@@ -33,4 +33,9 @@ void decodeTextMessageFrame(
     decoded->message[length - 1] = 0;
 }
 
+bool validateEncodedTextMessageFrame(const uint8_t* encoded, size_t length)
+{
+    return length >= 1;
+}
+
 }

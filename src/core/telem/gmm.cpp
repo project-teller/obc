@@ -44,4 +44,9 @@ void decodeGMMFrame(const uint8_t* encoded, gmm_data_t* decoded)
     }
 }
 
+bool validateEncodedGMMFrame(const uint8_t* encoded, size_t length)
+{
+    return length >= sizeof(gmm_frame_t);
+}
+
 }

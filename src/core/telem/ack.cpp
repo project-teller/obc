@@ -60,4 +60,9 @@ void decodeAckFrame(const uint8_t* encoded, ack_data_t* decoded)
     }
 }
 
+bool validateEncodedAckFrame(const uint8_t* encoded, size_t length)
+{
+    return length >= sizeof(ack_frame_t);
+}
+
 }

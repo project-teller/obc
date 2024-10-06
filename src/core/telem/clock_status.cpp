@@ -35,4 +35,9 @@ void decodeClockStatusFrame(const uint8_t* encoded, clock_status_data_t* decoded
     decoded->rtcTimestampInMsec = frame->rtcTimestamp;
 }
 
+bool validateEncodedClockStatusFrame(const uint8_t* encoded, size_t length)
+{
+    return length >= sizeof(clock_status_frame_t);
+}
+
 }

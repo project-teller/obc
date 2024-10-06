@@ -50,4 +50,13 @@ uint8_t encodeTextMessageFrame(
 void decodeTextMessageFrame(
     const std::uint8_t* encoded, std::size_t length, text_message_data_t* decoded);
 
+/**
+ * @brief Validates the wire representation of a text message frame without decoding it.
+ *
+ * @param encoded  the encoded representation of the telemetry frame
+ * @param length   the length of the encoded representation of the frame
+ * @return whether the frame can be considered valid and is safe to be decoded
+ */
+bool validateEncodedTextMessageFrame(const uint8_t* encoded, size_t length);
+
 }

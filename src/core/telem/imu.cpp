@@ -51,4 +51,9 @@ void decodeIMUFrame(const uint8_t* encoded, imu_data_t* decoded)
     decoded->angularVelocity.z = frame->gyrZ;
 }
 
+bool validateEncodedIMUFrame(const uint8_t* encoded, size_t length)
+{
+    return length >= sizeof(imu_frame_t);
+}
+
 }

@@ -48,4 +48,14 @@ void decodeBinaryDataFrame(const uint8_t* encoded, size_t length, binary_data_t*
     memcpy(decoded->data, frame->data, decoded->data_length);
 }
 
+bool validateEncodedBinaryDataFrame(const uint8_t* encoded, size_t length)
+{
+    if (length < sizeof(binary_data_frame_t)) {
+        return false;
+    }
+
+    auto frame = reinterpret_cast<const binary_data_frame_t*>(encoded);
+    return frame->max_fragment_index >= frame->fragment_index;
+}
+
 }

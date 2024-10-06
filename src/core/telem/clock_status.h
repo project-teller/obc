@@ -29,4 +29,13 @@ uint8_t encodeClockStatusFrame(const clock_status_data_t* data, std::uint8_t* en
  */
 void decodeClockStatusFrame(const std::uint8_t* encoded, clock_status_data_t* decoded);
 
+/**
+ * @brief Validates the wire representation of a clock status frame without decoding it.
+ *
+ * @param encoded  the encoded representation of the telemetry frame
+ * @param length   the length of the encoded representation of the frame
+ * @return whether the frame can be considered valid and is safe to be decoded
+ */
+bool validateEncodedClockStatusFrame(const uint8_t* encoded, size_t length);
+
 }

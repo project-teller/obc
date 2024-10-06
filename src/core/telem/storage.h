@@ -50,4 +50,13 @@ uint8_t encodeStorageCommandFrame(const storage_command_data_t* data, std::uint8
  */
 void decodeStorageCommandFrame(const std::uint8_t* encoded, storage_command_data_t* decoded);
 
+/**
+ * @brief Validates the wire representation of a storage command frame without decoding it.
+ *
+ * @param encoded  the encoded representation of the telemetry frame
+ * @param length   the length of the encoded representation of the frame
+ * @return whether the frame can be considered valid and is safe to be decoded
+ */
+bool validateEncodedStorageCommandFrame(const uint8_t* encoded, size_t length);
+
 }

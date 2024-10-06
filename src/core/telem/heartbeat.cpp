@@ -137,4 +137,9 @@ void decodeHeartbeatFrame(const uint8_t* encoded, heartbeat_data_t* decoded)
     decoded->lclStatusBits.cam = frame->lclStatusBits & (1 << LCL_STATUS_CAM_BIT_INDEX);
 }
 
+bool validateEncodedHeartbeatFrame(const uint8_t* encoded, size_t length)
+{
+    return length >= sizeof(heartbeat_frame_t);
+}
+
 }
