@@ -8,6 +8,7 @@ add_executable(
     ${TARGET_NAME}
     core/block_cache_test.cpp
     core/crc_test.cpp
+    core/histogram_test.cpp
     core/majority_voter_test.cpp
     core/nmea_test.cpp
     core/running_mean_test.cpp
