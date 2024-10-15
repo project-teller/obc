@@ -13,6 +13,7 @@ add_library(
     telem/gmm.cpp
     telem/heartbeat.cpp
     telem/imu.cpp
+    telem/lcl_reset.cpp
     telem/parser.cpp
     telem/storage.cpp
     telem/text_message.cpp

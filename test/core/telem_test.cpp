@@ -9,6 +9,7 @@
 #include "core/telem/gmm.h"
 #include "core/telem/heartbeat.h"
 #include "core/telem/imu.h"
+#include "core/telem/lcl_reset.h"
 #include "core/telem/parser.h"
 #include "core/telem/storage.h"
 #include "core/telem/text_message.h"
@@ -348,6 +349,28 @@ TEST(TelemetryTest, imuFrameEncoding)
     EXPECT_EQ(decoded.angularVelocity.x, message.angularVelocity.x);
     EXPECT_EQ(decoded.angularVelocity.y, message.angularVelocity.y);
     EXPECT_EQ(decoded.angularVelocity.z, message.angularVelocity.z);
+}
+
+TEST(TelemetryTest, lclResetRequestFrameEncoding)
+{
+    /* clang-format off */
+    frames::lcl_reset_request_data_t message = {
+        .lcls_to_reset = frames::LCL_RESET_CAM | frames::LCL_RESET_GMM,
+    };
+    uint8_t encoded[MAX_MESSAGE_LENGTH];
+    uint8_t expectedBytes[] = { 0x21 };
+    frames::lcl_reset_request_data_t decoded;
+    /* clang-format on */
+
+    EXPECT_EQ(sizeof(expectedBytes), frames::encodeLCLResetRequestFrame(&message, encoded));
+    EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
+
+    EXPECT_TRUE(frames::validateEncodedLCLResetRequestFrame(encoded, 1));
+    EXPECT_FALSE(frames::validateEncodedLCLResetRequestFrame(encoded, 0));
+
+    frames::decodeLCLResetRequestFrame(encoded, &decoded);
+
+    EXPECT_EQ(decoded.lcls_to_reset, message.lcls_to_reset);
 }
 
 TEST(TelemetryTest, calibrationRequestFrameEncoding)

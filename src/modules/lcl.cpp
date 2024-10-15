@@ -60,11 +60,18 @@ bool triggered(lcl_t lcl)
 
 void reset(lcl_t lcl)
 {
-    if (lcl >= 0 && lcl < NUM_LCLS) {
-        pin_t pin = pin_map[lcl].reset_pin;
-        write(pin, 0);
-        teller::hal::system::delayMsec(pulse_duration_msec);
-        write(pin, 1);
+    resetMultiple(1 << static_cast<uint8_t>(lcl));
+}
+
+void resetMultiple(uint8_t lcls_to_reset)
+{
+    for (uint8_t lcl = 0; lcl < NUM_LCLS; lcl++) {
+        if (lcls_to_reset & (1 << lcl)) {
+            pin_t pin = pin_map[lcl].reset_pin;
+            write(pin, 0);
+            teller::hal::system::delayMsec(pulse_duration_msec);
+            write(pin, 1);
+        }
     }
 }
 

@@ -40,6 +40,11 @@ bool triggered(lcl_t lcl);
 void reset(lcl_t lcl);
 
 /**
+ * @brief Resets multiple LCLs identified by bits in a byte.
+ */
+void resetMultiple(uint8_t lcls_to_reset);
+
+/**
  * @brief Sets the duration of the pulse used to reset an LCL.
  *
  * Should be used only in unit tests.

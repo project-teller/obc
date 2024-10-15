@@ -4,6 +4,7 @@
 #include "core/telem/ack.h"
 #include "core/telem/calibration.h"
 #include "core/telem/echo.h"
+#include "core/telem/lcl_reset.h"
 #include "core/telem/parser.h"
 #include "core/telem/storage.h"
 #include "hal/memory.h"
@@ -11,6 +12,7 @@
 #include "modules/cmd.h"
 #include "modules/edr.hpp"
 #include "modules/imu.h"
+#include "modules/lcl.h"
 #include "modules/log.h"
 #include "modules/storage.h"
 #include "modules/telem.h"
@@ -91,6 +93,7 @@ static bool prepareMessage(InboundMessage& message, uart_t index,
 static optional<Response> processPacket(const InboundMessage& message);
 static optional<Response> processCalibrationPacket(const InboundMessage& message);
 static bool processEchoPacket(const InboundMessage& message);
+static optional<Response> processLCLResetRequestPacket(const InboundMessage& message);
 static optional<Response> processStoragePacket(const InboundMessage& message);
 static bool sendResponse(uart_t channel, const envelope_t& envelope, Response response);
 
@@ -226,6 +229,12 @@ optional<Response> processPacket(const InboundMessage& message)
         }
         break;
 
+    case frames::LCL_RESET:
+        REJECT_UNLESS_FROM_GCS("LCL reset")
+        {
+            return processLCLResetRequestPacket(message);
+        }
+
     case frames::CALIBRATION:
         REJECT_UNLESS_FROM_GCS("calibration")
         {
@@ -256,6 +265,20 @@ bool sendResponse(uart_t channel, const envelope_t& envelope, Response response)
     };
     uint8_t length = frames::encodeAckFrame(&data, responseBuffer);
     return teller::telem::sendTo((1 << channel), frames::ACK, responseBuffer, length);
+}
+
+optional<Response> processLCLResetRequestPacket(const InboundMessage& message)
+{
+    frames::lcl_reset_request_data_t data;
+
+    if (!frames::validateEncodedLCLResetRequestFrame(message.payload, message.length)) {
+        return Response::invalid();
+    }
+
+    frames::decodeLCLResetRequestFrame(message.payload, &data);
+    teller::lcl::resetMultiple(data.lcls_to_reset);
+
+    return Response::ok();
 }
 
 optional<Response> processCalibrationPacket(const InboundMessage& message)
