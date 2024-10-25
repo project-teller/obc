@@ -202,7 +202,7 @@ bool prepareMessage(InboundMessage& message, uart_t index,
     return true;
 }
 
-#define REJECT_UNLESS_FROM_GCS(what)                                       \
+#define IGNORE_UNLESS_FROM_GCS(what)                                       \
     if (envelope.source != GROUND_STATION) {                               \
         logger->warning("Ignored %s req from c%d", what, envelope.source); \
     } else
@@ -214,7 +214,7 @@ optional<Response> processPacket(const InboundMessage& message)
     switch (envelope.frame_type) {
 
     case frames::RESET:
-        REJECT_UNLESS_FROM_GCS("reset")
+        IGNORE_UNLESS_FROM_GCS("reset")
         {
             /* TODO(ntamas): send ACK, delay the reset to leave some time for
              * the serial queue to flush */
@@ -223,20 +223,20 @@ optional<Response> processPacket(const InboundMessage& message)
         break;
 
     case frames::STORAGE:
-        REJECT_UNLESS_FROM_GCS("storage")
+        IGNORE_UNLESS_FROM_GCS("storage")
         {
             return processStoragePacket(message);
         }
         break;
 
     case frames::LCL_RESET:
-        REJECT_UNLESS_FROM_GCS("LCL reset")
+        IGNORE_UNLESS_FROM_GCS("LCL reset")
         {
             return processLCLResetRequestPacket(message);
         }
 
     case frames::CALIBRATION:
-        REJECT_UNLESS_FROM_GCS("calibration")
+        IGNORE_UNLESS_FROM_GCS("calibration")
         {
             return processCalibrationPacket(message);
         }
