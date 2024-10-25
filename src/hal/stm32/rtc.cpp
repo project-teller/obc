@@ -1,5 +1,6 @@
 #include "hal/rtc.h"
 #include "core/utils/time.h"
+#include "hal/system.h"
 
 #include "config.h"
 #include "stm32_hal.h"
@@ -70,6 +71,8 @@ uint64_t getTimeMsec()
 {
     RTC_DateTypeDef date;
     RTC_TimeTypeDef time;
+    broken_down_time_t bt;
+    uint64_t result;
 
     /* The STM32 documentation says that HAL_RTC_GetDate() must be called
      * after HAL_RTC_GetTime() */
@@ -82,14 +85,64 @@ uint64_t getTimeMsec()
         return 0;
     }
 
-    return utcTimeToMsec(
-        date.Year + 2000, date.Month, date.Date,
-        time.Hours, time.Minutes, time.Seconds,
-        1000 * time.SubSeconds / (static_cast<float>(time.SecondFraction) + 1));
+    bt.year = date.Year + 2000;
+    bt.month = date.Month;
+    bt.day = date.Date;
+    bt.hour = time.Hours;
+    bt.minute = time.Minutes;
+    bt.second = time.Seconds;
+    bt.millisecond = 1000 * time.SubSeconds / (static_cast<float>(time.SecondFraction) + 1);
+
+    if (!utcTimeToMsec(&bt, &result)) {
+        return 0;
+    }
+
+    return result;
 }
 
 bool setTimeMsec(uint64_t timestamp)
 {
+    RTC_DateTypeDef date;
+    RTC_TimeTypeDef time;
+    broken_down_time_t bt;
+    uint64_t remainder;
+
+    if (!utcMsecToTime(timestamp, &bt)) {
+        return false;
+    }
+
+    if (bt.year < 2000) {
+        return false;
+    }
+
+    /* HAL_RTC_SetTime can only set the clock to whole seconds. So, if the
+     * requested timestamp is not a whole second, we need to wait. */
+    remainder = timestamp % 1000;
+    if (remainder > 0) {
+        remainder = 1000 - remainder;
+        timestamp += remainder;
+        teller::hal::system::delayMsec(remainder);
+    }
+
+    if (!utcMsecToTime(timestamp, &bt)) {
+        return false;
+    }
+
+    date.Year = bt.year - 2000;
+    date.Month = bt.month;
+    date.Date = bt.day;
+    time.Hours = bt.hour;
+    time.Minutes = bt.minute;
+    time.Seconds = bt.second;
+
+    if (HAL_RTC_SetTime(&handle, &time, RTC_FORMAT_BIN) != HAL_OK) {
+        return false;
+    }
+
+    if (HAL_RTC_SetDate(&handle, &date, RTC_FORMAT_BIN) != HAL_OK) {
+        return false;
+    }
+
     return false;
 }
 
