@@ -104,3 +104,13 @@ TEST(TimeTest, utcMsecToTime)
     EXPECT_EQ(time.second, 56);
     EXPECT_EQ(time.millisecond, 125);
 }
+
+TEST(TimeTest, utcTimeToDayOfWeek)
+{
+    broken_down_time_t time;
+
+    time.year = 2024;
+    time.month = 10;
+    time.day = 26;
+    EXPECT_EQ(6, utcTimeToDayOfWeek(&time));
+}

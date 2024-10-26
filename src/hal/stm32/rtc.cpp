@@ -131,19 +131,26 @@ bool setTimeMsec(uint64_t timestamp)
     date.Year = bt.year - 2000;
     date.Month = bt.month;
     date.Date = bt.day;
+    date.WeekDay = utcTimeToDayOfWeek(&bt);
+    if (date.WeekDay == 0) {
+        date.WeekDay = 7; /* STM32 HAL day indices go from 1 (Monday) to 7 (Sunday) */
+    }
     time.Hours = bt.hour;
     time.Minutes = bt.minute;
     time.Seconds = bt.second;
+
+    /* HAL_RTC_SetDate needs to be called first, followed by HAL_RTC_SetTime.
+     * This is not clear from the docs but it can be found in the STM32
+     * forum. */
+    if (HAL_RTC_SetDate(&handle, &date, RTC_FORMAT_BIN) != HAL_OK) {
+        return false;
+    }
 
     if (HAL_RTC_SetTime(&handle, &time, RTC_FORMAT_BIN) != HAL_OK) {
         return false;
     }
 
-    if (HAL_RTC_SetDate(&handle, &date, RTC_FORMAT_BIN) != HAL_OK) {
-        return false;
-    }
-
-    return false;
+    return true;
 }
 
 }

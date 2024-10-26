@@ -3,11 +3,13 @@
 
 #include "core/telem/ack.h"
 #include "core/telem/calibration.h"
+#include "core/telem/clock_sync.h"
 #include "core/telem/echo.h"
 #include "core/telem/lcl_reset.h"
 #include "core/telem/parser.h"
 #include "core/telem/storage.h"
 #include "hal/memory.h"
+#include "hal/rtc.h"
 #include "hal/system.h"
 #include "modules/cmd.h"
 #include "modules/edr.hpp"
@@ -92,6 +94,7 @@ static bool prepareMessage(InboundMessage& message, uart_t index,
     const envelope_t& envelope, const uint8_t* payload, uint8_t length);
 static optional<Response> processPacket(const InboundMessage& message);
 static optional<Response> processCalibrationPacket(const InboundMessage& message);
+static optional<Response> processClockSyncPacket(const InboundMessage& message);
 static bool processEchoPacket(const InboundMessage& message);
 static optional<Response> processLCLResetRequestPacket(const InboundMessage& message);
 static optional<Response> processStoragePacket(const InboundMessage& message);
@@ -213,6 +216,13 @@ optional<Response> processPacket(const InboundMessage& message)
 
     switch (envelope.frame_type) {
 
+    case frames::CLOCK_SYNC:
+        IGNORE_UNLESS_FROM_GCS("clock sync")
+        {
+            return processClockSyncPacket(message);
+        }
+        break;
+
     case frames::RESET:
         IGNORE_UNLESS_FROM_GCS("reset")
         {
@@ -265,6 +275,23 @@ bool sendResponse(uart_t channel, const envelope_t& envelope, Response response)
     };
     uint8_t length = frames::encodeAckFrame(&data, responseBuffer);
     return teller::telem::sendTo((1 << channel), frames::ACK, responseBuffer, length);
+}
+
+optional<Response> processClockSyncPacket(const InboundMessage& message)
+{
+    frames::clock_sync_data_t data;
+
+    if (!frames::validateEncodedClockSyncFrame(message.payload, message.length)) {
+        return Response::invalid();
+    }
+
+    frames::decodeClockSyncFrame(message.payload, &data);
+
+    if (teller::hal::rtc::setTimeMsec(data.timestampInMsec)) {
+        return Response::ok();
+    } else {
+        return Response::failed();
+    }
 }
 
 optional<Response> processLCLResetRequestPacket(const InboundMessage& message)

@@ -58,6 +58,16 @@ bool utcTimeToMsec(const broken_down_time_t* components, uint64_t* timestamp);
  */
 bool utcMsecToTime(uint64_t timestamp, broken_down_time_t* components);
 
+/**
+ * @brief Converts a broken time representation to the index of the day of the week.
+ *
+ * Sunday is zero, Monday is 1 and so on.
+ *
+ * @param  components the broken time representation to convert
+ * @return the index of the day of the week
+ */
+int utcTimeToDayOfWeek(const broken_down_time_t* components);
+
 #ifdef __cplusplus
 }
 #endif

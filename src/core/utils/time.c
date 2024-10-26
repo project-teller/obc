@@ -65,7 +65,9 @@ bool utcMsecToTime(
     struct tm brokenTime;
     time_t time = timestamp / 1000;
 
-    brokenTime = *gmtime(&time);
+    if (!gmtime_r(&time, &brokenTime)) {
+        return false;
+    }
 
     if (components) {
         components->year = brokenTime.tm_year + 1900;
@@ -78,4 +80,16 @@ bool utcMsecToTime(
     }
 
     return true;
+}
+
+int utcTimeToDayOfWeek(const broken_down_time_t* components)
+{
+    static int t[] = { 0, 3, 2, 5, 0, 3, 5, 1, 4, 6, 2, 4 };
+    int y = components->year;
+    int m = components->month;
+    int d = components->day;
+
+    /* Tomohiko Sakamoto's method, question 20.31 in the C FAQ list */
+    y -= m < 3;
+    return (y + y / 4 - y / 100 + y / 400 + t[m - 1] + d) % 7;
 }
