@@ -220,6 +220,15 @@ void stopTelemetry(uart::uart_t index)
     telemetry_channel_mask &= ~(1 << index);
 }
 
+void sendClockStatusSoon(void)
+{
+    for (task_t* task = tasks; task->period > 0; task++) {
+        if (task->func == sendClockStatus) {
+            task->counter = task->period;
+        }
+    }
+}
+
 }
 
 /* ************************************************************************* */
@@ -246,6 +255,7 @@ static void sendHeartbeat(uint8_t* payload)
     updateHeartbeatData(&heartbeat);
     send(frames::HEARTBEAT, payload, encodeHeartbeatFrame(&heartbeat, payload));
 
+    /* TODO(ntamas): uncommnt this! */
     /*
     brdLogRecord.write(
         heartbeat.timestampInMsec,
@@ -260,6 +270,8 @@ static void sendClockStatus(uint8_t* payload)
 
     updateClockStatusData(&clock_status);
     send(frames::CLOCK_STATUS, payload, encodeClockStatusFrame(&clock_status, payload));
+
+    /* TODO(ntamas): log clock status regularly in the onboard log! */
 }
 
 static void sendIMUMeasurement(uint8_t* payload)

@@ -124,6 +124,10 @@ bool setTimeMsec(uint64_t timestamp)
         teller::hal::system::delayMsec(remainder);
     }
 
+    // TODO(ntamas): why is this needed? It seems to be required to keep the
+    // OBC and the GND clock in sync after a clock sync
+    timestamp -= 1000;
+
     if (!utcMsecToTime(timestamp, &bt)) {
         return false;
     }

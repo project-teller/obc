@@ -288,6 +288,7 @@ optional<Response> processClockSyncPacket(const InboundMessage& message)
     frames::decodeClockSyncFrame(message.payload, &data);
 
     if (teller::hal::rtc::setTimeMsec(data.timestampInMsec)) {
+        teller::telem::sendClockStatusSoon();
         return Response::ok();
     } else {
         return Response::failed();

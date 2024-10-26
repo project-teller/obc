@@ -139,4 +139,10 @@ bool sendTo(
  */
 void stopTelemetry(teller::hal::uart::uart_t index);
 
+/**
+ * @brief Triggers the sending of a clock status message on the telemetry
+ * streams as soon as possible.
+ */
+void sendClockStatusSoon(void);
+
 }
