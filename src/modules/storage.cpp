@@ -587,9 +587,9 @@ void setup(InitMode mode)
 
 void destroy()
 {
+    fs.destroy();
     teller::drivers::sdcard::destroy();
     teller::drivers::flashmem::destroy();
-    fs.destroy();
     logger = nullptr;
 }
 
