@@ -2,7 +2,7 @@
 
 #include "hal/system.h"
 
-namespace teller::drivers::storage {
+namespace teller::storage {
 
 /**
  * @brief Removes all files that the storage subsystem might have created.

@@ -11,7 +11,6 @@ add_library(
     imu.cpp
     mag.cpp
     sdcard.cpp
-    storage.cpp
     temperature.cpp
 )
 target_include_directories(

@@ -12,12 +12,7 @@ void destroy()
 {
 }
 
-bool setup(void)
-{
-    return true;
-}
-
-std::unique_ptr<littlefs::FilesystemConfig> createFilesystemConfiguration(void)
+littlefs::FilesystemConfig* setup(void)
 {
     return nullptr;
 }

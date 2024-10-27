@@ -22,17 +22,29 @@ typedef enum {
  *
  * @param mode  whether to format all storage areas before mounting them
  */
-[[nodiscard]] bool init(InitMode mode = INIT_MODE_DEFAULT);
+[[nodiscard]] bool init();
 
 /**
  * @brief Destroys the storage subsystem.
  */
 void destroy(void);
 
+void setup(InitMode mode = INIT_MODE_DEFAULT);
+
 /**
  * @brief Returns the status of the storage subsystem.
  */
 teller::telem::subsystem_status_t getSubsystemStatus(void);
+
+/**
+ * @brief Configures a storage area in the storage subsystem.
+ *
+ * @param area  the area to configure
+ * @param cfg   the LittleFS filesystem configuration of the area
+ *
+ * @return  whether the configuration attempt was successful
+ */
+bool configureStorage(teller::telem::storage_area_t area, littlefs::FilesystemConfig& cfg);
 
 /**
  * @brief Erases a storage area in the storage subsystem.

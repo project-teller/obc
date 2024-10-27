@@ -5,7 +5,6 @@
 #include <optional>
 
 #include "core/utils/smart_file_handle.h"
-#include "drivers/storage.h"
 #include "hal/memory.h"
 #include "hal/system.h"
 #include "modules/edr.hpp"

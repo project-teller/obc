@@ -99,6 +99,11 @@ static Logger* logger;
 /** Configuration of the detected flash memory variant */
 const flashmem_w25qxx_cfg_t* cfg;
 
+/**
+ * @brief Filesystem configuration for the flash memory.
+ */
+static std::unique_ptr<FilesystemConfig> fsCfg;
+
 /** Dummy buffer used during SPI transfers to prevent modifying the data
  * structures of LittleFS when writing a page */
 static uint8_t dummy_rx_buf[PAGE_SIZE];
@@ -170,17 +175,27 @@ bool init()
 
 void destroy()
 {
+    fsCfg.reset();
     cfg = nullptr;
     logger = nullptr;
 }
 
-std::unique_ptr<FilesystemConfig> createFilesystemConfiguration(void)
+FilesystemConfig* setup(void)
 {
+    const char* name = getStorageAreaName(STORAGE_AREA_FLASH_MEMORY);
+
     if (!cfg) {
+        if (logger) {
+            logger->error("%s: not found", name);
+        }
         return nullptr;
     }
 
-    auto new_config = std::make_unique<FilesystemConfig>(
+    if (logger) {
+        logger->info("%s: %s (%d KB)", name, cfg->name, cfg->block_count * BLOCK_SIZE_IN_KB);
+    }
+
+    fsCfg = std::make_unique<FilesystemConfig>(
         flashmem_read, /* read */
         flashmem_write, /* prog */
         flashmem_erase, /* erase */
@@ -192,25 +207,7 @@ std::unique_ptr<FilesystemConfig> createFilesystemConfiguration(void)
         /* block_cycles = */ 500,
         /* cache_size = */ PAGE_SIZE,
         /* lookahead_size = */ PAGE_SIZE);
-
-    return new_config;
-}
-
-bool setup(void)
-{
-    const char* name = getStorageAreaName(STORAGE_AREA_FLASH_MEMORY);
-
-    if (!logger) {
-        return false;
-    }
-
-    if (cfg) {
-        logger->info("%s: %s (%d KB)", name, cfg->name, cfg->block_count * BLOCK_SIZE_IN_KB);
-    } else {
-        logger->error("%s: not found", name);
-    }
-
-    return true;
+    return fsCfg.get();
 }
 
 uint32_t getTotalSize()
@@ -222,7 +219,6 @@ bool readData(uint8_t* buf, uint32_t address, size_t length)
 {
     return readIntoBuffer(address, buf, length);
 }
-
 }
 
 /**

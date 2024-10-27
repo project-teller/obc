@@ -115,6 +115,11 @@ static uint8_t writeBuf[BLOCK_SIZE];
 /** Stores the number of blocks on the SD card. Zero if no card was found. */
 static uint32_t blockCount;
 
+/**
+ * @brief Filesystem configuration for the flash memory.
+ */
+static std::unique_ptr<FilesystemConfig> fsCfg;
+
 namespace teller::drivers::sdcard {
 
 bool init()
@@ -122,11 +127,6 @@ bool init()
     bool success;
 
     logger = getLogger(MODULE_ID_EDR);
-    blockCount = tryInitialization();
-    // blockCount = 0;
-
-    /* blockCount == 0 is okay, we still want to report that we did not find the
-     * SD card in setup() */
     success = (logger != nullptr);
 
     if (!success) {
@@ -138,16 +138,28 @@ bool init()
 
 void destroy()
 {
+    fsCfg.reset();
     blockCount = 0;
 }
 
-std::unique_ptr<FilesystemConfig> createFilesystemConfiguration(void)
+FilesystemConfig* setup(void)
 {
+    const char* name = getStorageAreaName(STORAGE_AREA_SD_CARD);
+
+    blockCount = tryInitialization();
+
     if (blockCount <= 0) {
+        if (logger) {
+            logger->error("%s: not found", name);
+        }
         return nullptr;
     }
 
-    auto new_config = std::make_unique<FilesystemConfig>(
+    if (logger) {
+        logger->info("%s: found (%d MB)", name, (blockCount >> 11));
+    }
+
+    fsCfg = std::make_unique<FilesystemConfig>(
         sdcard_spi_read, /* read */
         sdcard_spi_write, /* prog */
         sdcard_spi_erase, /* erase */
@@ -159,27 +171,7 @@ std::unique_ptr<FilesystemConfig> createFilesystemConfiguration(void)
         /* block_cycles = */ 500,
         /* cache_size = */ BLOCK_SIZE,
         /* lookahead_size = */ BLOCK_SIZE);
-
-    return new_config;
-}
-
-bool setup(void)
-{
-    const char* name = getStorageAreaName(STORAGE_AREA_SD_CARD);
-
-    if (!logger) {
-        return false;
-    }
-
-    blockCount = tryInitialization();
-
-    if (blockCount > 0) {
-        logger->info("%s: found (%d MB)", name, (blockCount >> 11));
-    } else {
-        logger->error("%s: not found", name);
-    }
-
-    return true;
+    return fsCfg.get();
 }
 
 uint32_t getTotalSize()

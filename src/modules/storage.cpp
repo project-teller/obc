@@ -5,14 +5,12 @@
 #include "core/telem/binary_data.h"
 #include "drivers/flashmem.h"
 #include "drivers/sdcard.h"
-#include "drivers/storage.h"
 #include "hal/event_flags.hpp"
 #include "hal/system.h"
 #include "modules/log.h"
 #include "modules/storage.h"
 #include "modules/telem.h"
 
-using namespace teller::drivers::storage;
 using namespace teller::hal::system;
 using namespace teller::telem;
 
@@ -46,14 +44,15 @@ class FilesystemState {
 
     enum Flags {
         NO_FLAGS = 0,
-        FLAG_MOUNTED = 1,
-        FLAG_ERRORED = 2
+        FLAG_CONFIGURED = 1,
+        FLAG_MOUNTED = 2,
+        FLAG_ERRORED = 4
     };
 
 public:
-    FilesystemState(storage_area_t area, littlefs::FilesystemConfig& cfg)
+    FilesystemState(storage_area_t area)
         : _area(area)
-        , _fs(cfg)
+        , _fs()
         , _flags(NO_FLAGS)
     {
     }
@@ -63,8 +62,29 @@ public:
         ensureUnmounted();
     }
 
+    bool isConfigured() const { return _flags & FLAG_CONFIGURED; }
     bool isErrored() const { return _flags & FLAG_ERRORED; }
     bool isMounted() const { return _flags & FLAG_MOUNTED; }
+
+    /**
+     * @brief Configures the filesystem with the given LittleFS configuration object.
+     *
+     * This can be called once and only once, before the filesystem is mounted.
+     */
+    bool configure(littlefs::FilesystemConfig& cfg)
+    {
+        if (isConfigured()) {
+            return false;
+        }
+
+        _fs = new littlefs::Filesystem(cfg);
+        if (!_fs) {
+            return false;
+        }
+
+        _flags |= FLAG_CONFIGURED;
+        return true;
+    }
 
     /**
      * @brief Mounts the filesystem if it is not mounted yet.
@@ -78,7 +98,11 @@ public:
             return true;
         }
 
-        if (isErrored() || _fs.mount()) {
+        if (!_fs) {
+            return false;
+        }
+
+        if (isErrored() || _fs->mount()) {
             return false;
         } else {
             _flags |= FLAG_MOUNTED;
@@ -99,7 +123,11 @@ public:
             return true;
         }
 
-        if (_fs.unmount()) {
+        if (!_fs) {
+            return true;
+        }
+
+        if (_fs->unmount()) {
             return false;
         } else {
             _flags &= ~FLAG_MOUNTED;
@@ -113,7 +141,11 @@ public:
      */
     std::optional<littlefs::Error> format()
     {
-        return _fs.format();
+        if (_fs) {
+            return _fs->format();
+        } else {
+            return littlefs::Error::INVAL;
+        }
     }
 
     /**
@@ -201,7 +233,8 @@ public:
         while (!isMounted()) {
             _events.waitAny(EVT_MOUNTED);
         }
-        return &_fs;
+        assert(_fs != nullptr);
+        return _fs;
     }
 
     /**
@@ -214,7 +247,8 @@ public:
         while (isMounted()) {
             _events.waitAny(EVT_UNMOUNTED);
         }
-        return &_fs;
+        assert(_fs != nullptr);
+        return _fs;
     }
 
     /**
@@ -223,12 +257,12 @@ public:
      */
     operator littlefs::Filesystem*()
     {
-        return &_fs;
+        return _fs;
     }
 
 private:
     storage_area_t _area;
-    littlefs::Filesystem _fs;
+    littlefs::Filesystem* _fs;
     uint8_t _flags;
     teller::hal::EventFlags _events;
 
@@ -251,12 +285,7 @@ public:
     {
         for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
             storage_area_t area = static_cast<storage_area_t>(i);
-            auto cfg = getFilesystemConfig(area);
-            if (cfg) {
-                _filesystems[i] = std::make_shared<FilesystemState>(area, *cfg);
-            } else {
-                _filesystems[i].reset();
-            }
+            _filesystems[i] = i == STORAGE_AREA_UNKNOWN ? nullptr : std::make_shared<FilesystemState>(area);
         }
 
         return true;
@@ -362,7 +391,7 @@ public:
         for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
             auto fs = _filesystems[i];
             if (fs) {
-                if (!fs->ensureUnmounted() || fs->_fs.format()) {
+                if (!fs->ensureUnmounted() || !fs->_fs || fs->_fs->format()) {
                     success = false;
                 }
             }
@@ -381,8 +410,8 @@ public:
 
         for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
             auto fs = _filesystems[i];
-            if (fs && !fs->isMounted() && shouldMountStorageAreaAtBoot(i)) {
-                if (fs->_fs.format().has_value()) {
+            if (fs && !fs->isMounted() && shouldMountStorageAreaAtBoot(i) && fs->_fs) {
+                if (fs->_fs->format().has_value()) {
                     success = false;
                 }
             }
@@ -412,7 +441,7 @@ public:
     littlefs::Filesystem* operator[](storage_area_t area)
     {
         auto state = getState(area, /* ensureMounted = */ false);
-        return state ? &state->_fs : nullptr;
+        return state ? state->_fs : nullptr;
     }
 
 private:
@@ -508,11 +537,8 @@ static StorageReaderState storageReader;
 
 namespace teller::storage {
 
-bool init(InitMode mode)
+bool init()
 {
-    std::optional<littlefs::Error> err;
-    bool success;
-
     logger = teller::log::getLogger(MODULE_ID_EDR);
     if (!logger) {
         return false;
@@ -523,12 +549,31 @@ bool init(InitMode mode)
         return false;
     }
 
-    /* destroy() is safe to be called from here */
+    return true;
+}
+
+void setup(InitMode mode)
+{
+    std::optional<littlefs::Error> err;
+    bool success;
+
+    {
+        auto cfg = teller::drivers::flashmem::setup();
+        if (cfg) {
+            configureStorage(STORAGE_AREA_FLASH_MEMORY, *cfg);
+        }
+    }
+
+    {
+        auto cfg = teller::drivers::sdcard::setup();
+        if (cfg) {
+            configureStorage(STORAGE_AREA_SD_CARD, *cfg);
+        }
+    }
 
     if (mode == INIT_MODE_FORMAT) {
         if (!fs.formatAll()) {
-            destroy();
-            return false;
+            return;
         }
     }
 
@@ -538,11 +583,6 @@ bool init(InitMode mode)
         fs.formatAtBoot();
         fs.mountAtBoot();
     }
-
-    /* Formatting and mounting is on a best-effort basis so we return true
-     * even if there were errors while formatting or mounting */
-
-    return true;
 }
 
 void destroy()
@@ -568,6 +608,16 @@ subsystem_status_t getSubsystemStatus()
     }
 }
 
+bool configureStorage(storage_area_t area, littlefs::FilesystemConfig& cfg)
+{
+    auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
+    if (!_filesystem || _filesystem->isConfigured()) {
+        return false;
+    } else {
+        return _filesystem->configure(cfg);
+    }
+}
+
 int eraseStorage(storage_area_t area)
 {
     auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
@@ -590,7 +640,7 @@ int eraseStorage(storage_area_t area)
 bool isStorageConfigured(teller::telem::storage_area_t area)
 {
     auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
-    return static_cast<bool>(_filesystem);
+    return _filesystem && _filesystem->isConfigured();
 }
 
 bool isStorageErrored(storage_area_t area)

@@ -1,9 +1,8 @@
 #include <cstring>
 #include <gtest/gtest.h>
 
-#include "drivers/storage.h"
-#include "drivers/storage/posix_debug.h"
 #include "modules/storage.h"
+#include "modules/storage_posix_debug.h"
 #include "modules/telem.h"
 
 using namespace teller;
@@ -13,16 +12,16 @@ protected:
     void SetUp() override
     {
         ASSERT_TRUE(telem::init());
-        drivers::storage::removeAllFiles();
-        ASSERT_TRUE(drivers::storage::init());
-        ASSERT_TRUE(storage::init(/* format = */ storage::INIT_MODE_FORMAT));
+        storage::removeAllFiles();
+        ASSERT_TRUE(storage::init());
+
+        storage::setup(/* format = */ storage::INIT_MODE_FORMAT);
     }
 
     void TearDown() override
     {
         storage::destroy();
-        drivers::storage::destroy();
-        drivers::storage::removeAllFiles();
+        storage::removeAllFiles();
         telem::destroy();
     }
 };

@@ -26,6 +26,11 @@ static struct lfs_filebd_config filebd_config = { .read_size = SD_CARD_BLOCK_SIZ
  */
 static lfs_filebd_t filebd;
 
+/**
+ * @brief Filesystem configuration for the SD card.
+ */
+static std::unique_ptr<FilesystemConfig> fsCfg;
+
 namespace teller::drivers::sdcard {
 
 bool init()
@@ -35,17 +40,13 @@ bool init()
 
 void destroy()
 {
+    fsCfg.reset();
 }
 
-bool setup(void)
-{
-    return true;
-}
-
-std::unique_ptr<FilesystemConfig> createFilesystemConfiguration(void)
+FilesystemConfig* setup(void)
 {
     try {
-        auto new_config = std::make_unique<FilesystemConfig>(
+        fsCfg = std::make_unique<FilesystemConfig>(
             lfs_filebd_read,
             lfs_filebd_prog,
             lfs_filebd_erase,
@@ -58,9 +59,9 @@ std::unique_ptr<FilesystemConfig> createFilesystemConfiguration(void)
             filebd_config.read_size,
             filebd_config.read_size);
 
-        new_config->raw_cfg().context = &filebd;
-        if (lfs_filebd_create(&new_config->raw_cfg(), getFilename(), &filebd_config) == LFS_ERR_OK) {
-            return new_config;
+        fsCfg->raw_cfg().context = &filebd;
+        if (lfs_filebd_create(&fsCfg->raw_cfg(), getFilename(), &filebd_config) == LFS_ERR_OK) {
+            return fsCfg.get();
         }
         /* LCOV_EXCL_START */
     } catch (std::bad_alloc&) {

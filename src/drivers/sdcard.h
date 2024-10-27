@@ -25,19 +25,14 @@ void destroy(void);
  *
  * This function is called at startup from the EDR module before we start using
  * the SD card for logging.
- */
-bool setup(void);
-
-/**
- * @brief Creates a LittleFS filesystem configuration object for the SD card.
  *
- * The ownership of the newly created configuration object is passed to the
- * caller.
+ * The ownership of the newly created configuration object is retained by the
+ * flash memory driver.
  *
  * @return a new LittleFS filesystem configuration object, or a null pointer if
- * the SD card is not initialized yet.
+ * the SD card cannot be initialized.
  */
-std::unique_ptr<littlefs::FilesystemConfig> createFilesystemConfiguration(void);
+littlefs::FilesystemConfig* setup(void);
 
 /**
  * @brief Returns the total size of the SD card, in bytes.

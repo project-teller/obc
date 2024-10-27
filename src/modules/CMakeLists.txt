@@ -1,3 +1,7 @@
+if(TELLER_BOARD STREQUAL "POSIX")
+  set(EXTRA_OBC_MODULE_SOURCES storage_posix_debug.cpp)
+endif()
+
 # Declare the generic module library
 add_library(
     obc-modules
@@ -18,7 +22,9 @@ add_library(
     supervisor.cpp
     telem.cpp
     uart_rx.cpp
+    ${EXTRA_OBC_MODULE_SOURCES}
 )
+
 target_include_directories(
 	obc-modules PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/..
