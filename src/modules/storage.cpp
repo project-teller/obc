@@ -60,6 +60,9 @@ public:
     ~FilesystemState()
     {
         ensureUnmounted();
+        if (_fs) {
+            delete _fs;
+        }
     }
 
     bool isConfigured() const { return _flags & FLAG_CONFIGURED; }
