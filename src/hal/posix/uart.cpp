@@ -9,9 +9,11 @@
 
 #include "hal/system.h"
 #include "hal/uart.h"
+#include "lib/fdstream/fdstream.hh"
 #include "lib/socketstream/socketstream.hh"
 #include "uart_debug.h"
 
+using boost::fdistream;
 using swoope::socketstream;
 
 using namespace std;
@@ -38,12 +40,18 @@ static std::unique_ptr<socketstream> debugClientSocket;
 /** File descriptor on which we can read the measurements from the GMM */
 static int gmmFileDescriptor = 0;
 
+/** File descriptor stream that wraps the file descriptor of the GMM */
+static std::unique_ptr<fdistream> gmmStream;
+
 /** File descriptor on which we can read the measurements from the SCM */
 static int scmFileDescriptor = 0;
 
+/** File descriptor stream that wraps the file descriptor of the SCM */
+static std::unique_ptr<fdistream> scmStream;
+
 static void handleDebugPort(void);
 static int uartToInputFileDescriptor(uart_t index);
-static istream& uartToInputStream(uart_t index);
+static istream* uartToInputStream(uart_t index);
 static ostream& uartToOutputStream(uart_t index);
 
 static map<uart_t, stringstream> uartInputOverrides;
@@ -95,7 +103,8 @@ bool teller::hal::uart::read(uart_t index, uint8_t* data, uint16_t size, uint16_
         return true;
     }
 
-    istream& stream = uartToInputStream(index);
+    istream* pStream = uartToInputStream(index);
+    istream& stream = pStream ? *pStream : nullStream;
     bool result = false;
 
     if (stream.rdstate() & (stream.failbit | stream.eofbit)) {
@@ -146,11 +155,23 @@ void teller::hal::uart::setDebugPort(const std::string& service)
 void teller::hal::uart::setGMMFileDescriptor(int fd)
 {
     gmmFileDescriptor = fd;
+
+    if (gmmFileDescriptor > 0) {
+        gmmStream.reset(new fdistream(gmmFileDescriptor));
+    } else {
+        gmmStream.reset();
+    }
 }
 
 void teller::hal::uart::setSCMFileDescriptor(int fd)
 {
     scmFileDescriptor = fd;
+
+    if (scmFileDescriptor > 0) {
+        scmStream.reset(new fdistream(scmFileDescriptor));
+    } else {
+        scmStream.reset();
+    }
 }
 
 void teller::hal::uart::waitUntilConnected(uart_t index)
@@ -163,7 +184,6 @@ void teller::hal::uart::waitUntilConnected(uart_t index)
             if (client.is_open()) {
                 debugClientSocket.reset(new socketstream());
                 debugClientSocket->swap(client);
-                (*debugClientSocket) << "Hello world\n";
             }
         } else {
             teller::hal::system::sleepForever();
@@ -207,20 +227,24 @@ bool teller::hal::uart::write(uart_t index, const char* data)
     return write(index, reinterpret_cast<uint8_t*>(const_cast<char*>(data)), strlen(data));
 }
 
-static istream& uartToInputStream(uart_t index)
+static istream* uartToInputStream(uart_t index)
 {
     auto it = uartInputOverrides.find(index);
     if (it != uartInputOverrides.end()) {
-        return it->second;
+        return &it->second;
     }
 
     switch (index) {
     case RXSM:
-        return cin;
+        return &cin;
+    case GMM:
+        return gmmStream.get();
+    case SCM:
+        return scmStream.get();
     case DEBUG:
-        return debugClientSocket ? *debugClientSocket : nullStream;
+        return debugClientSocket ? debugClientSocket.get() : &nullStream;
     default:
-        return nullStream;
+        return &nullStream;
     }
 }
 
