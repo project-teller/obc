@@ -14,7 +14,7 @@ using namespace teller::telem;
 #if defined(TELLER_BOARD_NUCLEO144)
 static const spi::address_t address = spi::NO_ADDRESS;
 #elif defined(TELLER_BOARD_STM32F4)
-/* SPI bus 3, CS pin 2 */
+/* SPI bus 3, CS pin 3 */
 static const spi::address_t address = { .bus = 2, .device = 2 };
 #else
 static const spi::address_t address = spi::NO_ADDRESS;
@@ -167,7 +167,6 @@ bool update(measurement_3d_t& acceleration, measurement_3d_t& angularVelocity)
     /* Read accelerometer measurement */
     now = system::getTimeSinceBootMsec();
     if (!spi::transfer(address, txBuf, rxBuf, sizeof(txBuf))) {
-        logger->error("SPI transfer failed");
         return false;
     }
 
