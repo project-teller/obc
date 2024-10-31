@@ -589,7 +589,8 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
             enableGPIOClocksForPort(cfg->gpio.by_index[i].port);
             GPIO_InitStruct.Pin = cfg->gpio.by_index[i].pins;
             GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-            GPIO_InitStruct.Pull = GPIO_NOPULL;
+            /* It seems like GPIO_PULLDOWN is needed for the SD card to work */
+            GPIO_InitStruct.Pull = i > 0 ? GPIO_PULLDOWN : GPIO_NOPULL;
             GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
             GPIO_InitStruct.Alternate = gpioFunc;
             HAL_GPIO_Init(cfg->gpio.by_index[i].port, &GPIO_InitStruct);
