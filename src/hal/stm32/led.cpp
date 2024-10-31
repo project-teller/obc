@@ -23,10 +23,10 @@ const led_config_t led_config[NUM_LEDS] = {
     { GPIOE, GPIO_PIN_1 }, /* Debug LED */
 };
 #elif defined(TELLER_BOARD_STM32F4)
-// STM32F415RG TELLER OBC
+// STM32F415RG TELLER OBC v2.1
 const led_config_t led_config[NUM_LEDS] = {
     { GPIOA, GPIO_PIN_6 }, /* Heartbeat LED */
-    { 0 }, /* Error LED */
+    { GPIOB, GPIO_PIN_7 }, /* Error LED */
     { 0 }, /* Debug LED */
 };
 #else

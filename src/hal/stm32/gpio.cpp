@@ -70,7 +70,7 @@ const gpio_config_t gpio_configs[NUM_GPIO_PINS] = {
     /* - Miscellaneous */
     UNMAPPED,
 #elif defined(TELLER_BOARD_STM32F4)
-    // STM32F415RG TELLER OBC
+    // STM32F415RG TELLER OBC v2.1
 
     /* RXSM signals */
     /* - SODS */
@@ -92,14 +92,14 @@ const gpio_config_t gpio_configs[NUM_GPIO_PINS] = {
     /* - STATUS_SUC_LCL3 */
     { GPIOC, GPIO_PIN_5, INPUT_PIN_PULLUP, FLAG_INVERTED },
     /* - STATUS_CAM_LCL */
-    { GPIOC, GPIO_PIN_8, INPUT_PIN_PULLUP, FLAG_INVERTED },
+    { GPIOC, GPIO_PIN_0, INPUT_PIN_PULLUP, FLAG_INVERTED },
 
     /* LCL reset */
     /* - RST_GMM_LCL */
     { GPIOA, GPIO_PIN_2, OUTPUT_PIN_ACTIVE_HIGH },
     /* - RST_SCM_LCL */
     { GPIOB, GPIO_PIN_11, OUTPUT_PIN_ACTIVE_HIGH },
-    /* - RST_SUC_LCL1 -- A10 on the current board, but it is a mistake */
+    /* - RST_SUC_LCL1 */
     { GPIOA, GPIO_PIN_8, OUTPUT_PIN_ACTIVE_HIGH },
     /* - RST_SUC_LCL2 */
     { GPIOC, GPIO_PIN_9, OUTPUT_PIN_ACTIVE_HIGH },

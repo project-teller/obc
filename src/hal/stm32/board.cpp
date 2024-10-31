@@ -168,7 +168,7 @@ static bool configureSystemClock()
 #else
     /* System clock runs from PLL @ 168 MHz, requiring 5 wait cycles */
     clkInit.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-    clkInit.AHBCLKDivider = RCC_HCLK_DIV1;
+    clkInit.AHBCLKDivider = RCC_SYSCLK_DIV1;
     clkInit.APB1CLKDivider = RCC_HCLK_DIV4;
     clkInit.APB2CLKDivider = RCC_HCLK_DIV2;
     if (HAL_RCC_ClockConfig(&clkInit, FLASH_LATENCY_5) != HAL_OK) {
@@ -211,7 +211,7 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority)
     HAL_RCC_GetClockConfig(&clkconfig, &pFLatency);
 
     /* Compute TIM1 clock */
-    uwTimclock = HAL_RCC_GetPCLK2Freq();
+    uwTimclock = 2 * HAL_RCC_GetPCLK2Freq();
 
     /* Compute the prescaler value to have TIM1 counter clock equal to 1MHz */
     uwPrescalerValue = (uint32_t)((uwTimclock / 1000000U) - 1U);
