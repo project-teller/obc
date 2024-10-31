@@ -17,6 +17,7 @@ add_library(
     messages.cpp
     mode.cpp
     rxsm.cpp
+    scheduler.cpp
     scm.cpp
     storage.cpp
     supervisor.cpp

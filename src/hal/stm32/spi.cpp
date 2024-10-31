@@ -134,8 +134,8 @@ const spi_bus_config_t spi_config[] = {
             NO_MORE_GPIO_CFG
         },
         /* The datasheet of the MLX90393 magnetometer explicitly claims that
-         * SPI mode 3 is implemented */
-        .mode = 3,
+         * SPI mode 3 is implemented, but mode 0 also seems to work */
+        .mode = 0,
         .irq = SPI3_IRQn,
     },
     NO_MORE_SPI_BUSES

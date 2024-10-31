@@ -4,6 +4,7 @@
 #include "core/telem/generic.h"
 #include "hal/system.h"
 #include "modules/edr.hpp"
+#include "modules/scheduler.h"
 
 using namespace teller::log;
 using namespace teller::rxsm;
@@ -36,10 +37,10 @@ public:
     /**
      * @brief Updates the state of all signals at once.
      *
-     * @return Whether the state of at least one signal changed conclusively,
-     *         after taking into account the majority votes.
+     * @return Bitfield indicating the signals for which the state has changed,
+     *         taking into account the majority votes.
      */
-    bool update(bool sods_, bool soe_, bool lo_);
+    signal::signal_t update(bool sods_, bool soe_, bool lo_);
 
 private:
     /** Majority voter for the SODS signal */
@@ -66,15 +67,23 @@ void StateManager::reset()
     soe.reset();
 }
 
-bool StateManager::update(bool sods_, bool soe_, bool lo_)
+signal::signal_t StateManager::update(bool sods_, bool soe_, bool lo_)
 {
-    bool changed = false;
+    uint8_t changed = 0;
 
-    changed |= lo.feedAndCheck(lo_);
-    changed |= sods.feedAndCheck(sods_);
-    changed |= soe.feedAndCheck(soe_);
+    if (lo.feedAndCheck(lo_)) {
+        changed |= signal::LO;
+    }
 
-    return changed;
+    if (sods.feedAndCheck(sods_)) {
+        changed |= signal::SODS;
+    }
+
+    if (soe.feedAndCheck(soe_)) {
+        changed |= signal::SOE;
+    }
+
+    return static_cast<signal::signal_t>(changed);
 }
 
 static StateManager rxsmStateManager;
@@ -113,8 +122,23 @@ void getState(State& state)
 
 void update(bool sods, bool soe, bool lo)
 {
-    if (rxsmStateManager.update(sods, soe, lo)) {
+    signal::signal_t changed = rxsmStateManager.update(sods, soe, lo);
+
+    if (changed) {
         logCurrentState();
+    }
+
+    if (changed & signal::SOE) {
+        /* SOE signal triggers the scheduler */
+        State state;
+        rxsmStateManager.getState(state);
+
+        if (state.soe) {
+            teller::scheduler::reset();
+            teller::scheduler::start();
+        } else {
+            teller::scheduler::stop();
+        }
     }
 }
 

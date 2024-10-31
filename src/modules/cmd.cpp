@@ -4,6 +4,7 @@
 #include "core/telem/ack.h"
 #include "core/telem/calibration.h"
 #include "core/telem/clock_sync.h"
+#include "core/telem/debug.h"
 #include "core/telem/echo.h"
 #include "core/telem/lcl_reset.h"
 #include "core/telem/parser.h"
@@ -16,6 +17,7 @@
 #include "modules/imu.h"
 #include "modules/lcl.h"
 #include "modules/log.h"
+#include "modules/scheduler.h"
 #include "modules/storage.h"
 #include "modules/telem.h"
 
@@ -95,6 +97,7 @@ static bool prepareMessage(InboundMessage& message, uart_t index,
 static optional<Response> processPacket(const InboundMessage& message);
 static optional<Response> processCalibrationPacket(const InboundMessage& message);
 static optional<Response> processClockSyncPacket(const InboundMessage& message);
+static optional<Response> processDebugPacket(const InboundMessage& message);
 static bool processEchoPacket(const InboundMessage& message);
 static optional<Response> processLCLResetRequestPacket(const InboundMessage& message);
 static optional<Response> processStoragePacket(const InboundMessage& message);
@@ -255,6 +258,12 @@ optional<Response> processPacket(const InboundMessage& message)
         processEchoPacket(message);
         break;
 
+    case frames::DEBUG:
+        IGNORE_UNLESS_FROM_GCS("debug")
+        {
+            return processDebugPacket(message);
+        }
+
     default:
         /* We are not interested in this packet */
         logger->warning("Unhandled pkt: %d", envelope.frame_type);
@@ -330,6 +339,47 @@ optional<Response> processCalibrationPacket(const InboundMessage& message)
 
     case frames::CALIBRATION_ACCEL:
         return Response::unsupported();
+
+    default:
+        return Response::invalid();
+    }
+
+    if (retval) {
+        return Response::failed(retval);
+    } else {
+        return Response::ok();
+    }
+}
+
+optional<Response> processDebugPacket(const InboundMessage& message)
+{
+    frames::debug_command_data_t data;
+    int retval = 0;
+
+    if (!frames::validateEncodedDebugCommandFrame(message.payload, message.length)) {
+        return Response::invalid();
+    }
+
+    frames::decodeDebugCommandFrame(message.payload, &data);
+
+    switch (data.command) {
+    case frames::DEBUG_CMD_NOP:
+        break;
+
+    case frames::DEBUG_CMD_START_CLOCK:
+        teller::scheduler::start();
+        teller::telem::sendClockStatusSoon();
+        break;
+
+    case frames::DEBUG_CMD_STOP_CLOCK:
+        teller::scheduler::stop();
+        teller::telem::sendClockStatusSoon();
+        break;
+
+    case frames::DEBUG_CMD_RESET_CLOCK:
+        teller::scheduler::reset();
+        teller::telem::sendClockStatusSoon();
+        break;
 
     default:
         return Response::invalid();

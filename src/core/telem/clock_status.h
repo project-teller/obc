@@ -9,7 +9,9 @@ namespace teller::telem::frames {
  */
 typedef struct {
     std::uint32_t timestampInMsec;
+    std::uint32_t missionClockInMsec;
     std::uint64_t rtcTimestampInMsec;
+    bool missionClockIsRunning;
 } clock_status_data_t;
 
 /**

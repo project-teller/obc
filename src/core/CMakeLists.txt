@@ -9,6 +9,7 @@ add_library(
     telem/calibration.cpp
     telem/clock_status.cpp
     telem/clock_sync.cpp
+    telem/debug.cpp
     telem/echo.cpp
     telem/generic.cpp
     telem/gmm.cpp

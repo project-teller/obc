@@ -14,6 +14,7 @@
 #include "modules/messages.h"
 #include "modules/mode.h"
 #include "modules/rxsm.h"
+#include "modules/scheduler.h"
 #include "modules/storage.h"
 
 using namespace teller::errors;
@@ -58,6 +59,8 @@ void updateClockStatusData(frames::clock_status_data_t* data)
 {
     data->timestampInMsec = system::getTimeSinceBootMsec();
     data->rtcTimestampInMsec = rtc::getTimeMsec();
+    data->missionClockInMsec = scheduler::getElapsedTimeMsec();
+    data->missionClockIsRunning = scheduler::isRunning();
 }
 
 void updateIMUMeasurement(frames::imu_data_t* data)

@@ -189,11 +189,13 @@ TEST(TelemetryTest, clockStatusFrameEncoding)
     /* clang-format off */
     frames::clock_status_data_t message = {
         .timestampInMsec = 1234567,
+        .missionClockInMsec = 2345678,
+        .missionClockIsRunning = true,
         .rtcTimestampInMsec = 1707048820951,
     };
     uint8_t encoded[MAX_MESSAGE_LENGTH];
     uint8_t expectedBytes[] = {
-        135, 214, 18, 0, 215, 224, 9, 116, 141, 1, 0, 0
+        135, 214, 18, 0, 206, 202, 35, 128, 215, 224, 9, 116, 141, 1, 0, 0
     };
     frames::clock_status_data_t decoded;
     /* clang-format on */
@@ -201,8 +203,8 @@ TEST(TelemetryTest, clockStatusFrameEncoding)
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeClockStatusFrame(&message, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
 
-    EXPECT_TRUE(frames::validateEncodedClockStatusFrame(encoded, 12));
-    EXPECT_FALSE(frames::validateEncodedClockStatusFrame(encoded, 11));
+    EXPECT_TRUE(frames::validateEncodedClockStatusFrame(encoded, 16));
+    EXPECT_FALSE(frames::validateEncodedClockStatusFrame(encoded, 15));
 
     frames::decodeClockStatusFrame(encoded, &decoded);
 

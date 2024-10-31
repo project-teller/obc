@@ -138,6 +138,7 @@ namespace frames {
         CALIBRATION = 16,
         ECHO = 17,
         CLOCK_SYNC = 18,
+        DEBUG = 19,
     } frame_type_t;
 
 }

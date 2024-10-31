@@ -22,6 +22,7 @@
 #include "modules/mag.h"
 #include "modules/mode.h"
 #include "modules/rxsm.h"
+#include "modules/scheduler.h"
 #include "modules/scm.h"
 #include "modules/storage.h"
 #include "modules/supervisor.h"
@@ -156,6 +157,7 @@ void bootSystem(void)
     inited &= teller::supervisor::init();
     inited &= teller::lcl::init();
     inited &= teller::mode::init();
+    inited &= teller::scheduler::init();
     inited &= teller::rxsm::init();
     inited &= teller::storage::init();
     inited &= teller::telem::init();
