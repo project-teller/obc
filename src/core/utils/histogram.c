@@ -1,5 +1,3 @@
-#include <stdlib.h>
-
 #include "core/utils/histogram.h"
 #include "core/utils/varuint.h"
 

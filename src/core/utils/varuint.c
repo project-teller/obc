@@ -1,5 +1,3 @@
-#include <stdlib.h>
-
 #include "core/utils/varuint.h"
 
 /**
@@ -35,7 +33,7 @@ static const uint32_t THRESHOLDS[MAX_LENGTH] = {
 
 const uint8_t* varuint_decode(const uint8_t* buf, uint32_t* value)
 {
-    return varuint_decode_overlong(buf, value, NULL);
+    return varuint_decode_overlong(buf, value, 0);
 }
 
 const uint8_t* varuint_decode_overlong(const uint8_t* buf, uint32_t* value, uint8_t* overlong)
