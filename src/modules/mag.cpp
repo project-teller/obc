@@ -18,12 +18,13 @@ using namespace teller::telem;
 static subsystem_status_t status = SUBSYSTEM_STATUS_CRITICAL;
 
 static measurement_3d_t magneticVector;
+static float temperature = 0.0f;
 
 static teller::edr::FormattedLogRecord<uint32_t, uint8_t, float, float, float>
     logRecord(
         LOG_RECORD_IMU, "MAG",
-        "TimeMS,I,MagX,MagY,MagZ",
-        "IBfff", "s#GGG", "C-000");
+        "TimeMS,I,MagX,MagY,MagZ,Temp",
+        "IBffff", "s#GGGO", "C-CCC0");
 
 static Logger* logger;
 
@@ -47,6 +48,11 @@ measurement_3d_t getMagneticVector(void)
     return magneticVector;
 }
 
+float getTemperature(void)
+{
+    return temperature;
+}
+
 subsystem_status_t getSubsystemStatus()
 {
     return status;
@@ -62,7 +68,7 @@ bool setup()
 
 bool update()
 {
-    status = teller::drivers::mag::update(magneticVector)
+    status = teller::drivers::mag::update(magneticVector, temperature)
         ? SUBSYSTEM_STATUS_OK
         : SUBSYSTEM_STATUS_ERROR;
 

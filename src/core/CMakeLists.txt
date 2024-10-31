@@ -15,6 +15,7 @@ add_library(
     telem/heartbeat.cpp
     telem/imu.cpp
     telem/lcl_reset.cpp
+    telem/mag.cpp
     telem/parser.cpp
     telem/storage.cpp
     telem/text_message.cpp

@@ -73,4 +73,14 @@ void updateIMUMeasurement(frames::imu_data_t* data)
     data->angularVelocity = measurement.value;
 }
 
+void updateMagneticVectorMeasurement(frames::mag_data_t* data)
+{
+    measurement_3d_t measurement;
+
+    measurement = teller::mag::getMagneticVector();
+    data->timestampInMsec = measurement.timestampInMsec;
+    data->magneticVector = measurement.value;
+    data->temperature = teller::mag::getTemperature();
+}
+
 }

@@ -8,7 +8,7 @@ using namespace teller;
 {
     bool healthy = mag::setup();
     while (healthy) {
-        healthy = mag::update();
+        mag::update();
     }
 
     /* TODO: maybe reset and retry? */

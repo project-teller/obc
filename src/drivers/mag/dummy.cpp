@@ -21,7 +21,7 @@ bool setup()
     return false;
 }
 
-bool update(measurement_3d_t& magneticVector)
+bool update(measurement_3d_t& magneticVector, float& temperature)
 {
     sleepForever();
     return false;

@@ -4,6 +4,7 @@
 #include "core/telem/gmm.h"
 #include "core/telem/heartbeat.h"
 #include "core/telem/imu.h"
+#include "core/telem/mag.h"
 
 namespace teller::telem {
 
@@ -22,5 +23,11 @@ void updateClockStatusData(frames::clock_status_data_t* data);
  * of the IMU.
  */
 void updateIMUMeasurement(frames::imu_data_t* data);
+
+/**
+ * @brief Updates a MAG measurement data object from the most recent measurement
+ * of the magnetometer.
+ */
+void updateMagneticVectorMeasurement(frames::mag_data_t* data);
 
 }

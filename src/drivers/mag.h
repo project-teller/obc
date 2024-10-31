@@ -37,7 +37,9 @@ bool setup(void);
  * This function should block until the next measurement becomes available.
  *
  * @param  magneticVector   the measurement is returned here
+ * @param  temperature      the temperature (if the sensor can measure temperature)
+ *         is returned here
  */
-bool update(teller::telem::measurement_3d_t& magneticVector);
+bool update(teller::telem::measurement_3d_t& magneticVector, float& temperature);
 
 }

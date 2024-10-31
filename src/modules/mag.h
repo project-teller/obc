@@ -20,6 +20,11 @@ void destroy(void);
 teller::telem::measurement_3d_t getMagneticVector(void);
 
 /**
+ * @brief Returns the most recent temperature measurement from the magnetometer.
+ */
+float getTemperature(void);
+
+/**
  * @brief Returns the status of the magnetometer subsystem.
  */
 teller::telem::subsystem_status_t getSubsystemStatus(void);

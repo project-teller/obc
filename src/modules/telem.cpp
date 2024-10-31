@@ -55,6 +55,7 @@ static BlockingQueue<OutboundMessage> out_queue(QUEUE_SIZE);
 static void sendHeartbeat(uint8_t* payload);
 static void sendClockStatus(uint8_t* payload);
 static void sendIMUMeasurement(uint8_t* payload);
+static void sendMAGMeasurement(uint8_t* payload);
 
 static bool sendLowLevel(uint8_t targets, uint8_t* buf, uint8_t length, uint32_t timeout);
 
@@ -75,6 +76,7 @@ task_t tasks[] = {
     { 25, sendHeartbeat },
     { 250, sendClockStatus },
     { 1, sendIMUMeasurement },
+    { 5, sendMAGMeasurement },
     NO_MORE_TASKS
 };
 
@@ -280,4 +282,12 @@ static void sendIMUMeasurement(uint8_t* payload)
 
     updateIMUMeasurement(&imu_measurement);
     send(frames::IMU, payload, encodeIMUFrame(&imu_measurement, payload));
+}
+
+static void sendMAGMeasurement(uint8_t* payload)
+{
+    frames::mag_data_t mag_measurement;
+
+    updateMagneticVectorMeasurement(&mag_measurement);
+    send(frames::MAG, payload, encodeMAGFrame(&mag_measurement, payload));
 }
