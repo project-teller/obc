@@ -190,8 +190,8 @@ TEST(TelemetryTest, clockStatusFrameEncoding)
     frames::clock_status_data_t message = {
         .timestampInMsec = 1234567,
         .missionClockInMsec = 2345678,
-        .missionClockIsRunning = true,
         .rtcTimestampInMsec = 1707048820951,
+        .missionClockIsRunning = true,
     };
     uint8_t encoded[MAX_MESSAGE_LENGTH];
     uint8_t expectedBytes[] = {
