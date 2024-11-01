@@ -41,4 +41,9 @@ void start(void);
  */
 void stop(void);
 
+/**
+ * @brief Updates the scheduler and executes pending events.
+ */
+void update(void);
+
 };

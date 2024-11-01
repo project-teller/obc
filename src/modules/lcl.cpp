@@ -1,9 +1,12 @@
 #include "modules/lcl.h"
+#include "modules/log.h"
 
 #include "hal/gpio.h"
 #include "hal/system.h"
 
 using namespace teller::hal::gpio;
+using namespace teller::log;
+using namespace teller::telem;
 
 /**
  * @brief Pair of GPIO pins associated to an LCL.
@@ -17,6 +20,8 @@ typedef struct {
 
 /** Pulse duration to use for resetting an LCL. Used to speed up unit tests. */
 static uint16_t pulse_duration_msec;
+
+static Logger* logger;
 
 namespace teller::lcl {
 
@@ -32,6 +37,13 @@ static const lcl_pins_t pin_map[NUM_LCLS] = {
     { STATUS_CAM_LCL, RST_CAM_LCL },
 };
 
+/**
+ * @brief Names of the LCLs.
+ */
+static const char* lcl_names[NUM_LCLS] = {
+    "GMM", "SCM", "SUC1", "SUC2", "SUC3", "CAM"
+};
+
 bool init()
 {
     pulse_duration_msec = 100;
@@ -41,6 +53,9 @@ bool init()
         pin_t pin = pin_map[static_cast<lcl_t>(i)].reset_pin;
         write(pin, 1);
     }
+
+    logger = getLogger(MODULE_ID_OBC);
+    return logger != nullptr;
 
     return true;
 }
@@ -60,16 +75,31 @@ bool triggered(lcl_t lcl)
 
 void reset(lcl_t lcl)
 {
+    if (lcl >= 0 && lcl < NUM_LCLS) {
+        logger->info("Resetting %s LCL", lcl_names[lcl]);
+    }
     resetMultiple(1 << static_cast<uint8_t>(lcl));
 }
 
 void resetMultiple(uint8_t lcls_to_reset)
 {
+    bool hasAtLeastOne = false;
+
     for (uint8_t lcl = 0; lcl < NUM_LCLS; lcl++) {
         if (lcls_to_reset & (1 << lcl)) {
             pin_t pin = pin_map[lcl].reset_pin;
             write(pin, 0);
-            teller::hal::system::delayMsec(pulse_duration_msec);
+            hasAtLeastOne = true;
+        }
+    }
+
+    if (hasAtLeastOne) {
+        teller::hal::system::delayMsec(pulse_duration_msec);
+    }
+
+    for (uint8_t lcl = 0; lcl < NUM_LCLS; lcl++) {
+        if (lcls_to_reset & (1 << lcl)) {
+            pin_t pin = pin_map[lcl].reset_pin;
             write(pin, 1);
         }
     }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/telem/calibration.h"
 #include "core/telem/generic.h"
 #include "hal/queue.hpp"
 #include "hal/uart.h"
@@ -54,6 +55,11 @@ bool feedNonblocking(
  * @brief Returns a pointer to the inbound queue of the command handler module.
  */
 teller::hal::BlockingQueueBase* getQueue(void);
+
+/**
+ * @brief Performs a calibration procedure.
+ */
+bool performCalibration(teller::telem::frames::calibration_procedure_t procedure);
 
 /**
  * @brief Processes the next message waiting in the command handler module.

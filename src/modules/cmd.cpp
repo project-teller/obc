@@ -184,6 +184,24 @@ bool processNext(void)
     return true;
 }
 
+bool performCalibration(teller::telem::frames::calibration_procedure_t procedure)
+{
+    switch (procedure) {
+    case frames::CALIBRATION_NOP:
+        return true;
+
+    case frames::CALIBRATION_GYRO:
+        teller::imu::startGyroCalibration();
+        return true;
+
+    case frames::CALIBRATION_ACCEL:
+        return false;
+
+    default:
+        return false;
+    }
+}
+
 size_t waiting(void)
 {
     return in_queue.size();
@@ -331,10 +349,10 @@ optional<Response> processCalibrationPacket(const InboundMessage& message)
 
     switch (data.procedure) {
     case frames::CALIBRATION_NOP:
-        break;
-
     case frames::CALIBRATION_GYRO:
-        teller::imu::startGyroCalibration();
+        if (!teller::cmd::performCalibration(data.procedure)) {
+            retval = 1;
+        }
         break;
 
     case frames::CALIBRATION_ACCEL:
