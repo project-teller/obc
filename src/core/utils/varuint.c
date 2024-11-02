@@ -28,7 +28,7 @@ static const uint8_pattern_t MARKERS[] = {
 };
 
 static const uint32_t THRESHOLDS[MAX_LENGTH] = {
-    1 << 6, 1 << 12, 1 << 18, 1 << 24, 1 << 30
+    1UL << 6, 1UL << 12, 1UL << 18, 1UL << 24, 1UL << 30
 };
 
 const uint8_t* varuint_decode(const uint8_t* buf, uint32_t* value)
