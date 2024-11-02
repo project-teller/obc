@@ -355,23 +355,30 @@ static void generateFakeSCMReadings(int fd)
     FILE* fp;
     const float gmmReportFreq = 50;
     int dt = 1000 / gmmReportFreq;
-    char message[128];
+    /* clang-format off */
+    uint8_t message[] = {
+        /* Scintillator index 0 */
+        0b01100000, 0b10000000, 0b10000000,
+        /* 256 empty slots */
+        0b01100000, 0b10000010, 0b10000000,
+        /* Scintillator index 1 */
+        0b01100000, 0b10000000, 0b10000001,
+        /* 256 empty slots */
+        0b01100000, 0b10000010, 0b10000000,
+        /* Scintillator index 2 */
+        0b01100000, 0b10000000, 0b10000010,
+        /* 256 empty slots */
+        0b01100000, 0b10000010, 0b10000000,
+        /* End of packet */
+        0b01000000, 0b10000000,
+    };
+    /* clang-format on */
 
     fp = fdopen(fd, "w");
 
     while (true) {
         std::this_thread::sleep_for(std::chrono::milliseconds(dt));
-
-        /* Print the message... */
-        snprintf(
-            message, sizeof(message), "$SCCNT,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,*",
-            4, 1, 1, 2, 0, 1, 0, 0, 0, 1);
-
-        /* ...then update the checksum... */
-        snprintf(strrchr(message, '*') + 1, 5, "%02X\r\n", minmea_checksum(message));
-
-        /* ...and send the message */
-        if (fputs(message, fp) == EOF) {
+        if (fwrite(message, sizeof(char), sizeof(message), fp) == EOF) {
             fprintf(stderr, "Error while writing SCM message to child process\n");
         } else {
             fflush(fp);

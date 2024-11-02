@@ -18,6 +18,7 @@ add_library(
     telem/lcl_reset.cpp
     telem/mag.cpp
     telem/parser.cpp
+    telem/scm.cpp
     telem/storage.cpp
     telem/text_message.cpp
 

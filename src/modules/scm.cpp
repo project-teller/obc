@@ -3,6 +3,9 @@
 
 #include "core/log_records.h"
 #include "core/nmea/parser.h"
+#include "core/telem/scm.h"
+#include "core/utils/histogram.h"
+#include "core/utils/varuint.h"
 
 #include "hal/system.h"
 #include "hal/uart.h"
@@ -17,44 +20,59 @@ using namespace teller::log;
 using namespace teller::math;
 using namespace teller::telem;
 
-static subsystem_status_t status = SUBSYSTEM_STATUS_CRITICAL;
-
-// static frames::gmm_data_t measurement;
-
 static teller::edr::FormattedLogRecord<
     uint32_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t*>
     logRecord(
         LOG_RECORD_SCM, "SCM",
-        "TimeMS,I,NumFrags,Frag,Length,Histogram",
+        "TimeMS,I,MaxFrag,Frag,Length,Histogram",
         "IBBBBZ", "s-----", "C-----");
 
+#define NUM_SCINTILLATORS 3
+#define HISTOGRAM_SIZE 256
+#define FRAGMENT_SIZE teller::telem::frames::MAX_SCM_FRAME_FRAGMENT_LENGTH
+
+static subsystem_status_t status = SUBSYSTEM_STATUS_CRITICAL;
+
 static Logger* logger;
-static teller::nmea::Parser parser;
 static uint32_t lastMessageStartedAt;
-static uint32_t lastMessageReceivedAt;
+static frames::scm_data_t scmFrame;
+static varuint_decoder_t varuintDecoder;
+
+static uint8_t scintillatorIndex;
+static uint16_t histogram[HISTOGRAM_SIZE];
+static uint16_t histogramIndex;
+static uint8_t packedHistogram[HISTOGRAM_SIZE * 2];
+static uint8_t* packedHistogramEnd;
 
 static void logSCMMeasurement(void);
 static bool parseReceivedMessage(const char* message);
 static void sendSCMMeasurement(uint8_t* payload);
 static bool updateStatus(void);
 
+static void addNonzeroToHistogram(uint32_t value);
+static void addZerosToHistogram(uint32_t count);
+static bool packHistogram(void);
+static void startHistogramForScintillator(uint8_t index);
+
 namespace teller::scm {
 
 bool init()
 {
-    parser.reset();
-
     status = SUBSYSTEM_STATUS_CRITICAL;
     logger = getLogger(MODULE_ID_SCM);
 
     lastMessageStartedAt = 0;
-    lastMessageReceivedAt = 0;
+
+    varuint_decoder_init(&varuintDecoder);
+
+    startHistogramForScintillator(0);
 
     return logger != nullptr;
 }
 
 void destroy()
 {
+    varuint_decoder_destroy(&varuintDecoder);
     logger = nullptr;
     status = SUBSYSTEM_STATUS_CRITICAL;
 }
@@ -66,7 +84,7 @@ subsystem_status_t getSubsystemStatus()
 
 bool setup()
 {
-    lastMessageReceivedAt = system::getTimeSinceBootMsec();
+    lastMessageStartedAt = 0;
     status = uart::isConnected(uart::SCM) ? SUBSYSTEM_STATUS_OK : SUBSYSTEM_STATUS_CRITICAL;
     return updateStatus();
 }
@@ -74,18 +92,37 @@ bool setup()
 bool update(uint8_t* payload, bool& updated)
 {
     uint8_t ch;
+    uint32_t value;
+    uint8_t overlong;
     uint16_t bytes_read;
 
     updated = false;
-    if (uart::read(uart::GMM, &ch, 1, &bytes_read)) {
-        if (ch == '$') {
-            lastMessageStartedAt = system::getTimeSinceBootMsec();
-        }
-        if (parser.feed(ch) && parseReceivedMessage(parser.getMessage())) {
-            lastMessageReceivedAt = system::getTimeSinceBootMsec();
-            logSCMMeasurement();
-            sendSCMMeasurement(payload);
-            updated = true;
+    if (uart::read(uart::SCM, &ch, 1, &bytes_read)) {
+        if (varuint_decoder_feed(&varuintDecoder, ch)) {
+            value = varuint_decoder_get_value(&varuintDecoder);
+            overlong = varuint_decoder_get_overlong(&varuintDecoder);
+
+            if (overlong == 2 && value < NUM_SCINTILLATORS) {
+                /* Marker for new scintillator histogram */
+                if (lastMessageStartedAt > 0) {
+                    /* Log previous histogram */
+                    if (packHistogram()) {
+                        logSCMMeasurement();
+                        sendSCMMeasurement(payload);
+                    }
+                }
+                startHistogramForScintillator(value);
+            } else if (overlong == 1 && value == 0) {
+                /* Start of new packet */
+                lastMessageStartedAt = system::getTimeSinceBootMsec();
+                updated = true;
+            } else if (overlong == 1) {
+                /* Run of zeros in current histogram */
+                addZerosToHistogram(value);
+            } else if (overlong == 0) {
+                /* Nonzero value in current histogram */
+                addNonzeroToHistogram(value);
+            }
         }
     }
 
@@ -95,52 +132,96 @@ bool update(uint8_t* payload, bool& updated)
 }
 
 /**
+ * @brief Starts processing the histogram for the scintillator with the given index.
+ *
+ * @param index  index of the scintillator
+ */
+static void startHistogramForScintillator(uint8_t index)
+{
+    scintillatorIndex = index;
+    histogramIndex = 0;
+    memset(histogram, 0, HISTOGRAM_SIZE * sizeof(uint16_t));
+}
+
+/**
+ * @brief Adds a new nonzero entry to the current histogram.
+ *
+ * This function is a no-op if we have reached the end of the histogram.
+ */
+static void addNonzeroToHistogram(uint32_t value)
+{
+    if (histogramIndex >= HISTOGRAM_SIZE) {
+        return;
+    }
+
+    if (value >= std::numeric_limits<uint16_t>::max()) {
+        value = std::numeric_limits<uint16_t>::max();
+    }
+    histogram[histogramIndex] = value;
+    histogramIndex++;
+}
+
+/**
+ * @brief Adds a run of zero entries to the current histogram.
+ *
+ * This function is a no-op if we have reached the end of the histogram.
+ */
+static void addZerosToHistogram(uint32_t count)
+{
+    while (count > 0 && histogramIndex < HISTOGRAM_SIZE) {
+        histogram[histogramIndex] = 0;
+        histogramIndex++;
+    }
+}
+
+/**
+ * @brief Encodes the current histogram into its wire format.
+ * @return whether the encoding was successful. The encoding may fail if there
+ * is not enough space in the pre-allocated buffer to store the entire encoded
+ * histogram.
+ */
+static bool packHistogram()
+{
+    size_t size = histogram_get_packed_size(histogram, HISTOGRAM_SIZE);
+    if (size > sizeof(packedHistogram)) {
+        packedHistogramEnd = nullptr;
+        return false;
+    } else {
+        packedHistogramEnd = histogram_pack(packedHistogram, histogram, HISTOGRAM_SIZE);
+        return true;
+    }
+}
+
+/**
  * @brief Stores a new SCM measurement in the log files.
  */
 static void logSCMMeasurement()
 {
-    /*
-    logRecord.write(
-        measurement.timestampInMsec,
-        measurement.hitCounts.byIndex[0],
-        measurement.hitCounts.byIndex[1],
-        measurement.hitCounts.byIndex[2],
-        measurement.hitCounts.byIndex[3],
-        measurement.hitCounts.byIndex[4],
-        measurement.hitCounts.byIndex[5],
-        measurement.hitCounts.byIndex[6],
-        measurement.hitCounts.byIndex[7],
-        measurement.hitCounts.byIndex[8],
-        measurement.hitCounts.byIndex[9]);
-    */
-}
+    size_t length = packedHistogramEnd - packedHistogram;
+    uint8_t* ptr;
+    int i, numFragments = length / FRAGMENT_SIZE;
 
-/**
- * Attempts to parse a received NMEA sentence to see if it contains an
- * SCM histogram. Updates the current histogram in case of a match.
- */
-static bool parseReceivedMessage(const char* message)
-{
-    return false;
-
-    /*
-    char type[6];
-    int counts[10];
-
-    if (!minmea_scan(
-            message, "tiiiiiiiiii", type,
-            &counts[0], &counts[1], &counts[2], &counts[3], &counts[4],
-            &counts[5], &counts[6], &counts[7], &counts[8], &counts[9])) {
-        return false;
+    if (length % FRAGMENT_SIZE > 0) {
+        numFragments++;
     }
 
-    measurement.timestampInMsec = lastMessageStartedAt;
-    for (int i = 0; i < 10; i++) {
-        measurement.hitCounts.byIndex[i] = counts[i];
-    }
+    for (i = 0, ptr = packedHistogram; i < numFragments; i++) {
+        length = packedHistogramEnd - ptr;
+        if (length > FRAGMENT_SIZE) {
+            length = FRAGMENT_SIZE;
+        }
 
-    return true;
-    */
+        scmFrame.fragmentIndex = i;
+        scmFrame.length = length;
+
+        logRecord.write(
+            lastMessageStartedAt,
+            scintillatorIndex,
+            numFragments - 1,
+            i,
+            length,
+            ptr);
+    }
 }
 
 /**
@@ -150,6 +231,38 @@ static bool parseReceivedMessage(const char* message)
  */
 static void sendSCMMeasurement(uint8_t* payload)
 {
+    size_t length = packedHistogramEnd - packedHistogram;
+    uint8_t* ptr;
+    int i, numFragments = length / FRAGMENT_SIZE;
+
+    if (length % FRAGMENT_SIZE > 0) {
+        numFragments++;
+    }
+
+    if (numFragments == 0) {
+        return;
+    }
+
+    scmFrame.timestampInMsec = lastMessageStartedAt;
+    scmFrame.scintillatorIndex = scintillatorIndex;
+    scmFrame.maxFragmentIndex = numFragments - 1;
+
+    for (i = 0, ptr = packedHistogram; i < numFragments; i++) {
+        length = packedHistogramEnd - ptr;
+        if (length > FRAGMENT_SIZE) {
+            length = FRAGMENT_SIZE;
+        }
+
+        scmFrame.fragmentIndex = i;
+        scmFrame.length = length;
+
+        memcpy(scmFrame.data, ptr, length);
+        ptr += length;
+
+        /* TODO(ntamas): count how many messages are skipped */
+        length = frames::encodeSCMFrame(&scmFrame, payload);
+        send(frames::SCM, payload, length, 20);
+    }
 }
 
 /**
@@ -159,9 +272,9 @@ static void sendSCMMeasurement(uint8_t* payload)
 static bool updateStatus()
 {
     uint32_t now = system::getTimeSinceBootMsec();
-    if (now - lastMessageReceivedAt < 100) {
+    if (now - lastMessageStartedAt < 100) {
         status = SUBSYSTEM_STATUS_OK;
-    } else if (now - lastMessageReceivedAt < 3000) {
+    } else if (now - lastMessageStartedAt < 3000) {
         status = SUBSYSTEM_STATUS_WARNING;
     } else {
         /* This is where we are giving up */
