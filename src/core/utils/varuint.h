@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -52,6 +53,20 @@ extern "C" {
  * representation. The compact representation can also be considered as the
  * zeroth overlong representation.
  */
+
+/**
+ * @brief Incremental varuint decoder that can be fed with bytes iteratively.
+ */
+typedef struct {
+    /** The current varuint being decoded */
+    uint32_t value;
+
+    /** Number of bytes left in the current varuint being decoded */
+    uint8_t bytes_left;
+
+    /** Number of bytes read for the current varuint being decoded */
+    uint8_t bytes_read;
+} varuint_decoder_t;
 
 /**
  * @brief Decodes a variable-length encoded unsigned integer from a buffer.
@@ -121,6 +136,52 @@ uint8_t varuint_size(uint32_t value);
  * @return the number of bytes needed to store the given unsigned integer
  */
 uint8_t varuint_size_overlong(uint32_t value, uint8_t overlong);
+
+/**
+ * @brief Initializes an incremental varuint decoder.
+ */
+void varuint_decoder_init(varuint_decoder_t* decoder);
+
+/**
+ * @brief Destroys an incremental varuint decoder.
+ */
+void varuint_decoder_destroy(varuint_decoder_t* decoder);
+
+/**
+ * @brief Feeds a new byte into an incremental varuint decoder.
+ *
+ * @param decoder  the decoder to feed
+ * @param ch  the byte to feed into the decoder
+ * @return Whether a new varuint was decoded successfully
+ */
+bool varuint_decoder_feed(varuint_decoder_t* decoder, uint8_t ch);
+
+/**
+ * @brief Resets an incremental varuint decoder to its base state.
+ */
+void varuint_decoder_reset(varuint_decoder_t* decoder);
+
+/**
+ * @brief Gets the current value from the varuint decoder.
+ *
+ * This function must be called only right after \ref varuint_decoder_feed()
+ * returned true. The returned value is unspecified if this does not hold.
+ *
+ * @param decoder  the decoder
+ */
+uint32_t varuint_decoder_get_value(const varuint_decoder_t* decoder);
+
+/**
+ * @brief Returns the overlongness of the current varuint that was decoded.
+ *
+ * This function must be called only right after \ref varuint_decoder_feed()
+ * returned true. The returned value is unspecified if this does not hold.
+ *
+ * @param decoder  the decoder
+ * @return zero if the decoded varuint was in its most compact representation,
+ * or k if it was the k-th overlong representation
+ */
+uint8_t varuint_decoder_get_overlong(const varuint_decoder_t* decoder);
 
 #ifdef __cplusplus
 }

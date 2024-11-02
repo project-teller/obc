@@ -88,3 +88,36 @@ TEST(VaruintTest, decodeErrors)
         EXPECT_EQ(overlong, 0x42);
     }
 }
+
+TEST(VaruintTest, incrementalDecoding)
+{
+    uint8_t buf[16];
+    uint8_t size;
+    uint8_t* ptr;
+    const uint8_t* end;
+    uint32_t observed;
+    uint8_t observed_overlong;
+    varuint_decoder_t decoder;
+
+    varuint_decoder_init(&decoder);
+
+    for (uint8_t i = 0; i < NUM_PROBES; i++) {
+        size = varuint_size(probes[i]);
+
+        for (uint8_t j = 0; j < 7 - size; j++) {
+            end = varuint_encode_overlong(buf, probes[i], j);
+            EXPECT_EQ(end, buf + size + j);
+
+            if (buf < end) {
+                for (ptr = buf; ptr != end; ptr++) {
+                    EXPECT_EQ(varuint_decoder_feed(&decoder, *ptr), ptr == end - 1);
+                }
+
+                EXPECT_EQ(probes[i], varuint_decoder_get_value(&decoder));
+                EXPECT_EQ(j, varuint_decoder_get_overlong(&decoder));
+            }
+        }
+    }
+
+    varuint_decoder_destroy(&decoder);
+}

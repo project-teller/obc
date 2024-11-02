@@ -132,3 +132,63 @@ uint8_t varuint_size_overlong(uint32_t value, uint8_t overlong)
 
     return MAX_LENGTH + overlong + 1;
 }
+
+void varuint_decoder_init(varuint_decoder_t* decoder)
+{
+    varuint_decoder_reset(decoder);
+}
+
+void varuint_decoder_destroy(varuint_decoder_t* decoder)
+{
+    varuint_decoder_reset(decoder);
+}
+
+void varuint_decoder_reset(varuint_decoder_t* decoder)
+{
+    decoder->bytes_left = 0;
+    decoder->bytes_read = 0;
+    decoder->value = 0;
+}
+
+bool varuint_decoder_feed(varuint_decoder_t* decoder, uint8_t ch)
+{
+    int i;
+
+    if ((ch & 0x80) == 0) {
+        /* This byte is the start of a new varuint */
+        for (i = 0; (ch & MARKERS[i].mask) != MARKERS[i].pattern; i++)
+            ;
+        if (!MARKERS[i].mask) {
+            /* No match for markers, this cannot be the start of a varuint,
+             * but this should not happen either */
+            /* LCOV_EXCL_START */
+            return false;
+            /* LCOV_EXCL_STOP */
+        }
+
+        decoder->bytes_left = i;
+        decoder->bytes_read = 1;
+        decoder->value = ch & ~MARKERS[i].mask;
+    } else if (decoder->bytes_left > 0) {
+        /* This byte is the continuation of the varuint */
+        decoder->bytes_left--;
+        decoder->bytes_read++;
+        decoder->value = (decoder->value << 7) | (ch & 0x7F);
+    } else {
+        /* This byte is supposed to be a continuation, but we are not expecting
+         * more bytes for the varuint */
+        return false;
+    }
+
+    return decoder->bytes_left == 0;
+}
+
+uint32_t varuint_decoder_get_value(const varuint_decoder_t* decoder)
+{
+    return decoder->value;
+}
+
+uint8_t varuint_decoder_get_overlong(const varuint_decoder_t* decoder)
+{
+    return decoder->bytes_read - varuint_size(decoder->value);
+}
