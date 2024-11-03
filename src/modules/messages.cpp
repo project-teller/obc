@@ -15,6 +15,7 @@
 #include "modules/mode.h"
 #include "modules/rxsm.h"
 #include "modules/scheduler.h"
+#include "modules/scm.h"
 #include "modules/storage.h"
 
 using namespace teller::errors;
@@ -43,6 +44,7 @@ void updateHeartbeatData(frames::heartbeat_data_t* data)
     data->rxsmStatusBits.soe = state.soe;
 
     data->subsystemStatus.gmm = teller::gmm::getSubsystemStatus();
+    data->subsystemStatus.scm = teller::scm::getSubsystemStatus();
     data->subsystemStatus.imu = teller::imu::getSubsystemStatus();
     data->subsystemStatus.mag = teller::mag::getSubsystemStatus();
     data->subsystemStatus.sto = teller::storage::getSubsystemStatus();
