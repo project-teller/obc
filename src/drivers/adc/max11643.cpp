@@ -105,6 +105,12 @@ bool update(std::uint8_t count, uint16_t* value)
         count = 16;
     }
 
+    /* Clear FIFO with reset register */
+    buf[0] = 0b00011000;
+    if (!spi::transfer(address, buf, 1)) {
+        return false;
+    }
+
     /* Conversion register: 0 CHSEL[3:0] SCAN[1:0] X
      * where CHSEL[3:0] must be set to the index of the last channel to read
      *   and  SCAN[1:0] must be set to 00 to scan the channels

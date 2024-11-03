@@ -23,7 +23,7 @@ static float values[NUM_CHANNELS];
 static const float reference = 2.5f;
 
 /** Increment corresponding to the LSB of the ADC */
-static const float lsbIncrement = reference / 255;
+static const float lsbIncrement = reference / 256;
 
 /** Scaling factors for the channels */
 static const float scaling[NUM_CHANNELS] = {
@@ -39,7 +39,7 @@ static const float scaling[NUM_CHANNELS] = {
     43.0f / 3.0f, /* 28V_MEAS */
     8.5f, /* 12V_MEAS */
     2.5f, /* 5V_MEAS */
-    2.0f, /* 3.3V_MEAS */
+    2.0f, /* 3V3_MEAS */
 };
 
 static Logger* logger;
@@ -79,7 +79,8 @@ bool update()
         counter = 0;
 
         logger->info(
-            "ADC: 5V = %f, 3.3V = %f", values[11], values[12]);
+            "ADC: 60V=%.1f 28V=%.1f 12V=%.1f 5V=%.1f, 3.3V=%.1f",
+            values[8], values[9], values[10], values[11], values[12]);
     }
 
     return true;

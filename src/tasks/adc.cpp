@@ -19,8 +19,6 @@ using namespace teller::telem;
 {
     bool healthy;
     uint8_t tries = 0;
-    TaskRegistration task("adc");
-    task.expect(BASE_ADC_UPDATE_FREQ_HZ - 2, BASE_ADC_UPDATE_FREQ_HZ + 1);
 
     while (true) {
         healthy = adc::setup();
@@ -28,7 +26,6 @@ using namespace teller::telem;
         while (healthy && tries < BASE_ADC_UPDATE_FREQ_HZ * 3) {
             if (adc::update()) {
                 tries = 0;
-                task.nudge();
             } else {
                 tries++;
             }
