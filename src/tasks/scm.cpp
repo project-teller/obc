@@ -13,7 +13,7 @@ using namespace teller::telem;
  * @def BASE_SCM_UPDATE_FREQ_HZ
  * @brief Specifies the base update frequency that we expect from the GMM.
  */
-#define BASE_SCM_UPDATE_FREQ_HZ 50
+#define BASE_SCM_UPDATE_FREQ_HZ 10
 
 [[noreturn]] void teller::tasks::scmTask(void* arg)
 {

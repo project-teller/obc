@@ -45,7 +45,6 @@ static uint8_t packedHistogram[HISTOGRAM_SIZE * 2];
 static uint8_t* packedHistogramEnd;
 
 static void logSCMMeasurement(void);
-static bool parseReceivedMessage(const char* message);
 static void sendSCMMeasurement(uint8_t* payload);
 static bool updateStatus(void);
 
@@ -171,6 +170,7 @@ static void addZerosToHistogram(uint32_t count)
     while (count > 0 && histogramIndex < HISTOGRAM_SIZE) {
         histogram[histogramIndex] = 0;
         histogramIndex++;
+        count--;
     }
 }
 
