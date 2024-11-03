@@ -4,6 +4,7 @@
 #include "core/log_records.h"
 #include "core/utils/crc.h"
 #include "hal/memory.h"
+#include "hal/mutex.hpp"
 #include "hal/queue.hpp"
 #include "hal/uart.h"
 #include "modules/edr.hpp"
@@ -45,6 +46,9 @@ static uint8_t telemetry_channel_mask = 0;
 
 /** Sequence number of next message */
 static uint8_t seq_no = 0;
+
+/** Mutex to control access to the sequence number */
+teller::hal::mutex seq_no_mutex;
 
 /** Number of chunks that can be enqueued in the task without blocking */
 static const int QUEUE_SIZE = 64;
@@ -201,13 +205,20 @@ bool sendTo(uint8_t targets, envelope_t envelope, const uint8_t* payload, uint8_
     buf = static_cast<uint8_t*>(teller::hal::memory::malloc(buf_length));
     TELLER_CHECK_OOM(buf);
 
-    envelope.seq_no = seq_no++;
+    /* TODO(ntamas): we should have per-channel sequence numbers */
+    {
+        /* The mutex must be held until the message is enqueued and we
+         * return from sendLowLevel, otherwise the messages could get in
+         * the outbound queue with out-of-order sequence numbers */
+        teller::hal::lock_guard<teller::hal::mutex> lock(seq_no_mutex);
+        envelope.seq_no = seq_no++;
 
-    if (!serialize(buf, buf_length, envelope, payload, length)) {
-        goto cleanup;
+        if (!serialize(buf, buf_length, envelope, payload, length)) {
+            goto cleanup;
+        }
+
+        success = sendLowLevel(targets, buf, length + 8, timeout);
     }
-
-    success = sendLowLevel(targets, buf, length + 8, timeout);
 
 cleanup:
     if (!success) {
