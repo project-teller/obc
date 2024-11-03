@@ -17,7 +17,7 @@ using namespace teller::supervisor;
 [[noreturn]] void teller::tasks::schedulerTask(void* arg)
 {
     TaskRegistration task("scheduler");
-    task.expect(BASE_SCHEDULER_UPDATE_FREQ_HZ - 2, BASE_SCHEDULER_UPDATE_FREQ_HZ + 1);
+    task.expect(BASE_SCHEDULER_UPDATE_FREQ_HZ - 3, BASE_SCHEDULER_UPDATE_FREQ_HZ + 1);
 
     while (true) {
         scheduler::update();

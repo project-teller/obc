@@ -41,7 +41,7 @@ subsystem_status_t getSubsystemStatus()
 {
     if (!inited) {
         return SUBSYSTEM_STATUS_CRITICAL;
-    } else if (!teller::lcl::triggered(teller::lcl::CAM_LCL)) {
+    } else if (teller::lcl::triggered(teller::lcl::CAM_LCL)) {
         return SUBSYSTEM_STATUS_ERROR;
     } else {
         return enabled ? SUBSYSTEM_STATUS_OK : SUBSYSTEM_STATUS_WARNING;
