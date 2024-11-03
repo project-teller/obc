@@ -26,7 +26,6 @@ typedef struct __attribute__((packed)) {
 uint8_t encodeSCMFrame(const scm_data_t* data, uint8_t* encoded)
 {
     auto frame = reinterpret_cast<scm_frame_t*>(encoded);
-    unsigned int i;
 
     frame->timestamp = data->timestampInMsec;
     frame->maxFragmentIndex = data->maxFragmentIndex;
@@ -40,7 +39,6 @@ uint8_t encodeSCMFrame(const scm_data_t* data, uint8_t* encoded)
 void decodeSCMFrame(const uint8_t* encoded, size_t length, scm_data_t* decoded)
 {
     auto frame = reinterpret_cast<const scm_frame_t*>(encoded);
-    unsigned int i;
 
     decoded->timestampInMsec = frame->timestamp;
     decoded->maxFragmentIndex = frame->maxFragmentIndex;
