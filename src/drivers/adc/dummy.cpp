@@ -17,9 +17,11 @@ bool setup(void)
     return true;
 }
 
-bool update(std::uint8_t channel, float& value)
+bool update(std::uint8_t count, float* value)
 {
-    value = 0.0f;
+    for (std::uint8_t i = 0; i < count; i++) {
+        value[i] = 0.0f;
+    }
     return true;
 }
 

@@ -102,6 +102,7 @@ add_executable(
 
 	main.cpp
 
+	tasks/adc.cpp
 	tasks/blinker.cpp
 	tasks/cmd.cpp
 	tasks/debug.cpp

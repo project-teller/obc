@@ -134,7 +134,11 @@ const spi_bus_config_t spi_config[] = {
             NO_MORE_GPIO_CFG
         },
         /* The datasheet of the MLX90393 magnetometer explicitly claims that
-         * SPI mode 3 is implemented, but mode 0 also seems to work */
+         * SPI mode 3 is implemented, but mode 0 also seems to work.
+         *
+         * The datasheet of the MAX11643 ADC explicitly claims that SPI mode
+         * 0 and 3 are both supported.
+         */
         .mode = 0,
         .irq = SPI3_IRQn,
     },

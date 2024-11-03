@@ -65,6 +65,7 @@ const gpio_config_t gpio_configs[NUM_GPIO_PINS] = {
 
     /* - Miscellaneous */
     UNMAPPED,
+    UNMAPPED,
 #elif defined(TELLER_BOARD_STM32F4)
     // STM32F415RG TELLER OBC v2.1
 
@@ -106,7 +107,10 @@ const gpio_config_t gpio_configs[NUM_GPIO_PINS] = {
 
     /* Miscellaneous */
     /* - START_CAM */
-    { GPIOA, GPIO_PIN_5, OUTPUT_PIN }
+    { GPIOA, GPIO_PIN_5, OUTPUT_PIN },
+    /* - ADC_READY */
+    { GPIOC, GPIO_PIN_13, INPUT_PIN, FLAG_INVERTED }
+
 #else
     // No GPIOs supported on this hardware
 
@@ -132,6 +136,7 @@ const gpio_config_t gpio_configs[NUM_GPIO_PINS] = {
     UNMAPPED,
 
     /* Miscellaneous */
+    UNMAPPED,
     UNMAPPED,
 #endif
 };

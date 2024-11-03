@@ -11,6 +11,7 @@
 #include "drivers/sdcard.h"
 #include "drivers/temperature.h"
 
+#include "modules/adc.h"
 #include "modules/cam.h"
 #include "modules/cmd.h"
 #include "modules/debug.h"
@@ -30,6 +31,7 @@
 #include "modules/telem.h"
 #include "modules/uart_rx.h"
 
+#include "tasks/adc.h"
 #include "tasks/blinker.h"
 #include "tasks/cmd.h"
 #include "tasks/debug.h"
@@ -115,6 +117,7 @@ static const task_definition_t tasks[] = {
     { .func = uartRxTask, .name = "uartRxTel", .priority = LOW, .stack_size = 1024, .context = &uart_telem_task_args },
     { .func = uartRxTask, .name = "uartRxDbg", .priority = LOW, .stack_size = 1024, .context = &uart_debug_task_args },
     { .func = usbTask, .name = "usb", .priority = LOW, .stack_size = 1024 },
+    { .func = adcTask, .name = "adc", .priority = LOW, .stack_size = 1024 },
     NO_MORE_TASKS
 };
 
@@ -158,6 +161,7 @@ void bootSystem(void)
     /* Initialize modules */
     inited &= teller::log::init();
     inited &= teller::supervisor::init();
+    inited &= teller::adc::init();
     inited &= teller::cam::init();
     inited &= teller::lcl::init();
     inited &= teller::mode::init();

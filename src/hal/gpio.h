@@ -31,6 +31,7 @@ typedef enum {
 
     /* Miscellaneous */
     START_CAM,
+    ADC_READY,
 
     NUM_GPIO_PINS,
 } pin_t;

@@ -29,10 +29,10 @@ bool setup(void);
 /**
  * @brief Retrieves a new measurement from the analog-digital converter.
  *
- * @param index  the index of the channel to read
- * @param value  the measurement will be stored here
+ * @param count  the number of channels to read
+ * @param value  the measurements will be stored here
  * @return whether the retrieval was successful
  */
-bool update(std::uint8_t index, float& value);
+bool update(std::uint8_t count, float* value);
 
 }
