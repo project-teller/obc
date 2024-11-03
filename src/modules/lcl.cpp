@@ -48,10 +48,10 @@ bool init()
 {
     pulse_duration_msec = 100;
 
-    /* LCL reset pins start from logical high */
+    /* LCL reset pins start from logical low */
     for (int i = 0; i < NUM_LCLS; i++) {
         pin_t pin = pin_map[static_cast<lcl_t>(i)].reset_pin;
-        write(pin, 1);
+        write(pin, 0);
     }
 
     logger = getLogger(MODULE_ID_OBC);
