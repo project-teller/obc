@@ -167,7 +167,6 @@ static bool updateStatus()
     } else if (now - lastMessageReceivedAt < 3000) {
         status = SUBSYSTEM_STATUS_WARNING;
     } else {
-        /* This is where we are giving up */
         status = SUBSYSTEM_STATUS_ERROR;
     }
     return status != SUBSYSTEM_STATUS_ERROR;
