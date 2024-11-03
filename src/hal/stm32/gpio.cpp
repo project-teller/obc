@@ -31,13 +31,9 @@ typedef struct {
     {                                                                              \
         .Mode = GPIO_MODE_INPUT, .Pull = GPIO_PULLUP, .Speed = GPIO_SPEED_FREQ_LOW \
     }
-#define OUTPUT_PIN_ACTIVE_HIGH                                                         \
+#define OUTPUT_PIN                                                                     \
     {                                                                                  \
         .Mode = GPIO_MODE_OUTPUT_PP, .Pull = GPIO_NOPULL, .Speed = GPIO_SPEED_FREQ_LOW \
-    }
-#define OUTPUT_PIN_ACTIVE_LOW                                                      \
-    {                                                                              \
-        .Mode = GPIO_MODE_INPUT, .Pull = GPIO_NOPULL, .Speed = GPIO_SPEED_FREQ_LOW \
     }
 
 #define FLAG_INVERTED 1
@@ -96,21 +92,21 @@ const gpio_config_t gpio_configs[NUM_GPIO_PINS] = {
 
     /* LCL reset */
     /* - RST_GMM_LCL */
-    { GPIOA, GPIO_PIN_2, OUTPUT_PIN_ACTIVE_HIGH },
+    { GPIOA, GPIO_PIN_2, OUTPUT_PIN },
     /* - RST_SCM_LCL */
-    { GPIOB, GPIO_PIN_11, OUTPUT_PIN_ACTIVE_HIGH },
+    { GPIOB, GPIO_PIN_11, OUTPUT_PIN },
     /* - RST_SUC_LCL1 */
-    { GPIOA, GPIO_PIN_8, OUTPUT_PIN_ACTIVE_HIGH },
+    { GPIOA, GPIO_PIN_8, OUTPUT_PIN },
     /* - RST_SUC_LCL2 */
-    { GPIOC, GPIO_PIN_9, OUTPUT_PIN_ACTIVE_HIGH },
+    { GPIOC, GPIO_PIN_9, OUTPUT_PIN },
     /* - RST_SUC_LCL3 */
-    { GPIOC, GPIO_PIN_8, OUTPUT_PIN_ACTIVE_HIGH },
+    { GPIOC, GPIO_PIN_8, OUTPUT_PIN },
     /* - RST_CAM_LCL */
-    { GPIOC, GPIO_PIN_1, OUTPUT_PIN_ACTIVE_HIGH },
+    { GPIOC, GPIO_PIN_1, OUTPUT_PIN },
 
     /* Miscellaneous */
     /* - START_CAM */
-    { GPIOA, GPIO_PIN_5, OUTPUT_PIN_ACTIVE_HIGH }
+    { GPIOA, GPIO_PIN_5, OUTPUT_PIN }
 #else
     // No GPIOs supported on this hardware
 
