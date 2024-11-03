@@ -6,6 +6,7 @@
 #include "hal/rtc.h"
 #include "hal/system.h"
 
+#include "modules/cam.h"
 #include "modules/errors.h"
 #include "modules/gmm.h"
 #include "modules/imu.h"
@@ -43,6 +44,7 @@ void updateHeartbeatData(frames::heartbeat_data_t* data)
     data->rxsmStatusBits.sods = state.sods;
     data->rxsmStatusBits.soe = state.soe;
 
+    data->subsystemStatus.cam = teller::cam::getSubsystemStatus();
     data->subsystemStatus.gmm = teller::gmm::getSubsystemStatus();
     data->subsystemStatus.scm = teller::scm::getSubsystemStatus();
     data->subsystemStatus.imu = teller::imu::getSubsystemStatus();

@@ -25,7 +25,7 @@ typedef struct {
     struct {
         subsystem_status_t gmm;
         subsystem_status_t scm;
-        subsystem_status_t ads;
+        subsystem_status_t cam;
         subsystem_status_t imu;
         subsystem_status_t mag;
         subsystem_status_t sto;

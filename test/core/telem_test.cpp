@@ -107,7 +107,7 @@ TEST(TelemetryTest, heartbeatFrameEncoding)
         .subsystemStatus = {
             .gmm = SUBSYSTEM_STATUS_OK,
             .scm = SUBSYSTEM_STATUS_WARNING,
-            .ads = SUBSYSTEM_STATUS_ERROR,
+            .cam = SUBSYSTEM_STATUS_ERROR,
             .imu = SUBSYSTEM_STATUS_CRITICAL,
             .mag = SUBSYSTEM_STATUS_OK
         },
@@ -142,7 +142,7 @@ TEST(TelemetryTest, heartbeatFrameEncoding)
     EXPECT_EQ(decoded.rxsmStatusBits.soe, heartbeat.rxsmStatusBits.soe);
     EXPECT_EQ(decoded.subsystemStatus.gmm, heartbeat.subsystemStatus.gmm);
     EXPECT_EQ(decoded.subsystemStatus.scm, heartbeat.subsystemStatus.scm);
-    EXPECT_EQ(decoded.subsystemStatus.ads, heartbeat.subsystemStatus.ads);
+    EXPECT_EQ(decoded.subsystemStatus.cam, heartbeat.subsystemStatus.cam);
     EXPECT_EQ(decoded.subsystemStatus.imu, heartbeat.subsystemStatus.imu);
     EXPECT_EQ(decoded.subsystemStatus.mag, heartbeat.subsystemStatus.mag);
 }

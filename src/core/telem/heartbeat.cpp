@@ -13,7 +13,7 @@ using namespace teller::telem;
 
 #define SUBSYSTEM_GMM_BIT_INDEX 0
 #define SUBSYSTEM_SCM_BIT_INDEX 2
-#define SUBSYSTEM_ADS_BIT_INDEX 4
+#define SUBSYSTEM_CAM_BIT_INDEX 4
 #define SUBSYSTEM_IMU_BIT_INDEX 6
 #define SUBSYSTEM_MAG_BIT_INDEX 8
 #define SUBSYSTEM_STO_BIT_INDEX 10
@@ -78,7 +78,7 @@ uint8_t encodeHeartbeatFrame(const heartbeat_data_t* data, uint8_t* encoded)
     frame->subsystemStatus = (
         (data->subsystemStatus.gmm << SUBSYSTEM_GMM_BIT_INDEX) |
         (data->subsystemStatus.scm << SUBSYSTEM_SCM_BIT_INDEX) |
-        (data->subsystemStatus.ads << SUBSYSTEM_ADS_BIT_INDEX) |
+        (data->subsystemStatus.cam << SUBSYSTEM_CAM_BIT_INDEX) |
         (data->subsystemStatus.imu << SUBSYSTEM_IMU_BIT_INDEX) |
         (data->subsystemStatus.mag << SUBSYSTEM_MAG_BIT_INDEX) |
         (data->subsystemStatus.sto << SUBSYSTEM_STO_BIT_INDEX) |
@@ -120,8 +120,8 @@ void decodeHeartbeatFrame(const uint8_t* encoded, heartbeat_data_t* decoded)
         (status >> SUBSYSTEM_GMM_BIT_INDEX) & 0x03);
     decoded->subsystemStatus.scm = static_cast<subsystem_status_t>(
         (status >> SUBSYSTEM_SCM_BIT_INDEX) & 0x03);
-    decoded->subsystemStatus.ads = static_cast<subsystem_status_t>(
-        (status >> SUBSYSTEM_ADS_BIT_INDEX) & 0x03);
+    decoded->subsystemStatus.cam = static_cast<subsystem_status_t>(
+        (status >> SUBSYSTEM_CAM_BIT_INDEX) & 0x03);
     decoded->subsystemStatus.imu = static_cast<subsystem_status_t>(
         (status >> SUBSYSTEM_IMU_BIT_INDEX) & 0x03);
     decoded->subsystemStatus.mag = static_cast<subsystem_status_t>(

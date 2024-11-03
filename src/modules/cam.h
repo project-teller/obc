@@ -1,6 +1,8 @@
+#pragma once
+
 #include <cstdint>
 
-#pragma once
+#include "core/telem/generic.h"
 
 namespace teller::cam {
 
@@ -15,6 +17,11 @@ namespace teller::cam {
  * @brief Destroys the module handling the camera.
  */
 void destroy(void);
+
+/**
+ * @brief Returns the status of the camera (ADS) subsystem.
+ */
+teller::telem::subsystem_status_t getSubsystemStatus(void);
 
 /**
  * @brief Returns whether the camera is enabled.
