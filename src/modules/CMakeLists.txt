@@ -5,6 +5,7 @@ endif()
 # Declare the generic module library
 add_library(
     obc-modules
+    cam.cpp
     cmd.cpp
     debug.cpp
     edr.cpp

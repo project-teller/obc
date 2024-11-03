@@ -9,6 +9,7 @@ typedef enum {
     DEBUG_CMD_START_CLOCK,
     DEBUG_CMD_STOP_CLOCK,
     DEBUG_CMD_RESET_CLOCK,
+    DEBUG_CMD_TOGGLE_CAMERA,
     NUM_DEBUG_COMMANDS,
 } debug_command_t;
 

@@ -12,6 +12,7 @@
 #include "hal/memory.h"
 #include "hal/rtc.h"
 #include "hal/system.h"
+#include "modules/cam.h"
 #include "modules/cmd.h"
 #include "modules/edr.hpp"
 #include "modules/imu.h"
@@ -397,6 +398,10 @@ optional<Response> processDebugPacket(const InboundMessage& message)
     case frames::DEBUG_CMD_RESET_CLOCK:
         teller::scheduler::reset();
         teller::telem::sendClockStatusSoon();
+        break;
+
+    case frames::DEBUG_CMD_TOGGLE_CAMERA:
+        teller::cam::sendPulse();
         break;
 
     default:

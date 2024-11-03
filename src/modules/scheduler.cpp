@@ -3,6 +3,7 @@
 #include "core/telem/calibration.h"
 #include "hal/gpio.h"
 #include "hal/system.h"
+#include "modules/cam.h"
 #include "modules/cmd.h"
 #include "modules/lcl.h"
 #include "modules/scheduler.h"
@@ -18,6 +19,7 @@ typedef enum {
     EVENT_GPIO_SET,
     EVENT_GPIO_CLEAR,
     EVENT_CALIBRATION,
+    EVENT_ENABLE_DISABLE_CAMERA,
 } scheduler_event_type_t;
 
 typedef struct {
@@ -43,8 +45,11 @@ static const scheduler_event_t events[] = {
     /* SOE+15s, T-255: calibrate gyroscope */
     { 15000, EVENT_CALIBRATION, teller::telem::frames::CALIBRATION_GYRO },
 
-    /* SOE+30s, T-240: start camera recording */
-    { 30000, EVENT_GPIO_SET, teller::hal::gpio::START_CAM },
+    /* SOE+30s, T-240: enable camera LCL */
+    { 30000, EVENT_LCL_RESET, teller::lcl::CAM_LCL },
+
+    /* SOE+40s, T-230: start camera recording */
+    { 40000, EVENT_ENABLE_DISABLE_CAMERA, true },
 
     /* No more events */
     { FUTURE, EVENT_NOP },
@@ -167,6 +172,11 @@ static void executeEvent(const scheduler_event_t& event)
             teller::cmd::performCalibration(
                 static_cast<teller::telem::frames::calibration_procedure_t>(event.param));
         }
+        break;
+
+    case EVENT_ENABLE_DISABLE_CAMERA:
+        /* Enable or disable the camera */
+        teller::cam::setEnabled(event.param != 0);
         break;
 
     default:

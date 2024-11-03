@@ -11,6 +11,7 @@
 #include "drivers/sdcard.h"
 #include "drivers/temperature.h"
 
+#include "modules/cam.h"
 #include "modules/cmd.h"
 #include "modules/debug.h"
 #include "modules/edr.hpp"
@@ -157,6 +158,7 @@ void bootSystem(void)
     /* Initialize modules */
     inited &= teller::log::init();
     inited &= teller::supervisor::init();
+    inited &= teller::cam::init();
     inited &= teller::lcl::init();
     inited &= teller::mode::init();
     inited &= teller::scheduler::init();
