@@ -33,6 +33,6 @@ bool setup(void);
  * @param value  the measurements will be stored here
  * @return whether the retrieval was successful
  */
-bool update(std::uint8_t count, float* value);
+bool update(std::uint8_t count, uint16_t* value);
 
 }

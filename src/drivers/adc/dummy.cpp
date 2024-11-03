@@ -17,10 +17,10 @@ bool setup(void)
     return true;
 }
 
-bool update(std::uint8_t count, float* value)
+bool update(std::uint8_t count, uint16_t* value)
 {
     for (std::uint8_t i = 0; i < count; i++) {
-        value[i] = 0.0f;
+        value[i] = 0;
     }
     return true;
 }

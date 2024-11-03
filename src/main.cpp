@@ -117,7 +117,7 @@ static const task_definition_t tasks[] = {
     { .func = uartRxTask, .name = "uartRxTel", .priority = LOW, .stack_size = 1024, .context = &uart_telem_task_args },
     { .func = uartRxTask, .name = "uartRxDbg", .priority = LOW, .stack_size = 1024, .context = &uart_debug_task_args },
     { .func = usbTask, .name = "usb", .priority = LOW, .stack_size = 1024 },
-    { .func = adcTask, .name = "adc", .priority = LOW, .stack_size = 1024 },
+    { .func = adcTask, .name = "adc", .priority = LOW, .stack_size = 2048 },
     NO_MORE_TASKS
 };
 
