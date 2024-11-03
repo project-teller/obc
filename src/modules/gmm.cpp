@@ -123,9 +123,10 @@ static bool parseReceivedMessage(const char* message)
 {
     char type[6];
     int counts[10];
+    int seq_no;
 
     if (!minmea_scan(
-            message, "tiiiiiiiiii", type,
+            message, "tiiiiiiiiiii", type, &seq_no,
             &counts[0], &counts[1], &counts[2], &counts[3], &counts[4],
             &counts[5], &counts[6], &counts[7], &counts[8], &counts[9])) {
         return false;
