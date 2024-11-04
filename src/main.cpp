@@ -332,6 +332,7 @@ static void generateFakeGMMReadings(int fd)
     FILE* fp;
     const float gmmReportFreq = 50;
     int dt = 1000 / gmmReportFreq;
+    int seq_no = 0;
     char message[128];
 
     fp = fdopen(fd, "w");
@@ -341,8 +342,8 @@ static void generateFakeGMMReadings(int fd)
 
         /* Print the message... */
         snprintf(
-            message, sizeof(message), "$GMCNT,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,*",
-            4, 1, 1, 2, 0, 1, 0, 0, 0, 1);
+            message, sizeof(message), "$GMCNT,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,*",
+            seq_no, 4, 1, 1, 2, 0, 1, 0, 0, 0, 1);
 
         /* ...then update the checksum... */
         snprintf(strrchr(message, '*') + 1, 5, "%02X\r\n", minmea_checksum(message));
@@ -353,14 +354,16 @@ static void generateFakeGMMReadings(int fd)
         } else {
             fflush(fp);
         }
+
+        seq_no++;
     }
 }
 
 static void generateFakeSCMReadings(int fd)
 {
     FILE* fp;
-    const float gmmReportFreq = 50;
-    int dt = 1000 / gmmReportFreq;
+    const float scmReportFreq = 10;
+    int dt = 1000 / scmReportFreq;
     /* clang-format off */
     uint8_t message[] = {
         /* Scintillator index 0 */
