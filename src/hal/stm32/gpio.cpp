@@ -72,10 +72,10 @@ const gpio_config_t gpio_configs[NUM_GPIO_PINS] = {
     /* RXSM signals */
     /* - SODS */
     { GPIOA, GPIO_PIN_3, INPUT_PIN, FLAG_INVERTED },
-    /* - SOE */
-    { GPIOB, GPIO_PIN_8, INPUT_PIN, FLAG_INVERTED },
-    /* - LO */
+    /* - SOE: swapped with LO due to an issue with the connectors */
     { GPIOD, GPIO_PIN_2, INPUT_PIN, FLAG_INVERTED },
+    /* - LO: swapped with LO due to an issue with the connectors */
+    { GPIOB, GPIO_PIN_8, INPUT_PIN, FLAG_INVERTED },
 
     /* LCL signals */
     /* - STATUS_GMM_LCL */
