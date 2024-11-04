@@ -38,6 +38,7 @@ typedef struct {
 static const scheduler_event_t events[] = {
     /* SOE signal: turn on GMM and SCM */
     { 0, EVENT_LCL_RESET, teller::lcl::GMM_LCL },
+    { 0, EVENT_LCL_RESET, teller::lcl::SCM_LCL },
     { 0, EVENT_LCL_RESET, teller::lcl::SUC_LCL1 },
     { 0, EVENT_LCL_RESET, teller::lcl::SUC_LCL2 },
     { 0, EVENT_LCL_RESET, teller::lcl::SUC_LCL3 },
