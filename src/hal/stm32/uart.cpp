@@ -159,13 +159,13 @@ const uart_phy_config_t uart_phy_config[] = {
         .gpio = {
             .by_name = {
                 .tx = { GPIOA, GPIO_PIN_9 },
-                .rx = { GPIOA, GPIO_PIN_10 }  /* A8 on the current board, but it's a mistake */
+                .rx = { GPIOA, GPIO_PIN_10 }
             },
         },
         .irq = USART1_IRQn,
         .dma_tx = nullptr,
         .dma_rx = nullptr,
-        .baud_rate = 38400
+        .baud_rate = 115200,
     },
 
     /* UART4 towards the RXSM */
