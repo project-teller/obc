@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "modules/adc.h"
 #include "modules/log.h"
 
@@ -16,8 +18,11 @@ static const uint8_t NUM_CHANNELS = 13;
 /** The raw measurements from the ADC */
 static uint16_t rawValues[NUM_CHANNELS];
 
+/** The timestamp of the last raw measurements */
+static uint32_t lastMeasurementTakenAt = 0;
+
 /** The scaled measurements from the ADC */
-static float values[NUM_CHANNELS];
+static float scaledValues[NUM_CHANNELS];
 
 /** Reference level of the ADC that corresponds to the maximum value */
 static const float reference = 2.5f;
@@ -48,6 +53,13 @@ namespace teller::adc {
 
 bool init()
 {
+    lastMeasurementTakenAt = 0;
+
+    for (uint8_t i = 0; i < NUM_CHANNELS; i++) {
+        rawValues[i] = 0;
+        scaledValues[i] = 0.0f;
+    }
+
     logger = getLogger(MODULE_ID_OBC);
     return logger != nullptr;
 }
@@ -58,32 +70,28 @@ void destroy()
 
 bool setup(void)
 {
+    lastMeasurementTakenAt = 0;
     return teller::drivers::adc::setup();
 }
 
 bool update()
 {
-    static int counter = 0;
-    uint8_t i;
-
     if (!teller::drivers::adc::update(NUM_CHANNELS, rawValues)) {
         return false;
     }
 
-    for (i = 0; i < NUM_CHANNELS; i++) {
-        values[i] = rawValues[i] * lsbIncrement * scaling[i];
-    }
-
-    counter++;
-    if (counter >= 10) {
-        counter = 0;
-
-        logger->info(
-            "ADC: 60V=%.1f 28V=%.1f 12V=%.1f 5V=%.1f, 3.3V=%.1f",
-            values[8], values[9], values[10], values[11], values[12]);
+    lastMeasurementTakenAt = teller::hal::system::getTimeSinceBootMsec();
+    for (uint8_t i = 0; i < NUM_CHANNELS; i++) {
+        scaledValues[i] = rawValues[i] * lsbIncrement * scaling[i];
     }
 
     return true;
+}
+
+void getMeasurements(uint32_t& timestampMsec, float* values)
+{
+    timestampMsec = lastMeasurementTakenAt;
+    memcpy(values, scaledValues, NUM_CHANNELS * sizeof(float));
 }
 
 }

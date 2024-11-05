@@ -26,7 +26,7 @@ uint8_t encodeGMMFrame(const gmm_data_t* data, uint8_t* encoded)
     unsigned int i;
 
     frame->timestamp = data->timestampInMsec;
-    for (i = 0; i < sizeof(frame->counts); i++) {
+    for (i = 0; i < sizeof(frame->counts) / sizeof(frame->counts[0]); i++) {
         frame->counts[i] = data->hitCounts.byIndex[i];
     }
 
@@ -39,7 +39,7 @@ void decodeGMMFrame(const uint8_t* encoded, gmm_data_t* decoded)
     unsigned int i;
 
     decoded->timestampInMsec = frame->timestamp;
-    for (i = 0; i < sizeof(frame->counts); i++) {
+    for (i = 0; i < sizeof(frame->counts) / sizeof(frame->counts[0]); i++) {
         decoded->hitCounts.byIndex[i] = frame->counts[i];
     }
 }

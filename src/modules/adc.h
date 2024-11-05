@@ -28,4 +28,13 @@ bool setup(void);
  */
 bool update(void);
 
+/**
+ * @brief Returns the most recent acceleration measurements from the ADC.
+ *
+ * @param  timestampMsec  the timestamp of the measurements will be returned here
+ * @param  values  the currents and voltages will be returned in this array.
+ *         The array must be large enough to hold all the measurements.
+ */
+void getMeasurements(uint32_t& timestampMsec, float* values);
+
 };

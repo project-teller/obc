@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/telem/adc.h"
 #include "core/telem/clock_status.h"
 #include "core/telem/gmm.h"
 #include "core/telem/heartbeat.h"
@@ -17,6 +18,12 @@ void updateHeartbeatData(frames::heartbeat_data_t* data);
  * @brief Updates a clock status data object from the current system and RTC time.
  */
 void updateClockStatusData(frames::clock_status_data_t* data);
+
+/**
+ * @brief Updates an ADC measurement data object from the most recent voltage
+ * and current measurements from the ADC.
+ */
+void updateADCMeasurements(frames::adc_data_t* data);
 
 /**
  * @brief Updates an IMU measurement data object from the most recent measurement

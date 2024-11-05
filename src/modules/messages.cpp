@@ -6,6 +6,7 @@
 #include "hal/rtc.h"
 #include "hal/system.h"
 
+#include "modules/adc.h"
 #include "modules/cam.h"
 #include "modules/errors.h"
 #include "modules/gmm.h"
@@ -88,6 +89,13 @@ void updateMagneticVectorMeasurement(frames::mag_data_t* data)
     data->timestampInMsec = measurement.timestampInMsec;
     data->magneticVector = measurement.value;
     data->temperature = teller::mag::getTemperature();
+}
+
+void updateADCMeasurements(frames::adc_data_t* data)
+{
+    teller::adc::getMeasurements(
+        data->timestampInMsec,
+        data->measurements.byIndex);
 }
 
 }

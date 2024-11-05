@@ -58,6 +58,7 @@ static BlockingQueue<OutboundMessage> out_queue(QUEUE_SIZE);
 
 static void sendHeartbeat(uint8_t* payload);
 static void sendClockStatus(uint8_t* payload);
+static void sendADCMeasurements(uint8_t* payload);
 static void sendIMUMeasurement(uint8_t* payload);
 static void sendMAGMeasurement(uint8_t* payload);
 
@@ -78,6 +79,7 @@ static bool sendLowLevel(uint8_t targets, uint8_t* buf, uint8_t length, uint32_t
  */
 task_t tasks[] = {
     { 25, sendHeartbeat },
+    { 50, sendADCMeasurements },
     { 250, sendClockStatus },
     { 1, sendIMUMeasurement },
     { 5, sendMAGMeasurement },
@@ -165,7 +167,7 @@ void runSingleIteration(uint8_t* payload)
 }
 
 bool send(
-    teller::telem::frames::frame_type_t type, const uint8_t* payload,
+    frames::frame_type_t type, const uint8_t* payload,
     uint8_t length, uint32_t timeout)
 {
     return sendTo(telemetry_channel_mask, type, payload, length, timeout);
@@ -177,7 +179,7 @@ bool send(envelope_t envelope, const uint8_t* payload, uint8_t length, uint32_t 
 }
 
 bool sendTo(
-    uint8_t targets, teller::telem::frames::frame_type_t type, const uint8_t* payload,
+    uint8_t targets, frames::frame_type_t type, const uint8_t* payload,
     uint8_t length, uint32_t timeout)
 {
     envelope_t envelope;
@@ -285,6 +287,16 @@ static void sendClockStatus(uint8_t* payload)
     send(frames::CLOCK_STATUS, payload, encodeClockStatusFrame(&clock_status, payload));
 
     /* TODO(ntamas): log clock status regularly in the onboard log! */
+}
+
+static void sendADCMeasurements(uint8_t* payload)
+{
+    frames::adc_data_t adc_measurement;
+
+    updateADCMeasurements(&adc_measurement);
+    send(frames::ADC, payload, encodeADCFrame(&adc_measurement, payload));
+
+    /* TODO(ntamas): log ADC status regularly in the onboard log! */
 }
 
 static void sendIMUMeasurement(uint8_t* payload)

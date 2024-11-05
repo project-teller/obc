@@ -139,6 +139,7 @@ namespace frames {
         ECHO = 17,
         CLOCK_SYNC = 18,
         DEBUG = 19,
+        ADC = 20,
     } frame_type_t;
 
 }

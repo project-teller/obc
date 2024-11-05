@@ -5,6 +5,7 @@ add_library(
     nmea/parser.cpp
 
     telem/ack.cpp
+    telem/adc.cpp
     telem/binary_data.cpp
     telem/calibration.cpp
     telem/clock_status.cpp
