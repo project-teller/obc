@@ -68,7 +68,7 @@ subsystem_status_t getSubsystemStatus()
 
 bool setup()
 {
-    lastMessageReceivedAt = system::getTimeSinceBootMsec();
+    lastMessageReceivedAt = 0;
     status = uart::isConnected(uart::GMM) ? SUBSYSTEM_STATUS_OK : SUBSYSTEM_STATUS_CRITICAL;
     return updateStatus();
 }
@@ -162,7 +162,9 @@ static void sendGMMMeasurement(uint8_t* payload)
 static bool updateStatus()
 {
     uint32_t now = system::getTimeSinceBootMsec();
-    if (now - lastMessageReceivedAt < 100) {
+    if (lastMessageReceivedAt == 0) {
+        status = SUBSYSTEM_STATUS_ERROR;
+    } else if (now - lastMessageReceivedAt < 100) {
         status = SUBSYSTEM_STATUS_OK;
     } else if (now - lastMessageReceivedAt < 3000) {
         status = SUBSYSTEM_STATUS_WARNING;

@@ -272,12 +272,15 @@ static void sendSCMMeasurement(uint8_t* payload)
 static bool updateStatus()
 {
     uint32_t now = system::getTimeSinceBootMsec();
-    if (now - lastMessageStartedAt < 100) {
+
+    if (lastMessageStartedAt == 0) {
+        /* No messages yet */
+        status = SUBSYSTEM_STATUS_ERROR;
+    } else if (now - lastMessageStartedAt < 100) {
         status = SUBSYSTEM_STATUS_OK;
     } else if (now - lastMessageStartedAt < 3000) {
         status = SUBSYSTEM_STATUS_WARNING;
     } else {
-        /* This is where we are giving up */
         status = SUBSYSTEM_STATUS_ERROR;
     }
     return status != SUBSYSTEM_STATUS_ERROR;

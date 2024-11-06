@@ -21,8 +21,8 @@ using namespace teller::telem;
     bool healthy, updated;
 
     while (true) {
-        healthy = gmm::setup();
-        while (healthy) {
+        gmm::setup();
+        while (true) {
             healthy = gmm::update(payload, updated);
         }
 
