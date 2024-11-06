@@ -49,8 +49,8 @@ static const scheduler_event_t events[] = {
     /* SOE+30s, T-240: enable camera LCL */
     { 30000, EVENT_LCL_RESET, teller::lcl::CAM_LCL },
 
-    /* SOE+40s, T-230: start camera recording */
-    { 40000, EVENT_ENABLE_DISABLE_CAMERA, true },
+    /* SOE+60s, T-230: start camera recording */
+    { 60000, EVENT_ENABLE_DISABLE_CAMERA, true },
 
     /* No more events */
     { FUTURE, EVENT_NOP },
