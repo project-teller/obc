@@ -11,7 +11,9 @@ typedef struct {
     std::uint32_t timestampInMsec;
     std::uint32_t missionClockInMsec;
     std::uint64_t rtcTimestampInMsec;
+    std::uint32_t liftoffTimestampInMsec;
     bool missionClockIsRunning;
+    bool liftoffHappened;
 } clock_status_data_t;
 
 /**

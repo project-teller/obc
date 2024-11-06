@@ -191,11 +191,14 @@ TEST(TelemetryTest, clockStatusFrameEncoding)
         .timestampInMsec = 1234567,
         .missionClockInMsec = 2345678,
         .rtcTimestampInMsec = 1707048820951,
+        .liftoffTimestampInMsec = 0,
         .missionClockIsRunning = true,
+        .liftoffHappened = false,
     };
     uint8_t encoded[MAX_MESSAGE_LENGTH];
     uint8_t expectedBytes[] = {
-        135, 214, 18, 0, 206, 202, 35, 128, 215, 224, 9, 116, 141, 1, 0, 0
+        135, 214, 18, 0, 206, 202, 35, 128, 215, 224, 9, 116, 141, 1, 0, 0,
+        0, 0, 0, 0
     };
     frames::clock_status_data_t decoded;
     /* clang-format on */
@@ -203,8 +206,8 @@ TEST(TelemetryTest, clockStatusFrameEncoding)
     EXPECT_EQ(sizeof(expectedBytes), frames::encodeClockStatusFrame(&message, encoded));
     EXPECT_EQ(0, memcmp(expectedBytes, encoded, sizeof(expectedBytes)));
 
-    EXPECT_TRUE(frames::validateEncodedClockStatusFrame(encoded, 16));
-    EXPECT_FALSE(frames::validateEncodedClockStatusFrame(encoded, 15));
+    EXPECT_TRUE(frames::validateEncodedClockStatusFrame(encoded, 20));
+    EXPECT_FALSE(frames::validateEncodedClockStatusFrame(encoded, 19));
 
     frames::decodeClockStatusFrame(encoded, &decoded);
 

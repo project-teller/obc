@@ -51,6 +51,9 @@ private:
 
     /** Majority voter for the LO signal */
     teller::utils::MajorityVoter lo;
+
+    /** Time when the LO signal came active the last time */
+    std::uint32_t lastLOSignalRisingEdgeTimestamp;
 };
 
 void StateManager::getState(State& state) const
@@ -73,6 +76,9 @@ signal::signal_t StateManager::update(bool sods_, bool soe_, bool lo_)
 
     if (lo.feedAndCheck(lo_)) {
         changed |= signal::LO;
+        if (lo.get()) {
+            lastLOSignalRisingEdgeTimestamp = teller::hal::system::getTimeSinceBootMsec();
+        }
     }
 
     if (sods.feedAndCheck(sods_)) {
@@ -118,6 +124,12 @@ void destroy()
 void getState(State& state)
 {
     rxsmStateManager.getState(state);
+}
+
+uint32_t getTimeSinceLiftoffMsec(void)
+{
+    /* TODO(ntamas) */
+    return 0;
 }
 
 void update(bool sods, bool soe, bool lo)

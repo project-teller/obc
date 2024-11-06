@@ -46,6 +46,11 @@ void destroy(void);
 void getState(State& state);
 
 /**
+ * @brief Returns the time elapsed since the liftoff signal, in milliseconds.
+ */
+uint32_t getTimeSinceLiftoffMsec(void);
+
+/**
  * @brief Updates the state of all signals at once.
  *
  * @param sods  the current value of the SODS signal
