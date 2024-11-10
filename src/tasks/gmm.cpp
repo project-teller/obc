@@ -22,7 +22,7 @@ using namespace teller::telem;
 
     while (true) {
         gmm::setup();
-        while (true) {
+        while (healthy) {
             healthy = gmm::update(payload, updated);
         }
 
