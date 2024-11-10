@@ -446,6 +446,11 @@ static uint32_t tryInitialization(void)
 
     blockCount = 0;
 
+    /* SPI initialization needs to start at a low clock speed */
+    if (!spi::setClockSpeed(address.bus, 200000)) {
+        return 0;
+    }
+
     if (!selector.ensureUnselected()) {
         return 0;
     }
@@ -536,6 +541,11 @@ static uint32_t tryInitialization(void)
     blockCount = (blockCount << 8) | buf[8];
     blockCount = (blockCount << 8) | buf[9];
     blockCount = (blockCount + 1) << 10; /* assert BLOCK_SIZE == (1 << 9) */
+
+    /* We can try raising the SPI clock speed now to, say, 12 MHz */
+    if (!spi::setClockSpeed(address.bus, 400000)) {
+        return 0;
+    }
 
     return blockCount;
 }

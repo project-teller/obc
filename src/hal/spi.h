@@ -58,6 +58,22 @@ void destroy(void);
 bool select(address_t address, bool value = true);
 
 /**
+ * @brief Sets the clock speed of the SPI bus with the given instance.
+ *
+ * The underlying hardware may not support the exact clock speed that you
+ * specified; in this case, the function will select the closest clock speed
+ * that is not higher than the specified one.
+ *
+ * @param  bus     index of the SPI bus to configure
+ * @param  speed   the desired clock speed, in Hertz
+ * @param  result  when not null, this variable will be filled with the clock
+ *         speed that was actually achieved with the hardware
+ *
+ * @return whether the operation was successful
+ */
+bool setClockSpeed(std::uint8_t bus, std::uint32_t speed, std::uint32_t* result = nullptr);
+
+/**
  * @brief Runs a simultaneous transmit-receive cycle on an SPI device.
  *
  * The function will block and yield to other tasks until the entire buffer was

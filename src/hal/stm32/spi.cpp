@@ -162,6 +162,9 @@ const spi_bus_config_t spi_config[] = {
 static bool configure_spi_bus(spi_bus_state_t* state, const spi_bus_config_t* cfg);
 static spi_bus_state_t* find_spi_bus_state(SPI_HandleTypeDef* hspi);
 static bool is_spi_address_valid(teller::hal::spi::address_t address);
+static bool is_spi_bus_index_valid(std::uint8_t bus);
+
+static uint32_t getPeripheralClockFreqForBus(std::uint8_t bus);
 
 static SPI_HandleTypeDef* spi_handle_ptrs[7];
 static spi_bus_state_t spi_state[NUM_SPI_BUSES];
@@ -203,6 +206,64 @@ bool select(address_t address, bool value)
     } else {
         return false;
     }
+}
+
+bool setClockSpeed(std::uint8_t bus, std::uint32_t speed, std::uint32_t* result)
+{
+    uint32_t currentSpeed;
+    uint8_t prescalers[] = {
+        SPI_BAUDRATEPRESCALER_2,
+        SPI_BAUDRATEPRESCALER_4,
+        SPI_BAUDRATEPRESCALER_8,
+        SPI_BAUDRATEPRESCALER_16,
+        SPI_BAUDRATEPRESCALER_32,
+        SPI_BAUDRATEPRESCALER_64,
+        SPI_BAUDRATEPRESCALER_128,
+        SPI_BAUDRATEPRESCALER_256,
+    };
+    bool success = false;
+    unsigned int i;
+
+    if (!is_spi_bus_index_valid(bus)) {
+        goto exit;
+    }
+
+    currentSpeed = getPeripheralClockFreqForBus(bus);
+
+    /* We can choose a prescaler value that is a power of 2, up to 256.
+     * Pick the one that produces the highest clock speed that is still lower
+     * than the specified one */
+    currentSpeed >>= 1;
+    success = false;
+    for (i = 0; i < sizeof(prescalers) / sizeof(prescalers[0]); i++) {
+        if (currentSpeed <= speed) {
+            /* This prescaler will be OK */
+            success = true;
+            break;
+        }
+
+        currentSpeed >>= 1;
+    }
+
+    if (success) {
+        /* TODO: set the SPI prescaler */
+        spi_bus_state_t* state = &spi_state[bus];
+        uint32_t regValue;
+
+#ifdef STM32F4
+        regValue = state->handle.Instance->CR1;
+        state->handle.Instance->CR1 = (regValue & ~SPI_CR1_BR_Msk) | (prescalers[i] & SPI_CR1_BR_Msk);
+#else
+        /* Not supported */
+#endif
+    }
+
+exit:
+    if (success && result) {
+        *result = speed;
+    }
+
+    return success;
 }
 
 bool transfer(
@@ -511,7 +572,7 @@ static spi_bus_state_t* find_spi_bus_state(SPI_HandleTypeDef* hspi)
 /* Returns whether an SPI address is valid */
 static bool is_spi_address_valid(teller::hal::spi::address_t address)
 {
-    if (address.bus >= NUM_SPI_BUSES || !spi_state[address.bus].initialized) {
+    if (!is_spi_bus_index_valid(address.bus)) {
         return false;
     }
 
@@ -520,6 +581,36 @@ static bool is_spi_address_valid(teller::hal::spi::address_t address)
     }
 
     return true;
+}
+
+/* Returns whether an SPI bus index is valid */
+static bool is_spi_bus_index_valid(std::uint8_t bus)
+{
+    return bus < NUM_SPI_BUSES && spi_state[bus].initialized;
+}
+
+/* Helper function to return the peripheral clock frequency for the SPI bus
+ * with the given index.
+ *
+ * On an STM32F4, SPI2 and SPI3 are on peripheral clock 1 while SPI1 is on
+ * peripheral clock 2.
+ */
+static uint32_t getPeripheralClockFreqForBus(std::uint8_t bus)
+{
+    if (!is_spi_bus_index_valid(bus)) {
+        return 0;
+    }
+
+    /* TODO(ntamas): update this for STM32H7 as well! */
+#ifdef STM32F4
+    if (spi_config[bus].instance == SPI1) {
+        return HAL_RCC_GetPCLK2Freq();
+    } else {
+        return HAL_RCC_GetPCLK1Freq();
+    }
+#else
+    return HAL_RCC_GetPCLK1Freq();
+#endif
 }
 
 /* ************************************************************************** */

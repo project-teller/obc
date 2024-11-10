@@ -19,6 +19,15 @@ bool select(address_t address, bool value)
     return false;
 }
 
+bool setClockSpeed(std::uint8_t bus, std::uint32_t speed, std::uint32_t* result)
+{
+    if (result) {
+        *result = speed;
+    }
+
+    return true;
+}
+
 bool transfer(
     address_t address, std::uint8_t* buf, std::uint16_t size, std::uint8_t flags)
 {
