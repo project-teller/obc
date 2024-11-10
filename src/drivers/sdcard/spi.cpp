@@ -542,7 +542,7 @@ static uint32_t tryInitialization(void)
     blockCount = (blockCount << 8) | buf[9];
     blockCount = (blockCount + 1) << 10; /* assert BLOCK_SIZE == (1 << 9) */
 
-    /* We can try raising the SPI clock speed now to, say, 12 MHz */
+    /* We can try raising the SPI clock speed now to, say, 400 kHz */
     if (!spi::setClockSpeed(address.bus, 400000)) {
         return 0;
     }
