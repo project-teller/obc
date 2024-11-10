@@ -418,17 +418,20 @@ static bool configure_spi_bus(spi_bus_state_t* state, const spi_bus_config_t* cf
      * For SPI1:
      *
      * Prescaler = 2: SPI bus will run at 42 MHz
+     * Prescaler = 128: SPI bus will run at 656.250 kHz
      * Prescaler = 256: SPI bus will run at 328.125 kHz
      *
-     * For SPI2:
+     * For SPI2 and SPI3:
      *
      * Prescaler = 2: SPI bus will run at 21 MHz
+     * Prescaler = 128: SPI bus will run at 328.125 kHz
      * Prescaler = 256: SPI bus will run at 164.0625 kHz
      *
      * Note that a low clock rate is required to communicate with SD cards
      * in order to bring them into SPI mode. Online sources suggest a clock
      * rate between 100 and 400 kHz, so we cannot bump the initial clock rate
-     * of the SPI2 bus higher.
+     * of the SPI2 bus higher, but anyway it is safer to initialize the SPI
+     * bus at the lowest clock speed and let the user bump it later if needed.
      */
 
     /* Comment on converting SPI modes to CLKPolarity and CLKPhase.
@@ -595,7 +598,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
             GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
             /* It seems like GPIO_PULLDOWN is needed for the SD card to work */
             GPIO_InitStruct.Pull = i > 0 ? GPIO_PULLDOWN : GPIO_NOPULL;
-            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
             GPIO_InitStruct.Alternate = gpioFunc;
             HAL_GPIO_Init(cfg->gpio.by_index[i].port, &GPIO_InitStruct);
         }
@@ -608,7 +611,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
             GPIO_InitStruct.Pin = cfg->cs[i].pins;
             GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
             GPIO_InitStruct.Pull = GPIO_NOPULL;
-            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+            GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
             HAL_GPIO_Init(cfg->cs[i].port, &GPIO_InitStruct);
             HAL_GPIO_WritePin(cfg->cs[i].port, cfg->cs[i].pins, GPIO_PIN_SET);
         }

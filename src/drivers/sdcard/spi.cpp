@@ -84,6 +84,9 @@ static bool readDataBlock(
 static uint8_t sendCommand(
     uint8_t cmd, uint32_t arg = 0, uint8_t* buf = nullptr, uint8_t size = 0,
     uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
+static uint8_t sendCommandAssumingNotBusy(
+    uint8_t cmd, uint32_t arg = 0, uint8_t* buf = nullptr, uint8_t size = 0,
+    uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
 static bool sendDataBlock(
     uint8_t* buf, size_t size, uint8_t token = DATA_TOKEN,
     uint32_t timeout = DEFAULT_SD_CARD_TIMEOUT);
@@ -285,6 +288,9 @@ static bool readDataBlock(uint8_t* buf, size_t size, uint8_t token, uint32_t tim
 /**
  * @brief Sends a standard 6-byte SD card command and reads the response.
  *
+ * This function waits until the card reports not being busy before sending the
+ * command.
+ *
  * @param cmd  the command code between 0 and 63, inclusive
  * @param arg  the argument of the command
  * @param buf  buffer in which to place the part of the response after the
@@ -298,6 +304,34 @@ static bool readDataBlock(uint8_t* buf, size_t size, uint8_t token, uint32_t tim
  */
 static uint8_t sendCommand(uint8_t cmd, uint32_t arg, uint8_t* buf, uint8_t size, uint32_t timeout)
 {
+    if (waitWhileBusy(timeout)) {
+        return sendCommandAssumingNotBusy(cmd, arg, buf, size, timeout);
+    } else {
+        return 0xFF;
+    }
+}
+
+/**
+ * @brief Sends a standard 6-byte SD card command and reads the response.
+ *
+ * This function assumes that the card is not busy. Used at initialization time
+ * where apparently it is needed for the first command that sends the card to
+ * idle state.
+ *
+ * @param cmd  the command code between 0 and 63, inclusive
+ * @param arg  the argument of the command
+ * @param buf  buffer in which to place the part of the response after the
+ *        initial response byte. null for R1 responses that have no additional
+ *        content
+ * @param size size of the buffer, i.e. the expected number of additional bytes
+ *        after the first response byte
+ * @param timeout  maximum number of milliseconds to wait for the SD card to
+ *        become ready
+ * @return the response byte; 0xFF if the command failed
+ */
+static uint8_t sendCommandAssumingNotBusy(
+    uint8_t cmd, uint32_t arg, uint8_t* buf, uint8_t size, uint32_t timeout)
+{
     uint8_t txBuf[10];
     uint8_t rxBuf[10];
     uint8_t i;
@@ -305,10 +339,6 @@ static uint8_t sendCommand(uint8_t cmd, uint32_t arg, uint8_t* buf, uint8_t size
 
     if (size > sizeof(rxBuf)) {
         size = sizeof(rxBuf);
-    }
-
-    if (!waitWhileBusy(timeout)) {
-        goto exit;
     }
 
     for (uint8_t tries = 0; tries < 5; tries++) {
@@ -322,10 +352,14 @@ static uint8_t sendCommand(uint8_t cmd, uint32_t arg, uint8_t* buf, uint8_t size
 
         /* Response should arrive within 16 clock cycles so it is enough
          * to wait for 2 more bytes, but let's be on the safe side and wait for
-         * at most 4 bytes. We send the bytes one by one, reading one byte in
+         * at most 8 bytes. We send the bytes one by one, reading one byte in
          * the response until we get a byte where the MSB is zero -- this will
-         * be the response code */
-        for (i = 0; i < 4; i++) {
+         * be the response code. Note that 8 bytes may seem overkill, but it
+         * was recommended here:
+         *
+         * https://electronics.stackexchange.com/questions/602105/
+         */
+        for (i = 0; i < 8; i++) {
             txBuf[0] = 0xff;
             if (!spi::transfer(address, txBuf, rxBuf, 1, spi::NO_CHIP_SELECT)) {
                 goto exit;
@@ -338,7 +372,7 @@ static uint8_t sendCommand(uint8_t cmd, uint32_t arg, uint8_t* buf, uint8_t size
     }
 
 readRest:
-    if (buf != nullptr && size > 0) {
+    if (buf != nullptr && size > 0 && response != 0xff) {
         memset(txBuf, 0xff, size);
         if (!spi::transfer(address, txBuf, buf, size, spi::NO_CHIP_SELECT)) {
             response = 0xff;
@@ -428,7 +462,7 @@ static uint32_t tryInitialization(void)
     }
 
     /* Step 2: send reset command and read response */
-    if (sendCommand(CMD_GO_IDLE_STATE) != RESPONSE_IDLE) {
+    if (sendCommandAssumingNotBusy(CMD_GO_IDLE_STATE) != RESPONSE_IDLE) {
         logger->error("%s: reset failed", name);
         return 0;
     }
@@ -565,14 +599,8 @@ static uint8_t waitForDataTokenResponse(uint32_t timeout)
  */
 static bool waitWhileBusy(uint32_t timeout)
 {
-    /* Do not use system::getTimeSinceBootMsec() here -- this function is
-     * called during initialization when the FreeRTOS facilities are not
-     * available yet */
     uint8_t busy;
-
-    /* TODO(ntamas): it seems like HAL_GetTick() is not being advanced during
-     * boot time? */
-    uint32_t now = HAL_GetTick();
+    uint32_t now = system::getTimeSinceBootMsec();
     uint32_t deadline = (timeout < std::numeric_limits<uint32_t>::max())
         ? now + timeout
         : std::numeric_limits<uint32_t>::max();
@@ -582,8 +610,16 @@ static bool waitWhileBusy(uint32_t timeout)
         if (!spi::transfer(address, &busy, sizeof(busy), spi::NO_CHIP_SELECT)) {
             return false;
         }
-        now = HAL_GetTick();
-    } while (busy != 0xff && now < deadline);
+
+        if (busy == 0xff) {
+            break;
+        }
+
+        now = system::getTimeSinceBootMsec();
+        if (now < deadline) {
+            system::delayMsec(1);
+        }
+    } while (now < deadline);
 
     return busy == 0xff;
 }
