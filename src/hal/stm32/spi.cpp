@@ -211,7 +211,7 @@ bool select(address_t address, bool value)
 bool setClockSpeed(std::uint8_t bus, std::uint32_t speed, std::uint32_t* result)
 {
     uint32_t currentSpeed;
-    uint8_t prescalers[] = {
+    uint32_t prescalers[] = {
         SPI_BAUDRATEPRESCALER_2,
         SPI_BAUDRATEPRESCALER_4,
         SPI_BAUDRATEPRESCALER_8,
@@ -247,10 +247,10 @@ bool setClockSpeed(std::uint8_t bus, std::uint32_t speed, std::uint32_t* result)
 
     if (success) {
         /* TODO: set the SPI prescaler */
+#ifdef STM32F4
         spi_bus_state_t* state = &spi_state[bus];
         uint32_t regValue;
 
-#ifdef STM32F4
         regValue = state->handle.Instance->CR1;
         state->handle.Instance->CR1 = (regValue & ~SPI_CR1_BR_Msk) | (prescalers[i] & SPI_CR1_BR_Msk);
 #else
