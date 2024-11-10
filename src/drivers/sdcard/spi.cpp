@@ -548,11 +548,8 @@ static uint32_t tryInitialization(void)
  */
 static uint8_t waitForToken(uint32_t timeout)
 {
-    /* Do not use system::getTimeSinceBootMsec() here -- this function is
-     * called during initialization when the FreeRTOS facilities are not
-     * available yet */
     uint8_t data;
-    uint32_t now = HAL_GetTick();
+    uint32_t now = system::getTimeSinceBootMsec();
     uint32_t deadline = (timeout < std::numeric_limits<uint32_t>::max())
         ? now + timeout
         : std::numeric_limits<uint32_t>::max();
@@ -562,8 +559,16 @@ static uint8_t waitForToken(uint32_t timeout)
         if (!spi::transfer(address, &data, sizeof(data), spi::NO_CHIP_SELECT)) {
             return false;
         }
-        now = HAL_GetTick();
-    } while (data == 0xff && now < deadline);
+
+        if (data != 0xff) {
+            break;
+        }
+
+        now = system::getTimeSinceBootMsec();
+        if (now < deadline) {
+            system::delayMsec(1);
+        }
+    } while (now < deadline);
 
     return data;
 }
