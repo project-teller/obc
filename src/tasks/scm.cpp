@@ -22,6 +22,8 @@ using namespace teller::telem;
 
     while (true) {
         scm::setup();
+
+        healthy = true;
         while (healthy) {
             healthy = scm::update(payload, updated);
         }
