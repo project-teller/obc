@@ -18,7 +18,7 @@ using namespace teller::telem;
 [[noreturn]] void teller::tasks::gmmTask(void* arg)
 {
     uint8_t payload[MAX_PAYLOAD_LENGTH];
-    bool healthy, updated;
+    bool healthy = true, updated;
 
     while (true) {
         gmm::setup();
