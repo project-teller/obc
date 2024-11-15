@@ -34,7 +34,7 @@ uint8_t encodeADCFrame(const adc_data_t* data, uint8_t* encoded)
     }
 
     /* Encoding voltages */
-    for (i = 7; i < 13; i++) {
+    for (i = 6; i < 13; i++) {
         frame->measurements[i] = data->measurements.byIndex[i] * 100.0f;
     }
 
@@ -54,7 +54,7 @@ void decodeADCFrame(const uint8_t* encoded, adc_data_t* decoded)
     }
 
     /* Decoding voltages */
-    for (i = 0; i < 6; i++) {
+    for (i = 6; i < 13; i++) {
         decoded->measurements.byIndex[i] = frame->measurements[i] / 100.0f;
     }
 }
