@@ -8,7 +8,6 @@ namespace teller::hal::watchdog {
 
 bool init()
 {
-    /* TODO: check whether the previous reset was triggered by the watchdog */
     return true;
 }
 

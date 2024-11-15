@@ -404,6 +404,11 @@ optional<Response> processDebugPacket(const InboundMessage& message)
         teller::cam::sendPulse();
         break;
 
+    case frames::DEBUG_CMD_TRIGGER_WATCHDOG:
+        for (;;)
+            ;
+        break;
+
     default:
         return Response::invalid();
     }
