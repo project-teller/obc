@@ -5,6 +5,7 @@
 #include "hal/spi.h"
 #include "hal/system.h"
 #include "modules/log.h"
+#include <limits>
 
 using namespace littlefs;
 using namespace teller::hal;

@@ -6,6 +6,7 @@
 #include "hal/system.h"
 #include "modules/debug.h"
 #include "modules/log.h"
+#include <limits>
 
 #include "stm32_hal.h"
 
