@@ -37,14 +37,14 @@ static const float scaling[NUM_CHANNELS] = {
     0.488f, /* CUR_SUC_LCL3 */
     9.766f, /* CUR_CAM */
     4.883f, /* CUR_SCM */
-    9.766f, /* CUR_GMM */
+    1.f, /* CUR_GMM */
     31.0f, /* 60V_MEAS1 */
     31.0f, /* 60V_MEAS2 */
     31.0f, /* 60V_MEAS3 */
     43.0f / 3.0f, /* 28V_MEAS */
-    8.5f, /* 12V_MEAS */
-    2.5f, /* 5V_MEAS */
-    2.0f, /* 3V3_MEAS */
+    8.82f, /* 12V_MEAS */
+    3.616f, /* 5V_MEAS */
+    2.63f, /* 3V3_MEAS */
 };
 
 static Logger* logger;
