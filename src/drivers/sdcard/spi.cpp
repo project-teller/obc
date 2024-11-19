@@ -1,12 +1,13 @@
-#include "hal/spi.h"
+#include <limits>
+
 #include "config.h"
 #include "core/utils/block_cache.h"
 #include "core/utils/crc.h"
 #include "drivers/sdcard.h"
+#include "hal/spi.h"
 #include "hal/system.h"
 #include "modules/debug.h"
 #include "modules/log.h"
-#include <limits>
 
 #include "stm32_hal.h"
 
