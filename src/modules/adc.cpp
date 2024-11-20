@@ -32,19 +32,19 @@ static const float lsbIncrement = reference / 256;
 
 /** Scaling factors for the channels */
 static const float scaling[NUM_CHANNELS] = {
-    0.488f, /* CUR_SUC_LCL1 */
-    0.488f, /* CUR_SUC_LCL2 */
-    0.488f, /* CUR_SUC_LCL3 */
-    9.766f, /* CUR_CAM */
-    4.883f, /* CUR_SCM */
-    1.f, /* CUR_GMM */
+    1.f/20.f, /* CUR_SUC_LCL1 */
+    1.f/20.f, /* CUR_SUC_LCL2 */
+    1.f/20.f, /* CUR_SUC_LCL3 */
+    1.f, /* CUR_CAM */
+    0.5f, /* CUR_SCM */
+    0.1f, /* CUR_GMM */
     31.0f, /* 60V_MEAS1 */
     31.0f, /* 60V_MEAS2 */
     31.0f, /* 60V_MEAS3 */
     43.0f / 3.0f, /* 28V_MEAS */
-    8.82f, /* 12V_MEAS */
+    9.07f, /* 12V_MEAS */
     3.616f, /* 5V_MEAS */
-    2.63f, /* 3V3_MEAS */
+    2.71f, /* 3V3_MEAS */
 };
 
 static Logger* logger;
