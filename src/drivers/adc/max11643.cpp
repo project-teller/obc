@@ -79,9 +79,9 @@ bool setup(void)
     /* Averaging register: 001 AVGON NAVG[1:0] NSCAN[1:0]
      * where AVGON is whether averaging should be on or off
      *   and NAVG[1:0] must be 00, 01, 10 or 11 for 4, 8, 16 and 32 conversions
-     *   and NSCAN[1:0] is XX because we are not in sacn mode 10.
+     *   and NSCAN[1:0] is XX because we are not in scan mode 10.
      * See Table 4 of the datasheet */
-    buf[0] = 0b00000000;
+    buf[0] = 0b00111000;
     if (!spi::transfer(address, buf, 1)) {
         return false;
     }
