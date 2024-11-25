@@ -43,8 +43,8 @@ static const float scaling[NUM_CHANNELS] = {
     31.0f, /* 60V_MEAS3 */
     43.0f / 3.0f, /* 28V_MEAS */
     9.07f, /* 12V_MEAS */
-    3.616f, /* 5V_MEAS */
-    2.71f, /* 3V3_MEAS */
+    2.5f, /* 5V_MEAS */
+    2.f, /* 3V3_MEAS */
 };
 
 static Logger* logger;
