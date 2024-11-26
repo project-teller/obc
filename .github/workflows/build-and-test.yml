@@ -18,7 +18,6 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: |
-            build-devboard/_deps
             build-prod/_deps
           key: v3-${{ runner.os }}-tests
 
@@ -28,12 +27,7 @@ jobs:
           cmake --build build
           ctest --timeout 5 --test-dir build --output-junit report.xml --output-on-failure
 
-      - name: Build firmware (dev board)
-        run: |
-          cmake . --preset devboard -B build-devboard -G Ninja
-          cmake --build build-devboard
-
-      - name: Build firmware (OBC board)
+      - name: Build firmware
         run: |
           cmake . --preset default -B build-prod -G Ninja
           cmake --build build-prod
@@ -46,9 +40,6 @@ jobs:
         with:
           name: firmware
           path: |
-            build-devboard/src/teller-obc.bin
-            build-devboard/src/teller-obc.elf
-            build-devboard/src/teller-obc.hex
             build-prod/src/teller-obc.bin
             build-prod/src/teller-obc.elf
             build-prod/src/teller-obc.hex
