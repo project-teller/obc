@@ -32,8 +32,8 @@ typedef struct {
     gpio_port_and_pins_t cs[NUM_CS_PINS_PER_BUS];
     uint8_t mode;
     IRQn_Type irq;
-
-    uint32_t baud_rate;
+    bool use_irq;
+    uint32_t clock_speed;
 } spi_bus_config_t;
 
 typedef struct {
@@ -75,6 +75,8 @@ const spi_bus_config_t spi_config[] = {
         },
         .mode = 0,
         .irq = SPI1_IRQn,
+        .use_irq = true,
+        .clock_speed = 0,
     },
     NO_MORE_SPI_BUSES
 };
@@ -98,6 +100,8 @@ const spi_bus_config_t spi_config[] = {
         },
         .mode = 0,
         .irq = SPI1_IRQn,
+        .use_irq = false,
+        .clock_speed = 1000000,
     },
     {
         .instance = SPI2,
@@ -115,6 +119,9 @@ const spi_bus_config_t spi_config[] = {
         },
         .mode = 0,
         .irq = SPI2_IRQn,
+        .use_irq = false,
+        /* SPI2 bus holds the SD card reader and it will manage its own clock speed */
+        .clock_speed = 0,
     },
     {
         .instance = SPI3,
@@ -141,6 +148,9 @@ const spi_bus_config_t spi_config[] = {
          */
         .mode = 0,
         .irq = SPI3_IRQn,
+        .use_irq = false,
+        /* IMU on SPI3 is somewhat slow so stick to lower clock speeds */
+        .clock_speed = 0,
     },
     NO_MORE_SPI_BUSES
 };
@@ -159,7 +169,7 @@ const spi_bus_config_t spi_config[] = {
 #endif
 /* clang-format on */
 
-static bool configure_spi_bus(spi_bus_state_t* state, const spi_bus_config_t* cfg);
+static bool configure_spi_bus(std::uint8_t bus, spi_bus_state_t* state, const spi_bus_config_t* cfg);
 static spi_bus_state_t* find_spi_bus_state(SPI_HandleTypeDef* hspi);
 static bool is_spi_address_valid(teller::hal::spi::address_t address);
 static bool is_spi_bus_index_valid(std::uint8_t bus);
@@ -179,7 +189,7 @@ const transfer_t NO_MORE_TRANSFERS = { 0, 0, 0 };
 bool init()
 {
     for (size_t i = 0; i < NUM_SPI_BUSES; i++) {
-        if (!configure_spi_bus(&spi_state[i], &spi_config[i])) {
+        if (!configure_spi_bus(i, &spi_state[i], &spi_config[i])) {
             return false;
         }
     }
@@ -246,7 +256,6 @@ bool setClockSpeed(std::uint8_t bus, std::uint32_t speed, std::uint32_t* result)
     }
 
     if (success) {
-        /* TODO: set the SPI prescaler */
 #ifdef STM32F4
         spi_bus_state_t* state = &spi_state[bus];
         uint32_t regValue;
@@ -295,7 +304,7 @@ bool transfer(
 
     pState = &spi_state[address.bus];
 
-    if (osKernelGetState() == osKernelRunning) {
+    if (pCfg->use_irq && osKernelGetState() == osKernelRunning) {
         // RTOS kernel is running so we can use event flags
         lock_guard lock(pState->in_use);
 
@@ -315,7 +324,8 @@ bool transfer(
         }
     } else {
         // Simplified implementation for the initialization where we cannot
-        // use RTOS primitives yet
+        // use RTOS primitives yet, and for the SPI buses where we are not using
+        // interrupts
         if ((flags & NO_CHIP_SELECT) == 0) {
             HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_RESET);
         }
@@ -356,7 +366,7 @@ bool transfer(
     }
 
     hal_status = HAL_OK;
-    if (osKernelGetState() == osKernelRunning) {
+    if (pCfg->use_irq && osKernelGetState() == osKernelRunning) {
         // RTOS kernel is running so we can use event flags
         lock_guard lock(pState->in_use);
 
@@ -397,7 +407,8 @@ bool transfer(
         }
     } else {
         // Simplified implementation for the initialization where we cannot
-        // use RTOS primitives yet
+        // use RTOS primitives yet, and for the SPI buses where we are not using
+        // interrupts
         if ((flags & NO_CHIP_SELECT) == 0) {
             HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_RESET);
         }
@@ -452,7 +463,8 @@ int getLastErrorCode(void)
 
 /* ************************************************************************** */
 
-static bool configure_spi_bus(spi_bus_state_t* state, const spi_bus_config_t* cfg)
+static bool configure_spi_bus(
+    std::uint8_t bus, spi_bus_state_t* state, const spi_bus_config_t* cfg)
 {
     bool success = false;
 
@@ -546,7 +558,12 @@ static bool configure_spi_bus(spi_bus_state_t* state, const spi_bus_config_t* cf
         goto cleanup;
     }
 
+    /* We can now set the clock speed if the clock speed is specified explicitly
+     * for the bus */
     success = true;
+    if (cfg->clock_speed > 0) {
+        success &= teller::hal::spi::setClockSpeed(bus, cfg->clock_speed);
+    }
 
 cleanup:
     if (state->initialized && !success) {
