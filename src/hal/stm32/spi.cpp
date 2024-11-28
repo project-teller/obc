@@ -19,6 +19,11 @@ static const uint32_t EVT_ERROR = 0x00000002U;
 #define NUM_GPIO_PINS_PER_BUS 3
 #define NUM_CS_PINS_PER_BUS 6
 
+typedef enum {
+    SPI_TRANSFER_POLLING,
+    SPI_TRANSFER_INTERRUPT,
+} spi_transfer_mode_t;
+
 typedef struct {
     SPI_TypeDef* instance;
     union {
@@ -30,10 +35,10 @@ typedef struct {
         } by_name;
     } gpio;
     gpio_port_and_pins_t cs[NUM_CS_PINS_PER_BUS];
-    uint8_t mode;
-    IRQn_Type irq;
-    bool use_irq;
     uint32_t clock_speed;
+    uint8_t mode;
+    spi_transfer_mode_t transfer_mode;
+    IRQn_Type irq;
 } spi_bus_config_t;
 
 typedef struct {
@@ -73,10 +78,10 @@ const spi_bus_config_t spi_config[] = {
             { GPIOD, GPIO_PIN_14 },
             NO_MORE_GPIO_CFG
         },
-        .mode = 0,
-        .irq = SPI1_IRQn,
-        .use_irq = true,
         .clock_speed = 0,
+        .mode = 0,
+        .transfer_mode = SPI_TRANSFER_INTERRUPT,
+        .irq = SPI1_IRQn,
     },
     NO_MORE_SPI_BUSES
 };
@@ -98,10 +103,10 @@ const spi_bus_config_t spi_config[] = {
             { GPIOA, GPIO_PIN_15 },
             NO_MORE_GPIO_CFG
         },
-        .mode = 0,
-        .irq = SPI1_IRQn,
-        .use_irq = false,
         .clock_speed = 1000000,
+        .mode = 0,
+        .transfer_mode = SPI_TRANSFER_POLLING,
+        .irq = SPI1_IRQn,
     },
     {
         .instance = SPI2,
@@ -117,11 +122,11 @@ const spi_bus_config_t spi_config[] = {
             { GPIOB, GPIO_PIN_9 },
             NO_MORE_GPIO_CFG
         },
-        .mode = 0,
-        .irq = SPI2_IRQn,
-        .use_irq = false,
         /* SPI2 bus holds the SD card reader and it will manage its own clock speed */
         .clock_speed = 0,
+        .mode = 0,
+        .transfer_mode = SPI_TRANSFER_POLLING,
+        .irq = SPI2_IRQn,
     },
     {
         .instance = SPI3,
@@ -140,6 +145,8 @@ const spi_bus_config_t spi_config[] = {
             { GPIOA, GPIO_PIN_4 },
             NO_MORE_GPIO_CFG
         },
+        /* IMU on SPI3 is somewhat slow so stick to the lowest possible clock speed */
+        .clock_speed = 0,
         /* The datasheet of the MLX90393 magnetometer explicitly claims that
          * SPI mode 3 is implemented, but mode 0 also seems to work.
          *
@@ -147,10 +154,8 @@ const spi_bus_config_t spi_config[] = {
          * 0 and 3 are both supported.
          */
         .mode = 0,
+        .transfer_mode = SPI_TRANSFER_INTERRUPT,
         .irq = SPI3_IRQn,
-        .use_irq = false,
-        /* IMU on SPI3 is somewhat slow so stick to lower clock speeds */
-        .clock_speed = 0,
     },
     NO_MORE_SPI_BUSES
 };
@@ -304,7 +309,7 @@ bool transfer(
 
     pState = &spi_state[address.bus];
 
-    if (pCfg->use_irq && osKernelGetState() == osKernelRunning) {
+    if (pCfg->transfer_mode == SPI_TRANSFER_INTERRUPT && osKernelGetState() == osKernelRunning) {
         // RTOS kernel is running so we can use event flags
         lock_guard lock(pState->in_use);
 
@@ -366,7 +371,7 @@ bool transfer(
     }
 
     hal_status = HAL_OK;
-    if (pCfg->use_irq && osKernelGetState() == osKernelRunning) {
+    if (pCfg->transfer_mode == SPI_TRANSFER_INTERRUPT && osKernelGetState() == osKernelRunning) {
         // RTOS kernel is running so we can use event flags
         lock_guard lock(pState->in_use);
 
@@ -726,7 +731,7 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
     }
 
     /* IRQ configuration */
-    if (cfg->irq) {
+    if (cfg->transfer_mode == SPI_TRANSFER_INTERRUPT) {
         /* Priority 5 is the highest (i.e. smallest numeric value) that is
          * allowed without interfering with FreeRTOS */
         HAL_NVIC_SetPriority(cfg->irq, 5, 0);
@@ -775,7 +780,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
         }
     }
 
-    if (cfg->irq) {
+    if (cfg->transfer_mode == SPI_TRANSFER_INTERRUPT) {
         HAL_NVIC_DisableIRQ(cfg->irq);
     }
 
