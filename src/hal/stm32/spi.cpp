@@ -22,10 +22,14 @@ static const uint32_t EVT_ERROR = 0x00000002U;
 typedef enum {
     SPI_TRANSFER_POLLING,
     SPI_TRANSFER_INTERRUPT,
+    SPI_TRANSFER_DMA,
 } spi_transfer_mode_t;
 
 typedef struct {
+    /** The physical STM32 HAL SPI bus instance being configured by this entry */
     SPI_TypeDef* instance;
+
+    /** GPIO pins that the SPI bus will use */
     union {
         gpio_port_and_pins_t by_index[NUM_GPIO_PINS_PER_BUS];
         struct {
@@ -35,17 +39,65 @@ typedef struct {
         } by_name;
     } gpio;
     gpio_port_and_pins_t cs[NUM_CS_PINS_PER_BUS];
+
+    /** Desired clock speed of the SPI bus; zero if the bus should operate at
+     * the lowest possible clock speed. Note that clock speeds might not be
+     * matched exactly because we can only adjust the prescaler of the
+     * peripheral clock. The system will pick the highest clock speed that is
+     * still not faster than the one specified here.
+     */
     uint32_t clock_speed;
+
+    /** Mode of the SPI bus (from mode 0 to mode 3, in standard conventions) */
     uint8_t mode;
+
+    /** Specifies how to conduct an SPI transfer on this bus. Polling mode is
+     * blocking, interrupts and DMA are nonblocking. Interrupts work only at
+     * lower clock speeds */
     spi_transfer_mode_t transfer_mode;
+
+    /**
+     * IRQ that the SPI bus will use to notify us during a transfer. Zero if the
+     * bus is not using IRQ.
+     */
     IRQn_Type irq;
+
+    /**
+     * The DMA channel to use for TX operations. Null if the SPI bus is not using
+     * DMA for TX.
+     */
+    DMA_Stream_TypeDef* dma_tx;
+
+    /**
+     * The DMA channel to use for RX operations. Null if the SPI bus is not using
+     * DMA for RX.
+     */
+    DMA_Stream_TypeDef* dma_rx;
 } spi_bus_config_t;
 
 typedef struct {
+    /** Handle to the configured STM32 SPI bus instance */
     SPI_HandleTypeDef handle;
+
+    /** Pointer to the physical SPI bus configuration */
     const spi_bus_config_t* cfg;
+
+    /** DMA stream of the SPI bus when it is using DMA for TX */
+    DMA_HandleTypeDef dma_tx_handle;
+
+    /** DMA stream of the SPI bus when it is using DMA for RX */
+    DMA_HandleTypeDef dma_rx_handle;
+
+    /**
+     * Event flags to trigger when the SPI transfer is done or if an error
+     * happened.
+     */
     osEventFlagsId_t event;
+
+    /** Whether this state object is initialized or not */
     bool initialized;
+
+    /** Mutex to control access to the SPI bus */
     teller::hal::mutex in_use;
 } spi_bus_state_t;
 
@@ -105,8 +157,10 @@ const spi_bus_config_t spi_config[] = {
         },
         .clock_speed = 1000000,
         .mode = 0,
-        .transfer_mode = SPI_TRANSFER_POLLING,
+        .transfer_mode = SPI_TRANSFER_DMA,
         .irq = SPI1_IRQn,
+        .dma_tx = DMA2_Stream3,
+        .dma_rx = DMA2_Stream2,
     },
     {
         .instance = SPI2,
@@ -125,8 +179,10 @@ const spi_bus_config_t spi_config[] = {
         /* SPI2 bus holds the SD card reader and it will manage its own clock speed */
         .clock_speed = 0,
         .mode = 0,
-        .transfer_mode = SPI_TRANSFER_POLLING,
+        .transfer_mode = SPI_TRANSFER_DMA,
         .irq = SPI2_IRQn,
+        .dma_tx = DMA1_Stream4,
+        .dma_rx = DMA1_Stream3,
     },
     {
         .instance = SPI3,
@@ -156,6 +212,8 @@ const spi_bus_config_t spi_config[] = {
         .mode = 0,
         .transfer_mode = SPI_TRANSFER_INTERRUPT,
         .irq = SPI3_IRQn,
+        .dma_tx = nullptr,
+        .dma_rx = nullptr,
     },
     NO_MORE_SPI_BUSES
 };
@@ -295,6 +353,7 @@ bool transfer(
     spi_bus_state_t* pState;
     bool success = false;
     std::uint32_t events;
+    spi_transfer_mode_t xfer_mode;
 
     if (!is_spi_address_valid(address)) {
         return false;
@@ -309,14 +368,28 @@ bool transfer(
 
     pState = &spi_state[address.bus];
 
-    if (pCfg->transfer_mode == SPI_TRANSFER_INTERRUPT && osKernelGetState() == osKernelRunning) {
+    xfer_mode = pCfg->transfer_mode;
+    if (osKernelGetState() != osKernelRunning) {
+        // RTOS kernel is not running so we cannot use nonblocking methods
+        xfer_mode = SPI_TRANSFER_POLLING;
+    }
+
+    if (xfer_mode != SPI_TRANSFER_POLLING) {
         // RTOS kernel is running so we can use event flags
         lock_guard lock(pState->in_use);
+        HAL_StatusTypeDef hal_status;
 
         if ((flags & NO_CHIP_SELECT) == 0) {
             HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_RESET);
         }
-        if (HAL_SPI_TransmitReceive_IT(&pState->handle, txBuf, rxBuf, size) == HAL_OK) {
+
+        if (xfer_mode == SPI_TRANSFER_DMA) {
+            hal_status = HAL_SPI_TransmitReceive_DMA(&pState->handle, txBuf, rxBuf, size);
+        } else {
+            hal_status = HAL_SPI_TransmitReceive_IT(&pState->handle, txBuf, rxBuf, size);
+        }
+
+        if (hal_status == HAL_OK) {
             events = osEventFlagsWait(pState->event, EVT_DONE | EVT_ERROR, osFlagsWaitAny, SPI_TIMEOUT_MSEC);
             if (events & (osFlagsError | EVT_ERROR)) {
                 HAL_SPI_Abort(&pState->handle);
@@ -324,6 +397,7 @@ bool transfer(
                 success = events & EVT_DONE;
             }
         }
+
         if ((flags & NO_CHIP_SELECT) == 0) {
             HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_SET);
         }
@@ -356,6 +430,7 @@ bool transfer(
     HAL_StatusTypeDef hal_status;
     std::uint32_t events;
     bool success = false;
+    spi_transfer_mode_t xfer_mode;
 
     if (!is_spi_address_valid(address)) {
         return false;
@@ -370,8 +445,14 @@ bool transfer(
         count = std::numeric_limits<std::uint16_t>::max();
     }
 
+    xfer_mode = pCfg->transfer_mode;
+    if (osKernelGetState() != osKernelRunning) {
+        // RTOS kernel is not running so we cannot use nonblocking methods
+        xfer_mode = SPI_TRANSFER_POLLING;
+    }
+
     hal_status = HAL_OK;
-    if (pCfg->transfer_mode == SPI_TRANSFER_INTERRUPT && osKernelGetState() == osKernelRunning) {
+    if (xfer_mode != SPI_TRANSFER_POLLING) {
         // RTOS kernel is running so we can use event flags
         lock_guard lock(pState->in_use);
 
@@ -388,11 +469,19 @@ bool transfer(
                 break;
             }
 
-            hal_status = HAL_SPI_TransmitReceive_IT(
-                &pState->handle,
-                transfer->tx_buf ? transfer->tx_buf : transfer->rx_buf,
-                transfer->rx_buf ? transfer->rx_buf : transfer->tx_buf,
-                transfer->size);
+            if (xfer_mode == SPI_TRANSFER_DMA) {
+                hal_status = HAL_SPI_TransmitReceive_DMA(
+                    &pState->handle,
+                    transfer->tx_buf ? transfer->tx_buf : transfer->rx_buf,
+                    transfer->rx_buf ? transfer->rx_buf : transfer->tx_buf,
+                    transfer->size);
+            } else {
+                hal_status = HAL_SPI_TransmitReceive_IT(
+                    &pState->handle,
+                    transfer->tx_buf ? transfer->tx_buf : transfer->rx_buf,
+                    transfer->rx_buf ? transfer->rx_buf : transfer->tx_buf,
+                    transfer->size);
+            }
 
             if (hal_status != HAL_OK) {
                 break;
@@ -637,7 +726,61 @@ static uint32_t getPeripheralClockFreqForBus(std::uint8_t bus)
 
 /* ************************************************************************** */
 
+namespace teller::hal::dma {
+
+void assignHandle(DMA_HandleTypeDef* handle);
+void detachHandle(DMA_HandleTypeDef* handle);
+
+}
+
 extern "C" {
+
+#ifdef STM32H7
+static uint32_t spi_instance_to_dma_tx_request(SPI_HandleTypeDef* hspi)
+{
+    if (!hspi) {
+        return 0;
+    } else if (hspi->Instance == SPI1) {
+        return DMA_REQUEST_SPI1_TX;
+    } else if (hspi->Instance == SPI2) {
+        return DMA_REQUEST_SPI2_TX;
+    } else if (hspi->Instance == SPI3) {
+        return DMA_REQUEST_SPI3_TX;
+    } else {
+        return 0;
+    }
+}
+
+static uint32_t spi_instance_to_dma_rx_request(SPI_HandleTypeDef* hspi)
+{
+    if (!hspi) {
+        return 0;
+    } else if (hspi->Instance == SPI1) {
+        return DMA_REQUEST_SPI1_RX;
+    } else if (hspi->Instance == SPI2) {
+        return DMA_REQUEST_SPI2_RX;
+    } else if (hspi->Instance == SPI3) {
+        return DMA_REQUEST_SPI3_RX;
+    } else {
+        return 0;
+    }
+}
+#else
+static uint32_t spi_instance_to_dma_channel(SPI_HandleTypeDef* hspi)
+{
+    if (!hspi) {
+        return 0;
+    } else if (hspi->Instance == SPI1) {
+        return DMA_CHANNEL_3;
+    } else if (hspi->Instance == SPI2) {
+        return DMA_CHANNEL_0;
+    } else if (hspi->Instance == SPI3) {
+        return DMA_CHANNEL_0;
+    } else {
+        return 0;
+    }
+}
+#endif
 
 /* Weakly linked function that is called by the STM32 HAL when a physical SPI bus is
  * initialized
@@ -738,6 +881,59 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
         HAL_NVIC_EnableIRQ(cfg->irq);
     }
 
+    /* DMA TX and RX configuration */
+    if (cfg->transfer_mode == SPI_TRANSFER_DMA) {
+        state->dma_tx_handle.Instance = cfg->dma_tx;
+        state->dma_rx_handle.Instance = cfg->dma_rx;
+
+        if (cfg->dma_tx) {
+#ifdef STM32H7
+            state->dma_tx_handle.Init.Request = spi_instance_to_dma_tx_request(hspi);
+#else
+            state->dma_tx_handle.Init.Channel = spi_instance_to_dma_channel(hspi);
+#endif
+            state->dma_tx_handle.Init.Direction = DMA_MEMORY_TO_PERIPH;
+            state->dma_tx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
+            state->dma_tx_handle.Init.MemInc = DMA_MINC_ENABLE;
+            state->dma_tx_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+            state->dma_tx_handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+            state->dma_tx_handle.Init.Mode = DMA_NORMAL;
+            state->dma_tx_handle.Init.Priority = DMA_PRIORITY_LOW;
+            state->dma_tx_handle.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+            if (HAL_DMA_Init(&state->dma_tx_handle) != HAL_OK) {
+                state->dma_tx_handle.Instance = nullptr; /* to prevent HAL_DMA_Deinit */
+                return;
+            }
+
+            __HAL_LINKDMA(hspi, hdmatx, state->dma_tx_handle);
+        }
+
+        if (cfg->dma_rx) {
+#ifdef STM32H7
+            state->dma_rx_handle.Init.Request = spi_instance_to_dma_rx_request(hspi);
+#else
+            state->dma_rx_handle.Init.Channel = spi_instance_to_dma_channel(hspi);
+#endif
+            state->dma_rx_handle.Init.Direction = DMA_PERIPH_TO_MEMORY;
+            state->dma_rx_handle.Init.PeriphInc = DMA_PINC_DISABLE;
+            state->dma_rx_handle.Init.MemInc = DMA_MINC_ENABLE;
+            state->dma_rx_handle.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+            state->dma_rx_handle.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+            state->dma_rx_handle.Init.Mode = DMA_NORMAL;
+            state->dma_rx_handle.Init.Priority = DMA_PRIORITY_LOW;
+            state->dma_rx_handle.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+            if (HAL_DMA_Init(&state->dma_rx_handle) != HAL_OK) {
+                state->dma_rx_handle.Instance = nullptr; /* to prevent HAL_DMA_Deinit */
+                return;
+            }
+
+            __HAL_LINKDMA(hspi, hdmarx, state->dma_rx_handle);
+        }
+    } else {
+        state->dma_tx_handle.Instance = nullptr;
+        state->dma_rx_handle.Instance = nullptr;
+    }
+
     state->initialized = true;
 
     if (hspi->Instance == SPI1) {
@@ -747,6 +943,14 @@ void HAL_SPI_MspInit(SPI_HandleTypeDef* hspi)
     } else if (hspi->Instance == SPI3) {
         spi_handle_ptrs[3] = hspi;
     }
+
+    if (state->dma_rx_handle.Instance) {
+        teller::hal::dma::assignHandle(&state->dma_rx_handle);
+    };
+
+    if (state->dma_tx_handle.Instance) {
+        teller::hal::dma::assignHandle(&state->dma_tx_handle);
+    };
 }
 
 /* Weakly linked function that is called by the STM32 HAL when an SPI bus is
@@ -760,6 +964,7 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
         return;
     }
 
+    /* Clock deinit */
     if (hspi->Instance == SPI1) {
         __HAL_RCC_SPI1_CLK_DISABLE();
     } else if (hspi->Instance == SPI2) {
@@ -768,26 +973,43 @@ void HAL_SPI_MspDeInit(SPI_HandleTypeDef* hspi)
         __HAL_RCC_SPI3_CLK_DISABLE();
     }
 
+    /* GPIO deinit */
     for (int i = NUM_GPIO_PINS_PER_BUS - 1; i >= 0; i--) {
         if (cfg->gpio.by_index[i].port && cfg->gpio.by_index[i].pins) {
             HAL_GPIO_DeInit(cfg->gpio.by_index[i].port, cfg->gpio.by_index[i].pins);
         }
-    }
-
-    for (int i = NUM_CS_PINS_PER_BUS - 1; i >= 0; i--) {
         if (cfg->cs[i].port && cfg->cs[i].pins) {
             HAL_GPIO_DeInit(cfg->cs[i].port, cfg->cs[i].pins);
         }
     }
 
+    /* IRQ deinit */
     if (cfg->transfer_mode == SPI_TRANSFER_INTERRUPT) {
         HAL_NVIC_DisableIRQ(cfg->irq);
+    }
+
+    /* DMA deinit */
+    if (cfg->transfer_mode == SPI_TRANSFER_DMA) {
+        if (cfg->dma_rx && state->dma_rx_handle.Instance) {
+            HAL_DMA_DeInit(&state->dma_rx_handle);
+        }
+        if (cfg->dma_tx && state->dma_tx_handle.Instance) {
+            HAL_DMA_DeInit(&state->dma_tx_handle);
+        }
     }
 
     if (state) {
         osEventFlagsDelete(state->event);
         state->initialized = false;
     }
+
+    if (state->dma_rx_handle.Instance) {
+        teller::hal::dma::detachHandle(&state->dma_rx_handle);
+    };
+
+    if (state->dma_tx_handle.Instance) {
+        teller::hal::dma::detachHandle(&state->dma_tx_handle);
+    };
 
     if (hspi->Instance == SPI1) {
         spi_handle_ptrs[1] = nullptr;

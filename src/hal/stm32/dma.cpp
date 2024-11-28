@@ -1,3 +1,4 @@
+#include "config.h"
 #include "stm32_hal.h"
 
 #include "hal/dma.h"
@@ -13,14 +14,29 @@ typedef struct {
         0                    \
     }
 
+#if defined(TELLER_BOARD_NUCLEO144)
+// STM32H743ZI Nucleo-144 dev board, for testing purposes
 const dma_config_t dma_config[] = {
-    { DMA1, DMA1_Stream0_IRQn },
-    { DMA1, DMA1_Stream1_IRQn },
     NO_MORE_DMA_CHANNELS
 };
+#elif defined(TELLER_BOARD_STM32F4)
+// STM32F415RG TELLER OBC board
+const dma_config_t dma_config[] = {
+    { DMA1, DMA1_Stream3_IRQn }, // for SPI2 RX
+    { DMA1, DMA1_Stream4_IRQn }, // for SPI2 TX
+    { DMA2, DMA2_Stream2_IRQn }, // for SPI1 RX
+    { DMA2, DMA2_Stream3_IRQn }, // for SPI1 TX
+    NO_MORE_DMA_CHANNELS
+};
+#else
+// No DMA channels needed
+const dma_config_t dma_config[] = {
+    NO_MORE_DMA_CHANNELS
+};
+#endif
 
-static DMA_HandleTypeDef* dma1_handle_ptrs[8];
-static DMA_HandleTypeDef* dma2_handle_ptrs[8];
+static DMA_HandleTypeDef* dma1_handle_ptrs[5];
+static DMA_HandleTypeDef* dma2_handle_ptrs[5];
 
 namespace teller::hal::dma {
 
@@ -67,6 +83,8 @@ void assignHandle(DMA_HandleTypeDef* handle)
         dma1_handle_ptrs[2] = handle;
     } else if (handle->Instance == DMA1_Stream3) {
         dma1_handle_ptrs[3] = handle;
+    } else if (handle->Instance == DMA1_Stream4) {
+        dma1_handle_ptrs[4] = handle;
     } else if (handle->Instance == DMA2_Stream0) {
         dma2_handle_ptrs[0] = handle;
     } else if (handle->Instance == DMA2_Stream1) {
@@ -75,6 +93,8 @@ void assignHandle(DMA_HandleTypeDef* handle)
         dma2_handle_ptrs[2] = handle;
     } else if (handle->Instance == DMA2_Stream3) {
         dma2_handle_ptrs[3] = handle;
+    } else if (handle->Instance == DMA2_Stream4) {
+        dma2_handle_ptrs[4] = handle;
     }
 
     /* TODO(ntamas): add more if we start using more DMA channels */
@@ -139,6 +159,14 @@ void DMA1_Stream3_IRQHandler(void)
     }
 }
 
+void DMA1_Stream4_IRQHandler(void)
+{
+    DMA_HandleTypeDef* ptr = dma1_handle_ptrs[4];
+    if (ptr) {
+        HAL_DMA_IRQHandler(ptr);
+    }
+}
+
 void DMA2_Stream0_IRQHandler(void)
 {
     DMA_HandleTypeDef* ptr = dma2_handle_ptrs[0];
@@ -171,5 +199,11 @@ void DMA2_Stream3_IRQHandler(void)
     }
 }
 
-/* TODO(ntamas): add more if we start using more DMA channels */
+void DMA2_Stream4_IRQHandler(void)
+{
+    DMA_HandleTypeDef* ptr = dma2_handle_ptrs[4];
+    if (ptr) {
+        HAL_DMA_IRQHandler(ptr);
+    }
+}
 }
