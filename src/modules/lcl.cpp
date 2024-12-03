@@ -21,6 +21,12 @@ typedef struct {
 /** Pulse duration to use for resetting an LCL. Used to speed up unit tests. */
 static uint16_t pulse_duration_msec;
 
+/** Idle state of the LLCs */
+static const bool IDLE = false;
+
+/** Idle state of the LLCs */
+static const bool ACTIVE = (!IDLE);
+
 static Logger* logger;
 
 namespace teller::lcl {
@@ -48,10 +54,10 @@ bool init()
 {
     pulse_duration_msec = 100;
 
-    /* LCL reset pins start from logical low */
+    /* LCL reset pins start from the idle state */
     for (int i = 0; i < NUM_LCLS; i++) {
         pin_t pin = pin_map[static_cast<lcl_t>(i)].reset_pin;
-        write(pin, 0);
+        write(pin, IDLE);
     }
 
     logger = getLogger(MODULE_ID_OBC);
@@ -88,7 +94,7 @@ void resetMultiple(uint8_t lcls_to_reset)
     for (uint8_t lcl = 0; lcl < NUM_LCLS; lcl++) {
         if (lcls_to_reset & (1 << lcl)) {
             pin_t pin = pin_map[lcl].reset_pin;
-            write(pin, 0);
+            write(pin, ACTIVE);
             hasAtLeastOne = true;
         }
     }
@@ -100,7 +106,7 @@ void resetMultiple(uint8_t lcls_to_reset)
     for (uint8_t lcl = 0; lcl < NUM_LCLS; lcl++) {
         if (lcls_to_reset & (1 << lcl)) {
             pin_t pin = pin_map[lcl].reset_pin;
-            write(pin, 1);
+            write(pin, IDLE);
         }
     }
 }
