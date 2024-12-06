@@ -27,9 +27,10 @@ void destroy(void);
  * This function is called right before we start reading IMU measurements in
  * a loop.
  *
+ * @param  logErrors  whether errors should be logged
  * @return whether the setup was successful
  */
-bool setup(void);
+bool setup(bool logErrors);
 
 /**
  * @brief Updates the IMU measurements.

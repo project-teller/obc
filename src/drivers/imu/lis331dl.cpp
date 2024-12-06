@@ -141,13 +141,15 @@ void destroy()
     logger = nullptr;
 }
 
-bool setup()
+bool setup(bool logErrors)
 {
     uint8_t value;
 
     /* Read WHO_AM_I register, check expected value */
     if (!readRegisterByte(REG_WHO_AM_I, value) || value != 0x32) {
-        logger->error("IMU not found");
+        if (logErrors) {
+            logger->error("IMU not found");
+        }
         return false;
     } else {
         /* Run configuration from scratch */

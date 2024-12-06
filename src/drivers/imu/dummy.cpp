@@ -16,7 +16,7 @@ void destroy()
 {
 }
 
-bool setup()
+bool setup(bool logErrors)
 {
     return false;
 }

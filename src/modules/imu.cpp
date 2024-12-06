@@ -131,9 +131,9 @@ subsystem_status_t getSubsystemStatus()
     return status;
 }
 
-bool setup()
+bool setup(bool logErrors)
 {
-    status = teller::drivers::imu::setup()
+    status = teller::drivers::imu::setup(logErrors)
         ? SUBSYSTEM_STATUS_OK
         : SUBSYSTEM_STATUS_ERROR;
     return status == SUBSYSTEM_STATUS_OK;

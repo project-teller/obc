@@ -31,9 +31,11 @@ teller::telem::subsystem_status_t getSubsystemStatus(void);
 
 /**
  * @brief Sets up the IMU before entering its main loop.
+ *
+ * @param  logErrors  whether errors should be logged
  * @return Whether the IMU subsystem is healthy
  */
-bool setup(void);
+bool setup(bool logErrors);
 
 /**
  * @brief Starts the calibration of the gyroscope.
