@@ -15,6 +15,9 @@
 #include "modules/scm.h"
 #include "modules/telem.h"
 
+// Uncomment the next line to simulate the SCM instead of reading from the SCM UART
+// #define SIMULATE_SCM
+
 using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::math;
@@ -90,6 +93,29 @@ bool setup()
 
 bool update(uint8_t* payload, bool& updated)
 {
+#ifdef SIMULATE_SCM
+    /* Pretend that the SCM is connected and send a dummy measurement 10 times
+     * per second */
+    uint32_t now = system::getTimeSinceBootMsec();
+    uint32_t nextMessageDueAt = lastMessageStartedAt + 100;
+    uint32_t toWait = nextMessageDueAt > now ? nextMessageDueAt - now : 0;
+    system::delayMsec(toWait);
+
+    lastMessageStartedAt = system::getTimeSinceBootMsec();
+
+    for (int i = 0; i < NUM_SCINTILLATORS; i++) {
+        startHistogramForScintillator(i);
+        addZerosToHistogram(64 * (i + 1) - 1);
+        addNonzeroToHistogram(4096);
+        addZerosToHistogram(256 - (64 * (i + 1)));
+        if (packHistogram()) {
+            logSCMMeasurement();
+            sendSCMMeasurement(payload);
+        }
+    }
+
+    updated = true;
+#else
     uint8_t ch;
     uint32_t value;
     uint8_t overlong;
@@ -124,6 +150,7 @@ bool update(uint8_t* payload, bool& updated)
             }
         }
     }
+#endif
 
     return updateStatus();
 }

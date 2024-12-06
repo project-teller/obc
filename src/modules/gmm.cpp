@@ -13,6 +13,9 @@
 #include "modules/log.h"
 #include "modules/telem.h"
 
+// Uncomment the next line to simulate the GMM instead of reading from the GMM UART
+// #define SIMULATE_GMM
+
 using namespace teller::hal;
 using namespace teller::log;
 using namespace teller::math;
@@ -36,9 +39,12 @@ static uint32_t lastMessageStartedAt;
 static uint32_t lastMessageReceivedAt;
 
 static void logGMMMeasurement(void);
-static bool parseReceivedMessage(const char* message);
 static void sendGMMMeasurement(uint8_t* payload);
 static bool updateStatus(void);
+
+#ifndef SIMULATE_GMM
+static bool parseReceivedMessage(const char* message);
+#endif
 
 namespace teller::gmm {
 
@@ -69,16 +75,40 @@ subsystem_status_t getSubsystemStatus()
 bool setup()
 {
     lastMessageReceivedAt = 0;
+#ifdef SIMULATE_GMM
+    status = SUBSYSTEM_STATUS_OK;
+#else
     status = uart::isConnected(uart::GMM) ? SUBSYSTEM_STATUS_OK : SUBSYSTEM_STATUS_CRITICAL;
+#endif
     return updateStatus();
 }
 
 bool update(uint8_t* payload, bool& updated)
 {
+#ifdef SIMULATE_GMM
+    /* Pretend that the GMM is connected and send a dummy measurement 50 times
+     * per second */
+    uint32_t now = system::getTimeSinceBootMsec();
+    uint32_t nextMessageDueAt = lastMessageReceivedAt + 20;
+    uint32_t toWait = nextMessageDueAt > now ? nextMessageDueAt - now : 0;
+    system::delayMsec(toWait);
+
+    memset(&measurement, 0, sizeof(measurement));
+    measurement.timestampInMsec = lastMessageReceivedAt;
+    measurement.hitCounts.byIndex[2] = 42;
+
+    lastMessageReceivedAt = system::getTimeSinceBootMsec();
+    logGMMMeasurement();
+    sendGMMMeasurement(payload);
+
+    updated = true;
+#else
     uint8_t ch;
     uint16_t bytes_read;
 
     updated = false;
+
+    /* Read data from the GMM UART and parse messages */
     if (uart::read(uart::GMM, &ch, 1, &bytes_read)) {
         if (ch == '$') {
             lastMessageStartedAt = system::getTimeSinceBootMsec();
@@ -90,6 +120,7 @@ bool update(uint8_t* payload, bool& updated)
             updated = true;
         }
     }
+#endif
 
     return updateStatus();
 }
@@ -115,6 +146,7 @@ static void logGMMMeasurement()
         measurement.hitCounts.byIndex[9]);
 }
 
+#ifndef SIMULATE_GMM
 /**
  * Attempts to parse a received NMEA sentence to see if it contains
  * GM hit counts. Updates the hit counts in case of a match.
@@ -139,6 +171,7 @@ static bool parseReceivedMessage(const char* message)
 
     return true;
 }
+#endif
 
 /**
  * @brief Sends a new GMM telemetry message.
