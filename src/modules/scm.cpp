@@ -96,13 +96,9 @@ bool update(uint8_t* payload, bool& updated)
 #ifdef SIMULATE_SCM
     /* Pretend that the SCM is connected and send a dummy measurement 10 times
      * per second */
-    uint32_t now = system::getTimeSinceBootMsec();
-    uint32_t nextMessageDueAt = lastMessageStartedAt + 100;
-    uint32_t toWait = nextMessageDueAt > now ? nextMessageDueAt - now : 0;
-    system::delayMsec(toWait);
+    system::sleepUntilMsec(lastMessageStartedAt + 20);
 
     lastMessageStartedAt = system::getTimeSinceBootMsec();
-
     for (int i = 0; i < NUM_SCINTILLATORS; i++) {
         startHistogramForScintillator(i);
         addZerosToHistogram(64 * (i + 1) - 1);

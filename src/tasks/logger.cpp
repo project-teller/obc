@@ -15,12 +15,16 @@ using namespace teller::supervisor;
 
 [[noreturn]] void teller::tasks::loggerTask(void* arg)
 {
+    uint32_t deadline;
     TaskRegistration task("log");
     task.expect(BASE_LOG_FREQ_HZ - 2, BASE_LOG_FREQ_HZ + 1);
 
     while (true) {
-        teller::log::runSingleIteration();
-        system::delayMsec(1000 / BASE_LOG_FREQ_HZ);
         task.nudge();
+
+        deadline = system::getTimeSinceBootMsec() + (1000 / BASE_LOG_FREQ_HZ);
+        teller::log::runSingleIteration();
+
+        system::sleepUntilMsec(deadline);
     }
 }

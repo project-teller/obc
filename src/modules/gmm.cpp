@@ -88,10 +88,7 @@ bool update(uint8_t* payload, bool& updated)
 #ifdef SIMULATE_GMM
     /* Pretend that the GMM is connected and send a dummy measurement 50 times
      * per second */
-    uint32_t now = system::getTimeSinceBootMsec();
-    uint32_t nextMessageDueAt = lastMessageReceivedAt + 20;
-    uint32_t toWait = nextMessageDueAt > now ? nextMessageDueAt - now : 0;
-    system::delayMsec(toWait);
+    system::sleepUntilMsec(lastMessageReceivedAt + 20);
 
     memset(&measurement, 0, sizeof(measurement));
     measurement.timestampInMsec = lastMessageReceivedAt;

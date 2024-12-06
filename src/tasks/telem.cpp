@@ -17,12 +17,16 @@ using namespace teller::telem;
 [[noreturn]] void teller::tasks::telemetryTask(void* arg)
 {
     uint8_t payload[MAX_PAYLOAD_LENGTH];
+    uint32_t deadline;
     TaskRegistration task("telem");
     task.expect(BASE_TELEMETRY_FREQ_HZ - 2, BASE_TELEMETRY_FREQ_HZ + 1);
 
     while (true) {
         task.nudge();
+
+        deadline = system::getTimeSinceBootMsec() + (1000 / BASE_TELEMETRY_FREQ_HZ);
         runSingleIteration(payload);
-        system::delayMsec(1000 / BASE_TELEMETRY_FREQ_HZ);
+
+        system::sleepUntilMsec(deadline);
     }
 }

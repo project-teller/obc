@@ -46,9 +46,9 @@ void sleepUntilMsec(uint32_t deadline)
 {
     uint32_t now = getTimeSinceBootMsec();
     if (now < deadline) {
-        osDelay(deadline - now);
+        delayMsec(deadline - now);
     } else {
-        osThreadYield();
+        yield();
     }
 }
 
