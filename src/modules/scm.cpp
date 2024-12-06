@@ -87,8 +87,12 @@ subsystem_status_t getSubsystemStatus()
 bool setup()
 {
     lastMessageStartedAt = 0;
+#ifdef SIMULATE_SCM
+    status = SUBSYSTEM_STATUS_OK;
+#else
     status = uart::isConnected(uart::SCM) ? SUBSYSTEM_STATUS_OK : SUBSYSTEM_STATUS_CRITICAL;
-    return updateStatus();
+#endif
+    return status == SUBSYSTEM_STATUS_OK;
 }
 
 bool update(uint8_t* payload, bool& updated)

@@ -80,7 +80,7 @@ bool setup()
 #else
     status = uart::isConnected(uart::GMM) ? SUBSYSTEM_STATUS_OK : SUBSYSTEM_STATUS_CRITICAL;
 #endif
-    return updateStatus();
+    return status == SUBSYSTEM_STATUS_OK;
 }
 
 bool update(uint8_t* payload, bool& updated)
