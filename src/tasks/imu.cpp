@@ -6,11 +6,15 @@ using namespace teller;
 
 [[noreturn]] void teller::tasks::imuTask(void* arg)
 {
-    bool healthy = imu::setup();
-    while (healthy) {
-        healthy = imu::update();
-    }
+    bool healthy;
 
-    /* TODO: maybe reset and retry? */
-    hal::system::sleepForever();
+    while (true) {
+        healthy = imu::setup();
+        while (healthy) {
+            healthy = imu::update();
+        }
+
+        /* IMU not healthy, wait a bit and then retry */
+        hal::system::delayMsec(1000);
+    }
 }
