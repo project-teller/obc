@@ -81,7 +81,7 @@ task_t tasks[] = {
     { 25, sendHeartbeat },
     { 50, sendADCMeasurements },
     { 250, sendClockStatus },
-    { 1, sendIMUMeasurement },
+    { 2, sendIMUMeasurement },
     { 5, sendMAGMeasurement },
     NO_MORE_TASKS
 };
