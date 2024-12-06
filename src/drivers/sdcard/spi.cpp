@@ -395,7 +395,10 @@ exit:
  */
 static uint8_t sendAppCommand(uint8_t cmd, uint32_t arg)
 {
-    if (sendCommand(CMD_APP_CMD, 0) != RESPONSE_IDLE) {
+    uint8_t response;
+
+    response = sendCommand(CMD_APP_CMD, 0);
+    if (response != RESPONSE_IDLE && response != RESPONSE_OK) {
         return 0xFF;
     } else {
         return sendCommand(cmd, arg);
@@ -445,6 +448,10 @@ static uint32_t tryInitialization(void)
     uint8_t buf[16]; /* 16 bytes are needed for the CSD register */
     const char* name = getStorageAreaName(STORAGE_AREA_SD_CARD);
     spi::DeviceSelector selector(address);
+    uint8_t response;
+    uint8_t tries;
+
+restart:
 
     blockCount = 0;
 
@@ -457,21 +464,42 @@ static uint32_t tryInitialization(void)
         return 0;
     }
 
-    /* Step 1: set MOSI and CS to high and apply 74 or more clock pulses to
-     * SCLK */
-    memset(buf, 0xff, sizeof(buf));
-    if (!spi::transfer(address, buf, 10, spi::NO_CHIP_SELECT)) {
-        return 0;
-    }
+    tries = 0;
+    while (true) {
+        /* Step 1: set MOSI and CS to high and apply 74 or more clock pulses to
+         * SCLK */
+        memset(buf, 0xff, sizeof(buf));
+        if (!spi::transfer(address, buf, 10, spi::NO_CHIP_SELECT)) {
+            return 0;
+        }
 
-    if (!selector.ensureSelected()) {
-        return 0;
-    }
+        if (!selector.ensureSelected()) {
+            return 0;
+        }
 
-    /* Step 2: send reset command and read response */
-    if (sendCommandAssumingNotBusy(CMD_GO_IDLE_STATE) != RESPONSE_IDLE) {
-        logger->error("%s: reset failed", name);
-        return 0;
+        /* Wait a bit -- apparently this is needed for correct initialization
+         * sometimes */
+        system::delayMsec(100);
+
+        /* Step 2: send reset command and read response */
+        response = sendCommandAssumingNotBusy(CMD_GO_IDLE_STATE);
+        if (response == RESPONSE_IDLE || response == RESPONSE_OK) {
+            break;
+        }
+
+        if (!selector.ensureUnselected()) {
+            return 0;
+        }
+
+        /* Initialization failed -- we will try again after a delay */
+        if (tries < 5) {
+            system::delayMsec(100);
+        } else {
+            logger->error("%s: reset failed", name);
+            return 0;
+        }
+
+        tries++;
     }
 
     /* Step 3: send CMD8 with argument of 0x1AA. If this is rejected with an
@@ -486,10 +514,23 @@ static uint32_t tryInitialization(void)
      *
      * Source: https://luckyresistor.me/cat-protector/software/sdcard-2/
      */
-    if (sendCommand(CMD_SEND_IF_COND, 0x1aa, buf, 4) != RESPONSE_IDLE) {
-        logger->error("%s: not an SD card", name);
-        return 0;
+    tries = 0;
+    while (true) {
+        int response = sendCommand(CMD_SEND_IF_COND, 0x1aa, buf, 4);
+        if (response == RESPONSE_IDLE || response == RESPONSE_OK) {
+            break;
+        }
+
+        if (tries < 5) {
+            system::delayMsec(10);
+        } else {
+            logger->error("%s: not an SD card", name);
+            return 0;
+        }
+
+        tries++;
     }
+
     if ((buf[2] & 0x01) != 1 || buf[3] != 0xaa) {
         logger->error("%s: not an SD card", name);
         return 0;
@@ -498,7 +539,7 @@ static uint32_t tryInitialization(void)
     /* Step 4: initiate initialization, setting the HCS flag, which corresponds
      * to fast transfer rates. */
     for (uint8_t i = 0; i < 10; i++) {
-        uint8_t response = sendAppCommand(CMD_APP_SEND_OP_COND, 0x40000000);
+        response = sendAppCommand(CMD_APP_SEND_OP_COND, 0x40000000);
         if (response == RESPONSE_IDLE) {
             /* this is okay, repeat the command */
         } else if (response == RESPONSE_OK) {
@@ -516,18 +557,54 @@ static uint32_t tryInitialization(void)
      * 4 bytes long. During initialization, bit 31 of the OCR register
      * (Card Power Up Status) must be 1. At that point we can check bit 30,
      * which should also be 1 for an SDHC/SDXC card. */
-    if (sendCommand(CMD_READ_OCR, 0x00, buf, 4) != RESPONSE_OK) {
-        return 0;
+    tries = 0;
+    while (true) {
+        response = sendCommand(CMD_READ_OCR, 0x00, buf, 4);
+        if (response == RESPONSE_OK) {
+            break;
+        } else if (response == (RESPONSE_IDLE | RESPONSE_ILLEGAL_COMMAND)) {
+            /* hmmm, this happens sometimes, let's wait a bit and restart */
+            system::delayMsec(100);
+            goto restart;
+        }
+
+        if (tries < 5) {
+            system::delayMsec(10);
+        } else {
+            logger->error("%s: cannot read OCR register", name);
+            return 0;
+        }
+
+        tries++;
     }
+
     if ((buf[0] & 0xc0) != 0xc0) {
         logger->error("%s: not an SDHC/SDXC card", name);
         return 0;
     }
 
     /* Step 6: read CSD register to determine the size of the card */
-    if (sendCommand(CMD_SEND_CSD, 0x00) != RESPONSE_OK) {
-        return 0;
+    tries = 0;
+    while (true) {
+        response = sendCommand(CMD_SEND_CSD, 0x00);
+        if (response == RESPONSE_OK) {
+            break;
+        } else if (response == (RESPONSE_IDLE | RESPONSE_ILLEGAL_COMMAND)) {
+            /* hmmm, this happens sometimes, let's wait a bit and restart */
+            system::delayMsec(100);
+            goto restart;
+        }
+
+        if (tries < 5) {
+            system::delayMsec(10);
+        } else {
+            logger->error("%s: cannot read CSD register", name);
+            return 0;
+        }
+
+        tries++;
     }
+
     if (!readDataBlock(buf, 16)) {
         return 0;
     }
