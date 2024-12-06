@@ -42,6 +42,16 @@ void sleepForever()
     }
 }
 
+void sleepUntilMsec(uint32_t deadline)
+{
+    uint32_t now = getTimeSinceBootMsec();
+    if (now < deadline) {
+        osDelay(deadline - now);
+    } else {
+        osThreadYield();
+    }
+}
+
 void yield(void)
 {
     osThreadYield();

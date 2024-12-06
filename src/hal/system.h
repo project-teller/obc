@@ -41,6 +41,12 @@ void requestReset(void);
 [[noreturn]] void sleepForever(void);
 
 /**
+ * @brief Delays the execution of the current thread or task until the internal
+ * clock reaches the given timestamp.
+ */
+void sleepUntilMsec(uint32_t deadline);
+
+/**
  * @brief Yields execution to other tasks with identical or higher priorities.
  */
 void yield(void);

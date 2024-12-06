@@ -79,6 +79,14 @@ void sleepForever()
     }
 }
 
+void sleepUntilMsec(std::uint32_t deadline)
+{
+    uint32_t now = getTimeSinceBootMsec();
+    if (now < deadline) {
+        delayMsec(deadline - now);
+    }
+}
+
 void yield(void)
 {
     /* empty */
