@@ -1,5 +1,6 @@
 #pragma once
 
+#include "drivers/common.h"
 #include "littlefs-cpp.h"
 #include <memory>
 
@@ -34,6 +35,16 @@ void destroy(void);
  * the flash memory cannot be initialized.
  */
 littlefs::FilesystemConfig* setup(void);
+
+/**
+ * @brief Returns the current operation being performed by the flash memory.
+ */
+StorageOperation getCurrentOperation(void);
+
+/**
+ * @brief Returns the statistics of the flash memory.
+ */
+StorageStatistics getStatistics(void);
 
 /**
  * @brief Returns the total size of the flash memory, in bytes.

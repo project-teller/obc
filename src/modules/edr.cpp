@@ -71,9 +71,9 @@ static std::list<event_callback_t*> callbacks;
         retval = storage::unmountStorage(area);
         if (retval) {
             log->error("%s: unmount failed, code = %d", name, retval);
-            storage::waitUntilUnmounted(area);
         }
 
+        storage::waitUntilUnmounted(area);
         log->warning("%s: unmounted, waiting for remount", name);
     }
 }

@@ -11,6 +11,7 @@
 #include "modules/storage.h"
 #include "modules/telem.h"
 
+using namespace teller::drivers;
 using namespace teller::hal::system;
 using namespace teller::telem;
 
@@ -148,6 +149,46 @@ public:
             return _fs->format();
         } else {
             return littlefs::Error::INVAL;
+        }
+    }
+
+    /**
+     * @brief Returns the current operation that the filesystem is performing.
+     */
+    teller::drivers::StorageOperation getCurrentStorageOperation()
+    {
+        if (!isConfigured()) {
+            return OP_UNCONFIGURED;
+        } else if (!isMounted()) {
+            return OP_UNMOUNTED;
+        } else if (isErrored()) {
+            return OP_ERROR;
+        } else {
+            switch (_area) {
+            case STORAGE_AREA_FLASH_MEMORY:
+                return teller::drivers::flashmem::getCurrentOperation();
+            case STORAGE_AREA_SD_CARD:
+                return teller::drivers::sdcard::getCurrentOperation();
+            default:
+                return OP_UNKNOWN;
+            }
+        }
+    }
+
+    /**
+     * @brief Returns the storage statistics of the filesystem.
+     */
+    teller::drivers::StorageStatistics getStatistics()
+    {
+        static const StorageStatistics ZERO = {};
+
+        switch (_area) {
+        case STORAGE_AREA_FLASH_MEMORY:
+            return teller::drivers::flashmem::getStatistics();
+        case STORAGE_AREA_SD_CARD:
+            return teller::drivers::sdcard::getStatistics();
+        default:
+            return ZERO;
         }
     }
 
@@ -772,10 +813,75 @@ int convertLittleFSErrorCode(std::optional<littlefs::Error> code)
     }
 }
 
+StorageOperation getCurrentStorageOperation(teller::telem::storage_area_t area)
+{
+    auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
+    if (!_filesystem) {
+        return OP_UNCONFIGURED;
+    } else {
+        return _filesystem->getCurrentStorageOperation();
+    }
+}
+
 int getStorageSize(teller::telem::storage_area_t area)
 {
     auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
     return _filesystem ? _filesystem->getSize() : 0;
+}
+
+void reportStatus(void)
+{
+    for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
+        teller::telem::storage_area_t area = static_cast<teller::telem::storage_area_t>(i);
+        StorageStatistics stats;
+
+        auto _filesystem = fs.getState(area, /* ensureMounted = */ false);
+        const char* opStr;
+
+        if (!_filesystem) {
+            continue;
+        }
+
+        stats = _filesystem->getStatistics();
+
+        switch (_filesystem->getCurrentStorageOperation()) {
+        case OP_ERASE:
+            opStr = "erasing";
+            break;
+        case OP_ERROR:
+            opStr = "error";
+            break;
+        case OP_IDLE:
+            opStr = "idle";
+            break;
+        case OP_READ:
+            opStr = "reading";
+            break;
+        case OP_SYNC:
+            opStr = "syncing";
+            break;
+        case OP_UNCONFIGURED:
+            opStr = "unconfigured";
+            break;
+        case OP_UNMOUNTED:
+            opStr = "unmounted";
+            break;
+        case OP_WRITE:
+            opStr = "writing";
+            break;
+        case OP_UNKNOWN:
+        default:
+            opStr = "unknown";
+        }
+
+        logger->info_nowait(
+            "%s: %s, rd: %lu, wr: %lu, e: %lu",
+            teller::telem::getStorageAreaName(area),
+            opStr,
+            stats.bytesRead,
+            stats.bytesWritten,
+            stats.blocksErased);
+    }
 }
 
 int startReadingStorage(

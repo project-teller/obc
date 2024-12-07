@@ -32,16 +32,25 @@ static lfs_filebd_t filebd;
  */
 static std::unique_ptr<FilesystemConfig> fsCfg;
 
+/**
+ * @brief The current operation being performed by the SD card.
+ */
+static teller::drivers::StorageOperation currentOperation;
+
+static teller::drivers::StorageStatistics stats;
+
 namespace teller::drivers::flashmem {
 
 bool init()
 {
+    currentOperation = OP_IDLE;
     return true;
 }
 
 void destroy()
 {
     fsCfg.reset();
+    currentOperation = OP_IDLE;
 }
 
 FilesystemConfig* setup(void)
@@ -71,6 +80,19 @@ FilesystemConfig* setup(void)
     /* LCOV_EXCL_STOP */
 
     return nullptr;
+}
+
+StorageOperation getCurrentOperation()
+{
+    return currentOperation;
+}
+
+/**
+ * @brief Returns the statistics of the flash memory.
+ */
+StorageStatistics getStatistics(void)
+{
+    return stats;
 }
 
 const char* getFilename()

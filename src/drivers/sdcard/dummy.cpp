@@ -1,6 +1,8 @@
 #include "config.h"
 #include "drivers/sdcard.h"
 
+static teller::drivers::StorageStatistics stats;
+
 namespace teller::drivers::sdcard {
 
 bool init()
@@ -15,6 +17,19 @@ void destroy()
 littlefs::FilesystemConfig* setup(void)
 {
     return nullptr;
+}
+
+StorageOperation getCurrentOperation()
+{
+    return OP_IDLE;
+}
+
+/**
+ * @brief Returns the statistics of the flash memory.
+ */
+StorageStatistics getStatistics(void)
+{
+    return stats;
 }
 
 uint32_t getTotalSize()

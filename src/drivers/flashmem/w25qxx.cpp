@@ -105,6 +105,13 @@ const flashmem_w25qxx_cfg_t* cfg;
  */
 static std::unique_ptr<FilesystemConfig> fsCfg;
 
+/**
+ * @brief The current operation being performed by the SD card.
+ */
+static teller::drivers::StorageOperation currentOperation;
+
+static teller::drivers::StorageStatistics stats;
+
 /** Dummy buffer used during SPI transfers to prevent modifying the data
  * structures of LittleFS when writing a page */
 static uint8_t dummy_rx_buf[PAGE_SIZE];
@@ -160,6 +167,7 @@ bool init()
 {
     bool success;
 
+    currentOperation = OP_IDLE;
     logger = getLogger(MODULE_ID_EDR);
     cfg = identify();
 
@@ -179,6 +187,7 @@ void destroy()
     fsCfg.reset();
     cfg = nullptr;
     logger = nullptr;
+    currentOperation = OP_IDLE;
 }
 
 FilesystemConfig* setup(void)
@@ -209,6 +218,19 @@ FilesystemConfig* setup(void)
         /* cache_size = */ PAGE_SIZE,
         /* lookahead_size = */ PAGE_SIZE);
     return fsCfg.get();
+}
+
+StorageOperation getCurrentOperation()
+{
+    return currentOperation;
+}
+
+/**
+ * @brief Returns the statistics of the flash memory.
+ */
+StorageStatistics getStatistics(void)
+{
+    return stats;
 }
 
 uint32_t getTotalSize()
@@ -390,6 +412,8 @@ static uint8_t* fillBufferWithAddress(uint8_t* buf, uint32_t address)
  */
 static bool eraseSector(uint32_t sector)
 {
+    teller::drivers::OperationContext ctx(&currentOperation, teller::drivers::OP_ERASE);
+
     if (!cfg || sector >= cfg->block_count * SECTORS_IN_BLOCK) {
         return false;
     }
@@ -408,11 +432,18 @@ static bool eraseSector(uint32_t sector)
         }
     }
 
+    if (success) {
+        stats.blocksErased++;
+    }
+
     return success;
 }
 
 static bool readIntoBuffer(uint32_t offset, uint8_t* buf, uint16_t length)
 {
+    teller::drivers::OperationContext ctx(&currentOperation, teller::drivers::OP_READ);
+    bool success;
+
     /* TODO(ntamas): figure out why it does not work with CMD_FAST_READ! */
     /* Maybe the length of the header buffer? It is not divisible by 4 */
     /* when using CMD_FAST_READ */
@@ -429,11 +460,20 @@ static bool readIntoBuffer(uint32_t offset, uint8_t* buf, uint16_t length)
         { nullptr, buf, length },
         spi::NO_MORE_TRANSFERS
     };
-    return waitWhileBusy() && spi::transfer(address, xfer, 0);
+
+    success = waitWhileBusy() && spi::transfer(address, xfer, 0);
+
+    if (success) {
+        stats.bytesRead += length;
+    }
+
+    return success;
 }
 
 static bool programFromBuffer(uint32_t offset, const uint8_t* buf, uint16_t length)
 {
+    teller::drivers::OperationContext ctx(&currentOperation, teller::drivers::OP_WRITE);
+
     /* Programming operation works only on previously erased pages */
     uint8_t header[6] = { CMD_PAGE_PROGRAM };
     uint8_t* end = fillBufferWithAddress(header + 1, offset);
@@ -462,6 +502,10 @@ static bool programFromBuffer(uint32_t offset, const uint8_t* buf, uint16_t leng
                 success = false;
             }
         }
+    }
+
+    if (success) {
+        stats.bytesWritten += length;
     }
 
     return success;

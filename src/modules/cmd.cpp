@@ -409,6 +409,10 @@ optional<Response> processDebugPacket(const InboundMessage& message)
             ;
         break;
 
+    case frames::DEBUG_CMD_REPORT_STORAGE_STATUS:
+        teller::storage::reportStatus();
+        break;
+
     default:
         return Response::invalid();
     }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "drivers/common.h"
 #include <littlefs-cpp.h>
 
 namespace teller::drivers::sdcard {
@@ -33,6 +34,16 @@ void destroy(void);
  * the SD card cannot be initialized.
  */
 littlefs::FilesystemConfig* setup(void);
+
+/**
+ * @brief Returns the current operation being performed by the SD card.
+ */
+StorageOperation getCurrentOperation(void);
+
+/**
+ * @brief Returns the statistics of the flash memory.
+ */
+StorageStatistics getStatistics(void);
 
 /**
  * @brief Returns the total size of the SD card, in bytes.

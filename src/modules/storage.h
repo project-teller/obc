@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/telem/generic.h"
+#include "drivers/common.h"
 #include "littlefs-cpp.h"
 
 namespace teller::storage {
@@ -89,6 +90,11 @@ void markStorageAsErrored(teller::telem::storage_area_t area, int error = 0);
  *         or if the storage area was already mounted.
  */
 [[nodiscard]] int mountStorage(teller::telem::storage_area_t area, bool force = false);
+
+/**
+ * @brief Reports the status of each storage area as text messages in the telemetry streams.
+ */
+void reportStatus(void);
 
 /**
  * @brief Unmounts a storage area in the storage subsystem.

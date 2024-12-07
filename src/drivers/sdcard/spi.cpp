@@ -121,9 +121,16 @@ static uint8_t writeBuf[BLOCK_SIZE];
 static uint32_t blockCount;
 
 /**
- * @brief Filesystem configuration for the flash memory.
+ * @brief Filesystem configuration for the SD caerd.
  */
 static std::unique_ptr<FilesystemConfig> fsCfg;
+
+/**
+ * @brief The current operation being performed by the SD card.
+ */
+static teller::drivers::StorageOperation currentOperation;
+
+static teller::drivers::StorageStatistics stats;
 
 namespace teller::drivers::sdcard {
 
@@ -133,6 +140,7 @@ bool init()
 
     logger = getLogger(MODULE_ID_EDR);
     success = (logger != nullptr);
+    currentOperation = OP_IDLE;
 
     if (!success) {
         destroy();
@@ -145,6 +153,7 @@ void destroy()
 {
     fsCfg.reset();
     blockCount = 0;
+    currentOperation = OP_IDLE;
 }
 
 FilesystemConfig* setup(void)
@@ -177,6 +186,19 @@ FilesystemConfig* setup(void)
         /* cache_size = */ BLOCK_SIZE,
         /* lookahead_size = */ BLOCK_SIZE);
     return fsCfg.get();
+}
+
+StorageOperation getCurrentOperation()
+{
+    return currentOperation;
+}
+
+/**
+ * @brief Returns the statistics of the flash memory.
+ */
+StorageStatistics getStatistics(void)
+{
+    return stats;
 }
 
 uint32_t getTotalSize()
@@ -622,7 +644,7 @@ restart:
     blockCount = (blockCount + 1) << 10; /* assert BLOCK_SIZE == (1 << 9) */
 
     /* We can try raising the SPI clock speed now to, say, 800 kHz */
-    if (!spi::setClockSpeed(address.bus, 800000)) {
+    if (!spi::setClockSpeed(address.bus, 3200000)) {
         return 0;
     }
 
@@ -729,7 +751,10 @@ static bool waitWhileBusy(uint32_t timeout)
  */
 static bool readBlockIntoBuffer(uint32_t block, uint8_t* buf)
 {
+    teller::drivers::OperationContext ctx(&currentOperation, teller::drivers::OP_READ);
     spi::DeviceSelector selector(address);
+    bool success;
+
     if (!selector.ensureSelected()) {
         return false;
     }
@@ -755,7 +780,13 @@ static bool readBlockIntoBuffer(uint32_t block, uint8_t* buf)
      */
 
     /* Read the block itself */
-    return readDataBlock(buf, BLOCK_SIZE);
+    success = readDataBlock(buf, BLOCK_SIZE);
+
+    if (success) {
+        stats.bytesRead += BLOCK_SIZE;
+    }
+
+    return success;
 }
 
 /**
@@ -792,6 +823,7 @@ static const uint8_t* ensureBlockIsCached(uint32_t block)
  */
 static bool programBlockFromBuffer(uint32_t block, uint8_t* buf)
 {
+    teller::drivers::OperationContext ctx(&currentOperation, teller::drivers::OP_WRITE);
     uint8_t response;
     uint8_t tries = 5;
     bool success = false;
@@ -814,7 +846,7 @@ static bool programBlockFromBuffer(uint32_t block, uint8_t* buf)
                 success = waitWhileBusy(DEFAULT_SD_CARD_WRITE_TIMEOUT);
                 break;
             } else if (response == DATA_TOKEN_RESPONSE_CRC_ERROR) {
-                /* This is OK */
+                /* This is OK, we will send the block again */
             } else {
                 /* Write error or invalid response */
                 break;
@@ -822,6 +854,10 @@ static bool programBlockFromBuffer(uint32_t block, uint8_t* buf)
         }
 
         tries--;
+    }
+
+    if (success) {
+        stats.bytesWritten += BLOCK_SIZE;
     }
 
     return success;
@@ -835,6 +871,7 @@ static bool programBlockFromBuffer(uint32_t block, uint8_t* buf)
  */
 static bool eraseBlock(uint32_t block)
 {
+    teller::drivers::OperationContext ctx(&currentOperation, teller::drivers::OP_ERASE);
     spi::DeviceSelector selector(address);
     if (!selector.ensureSelected()) {
         return false;
@@ -858,6 +895,8 @@ static bool eraseBlock(uint32_t block)
 
     /* Wait until idle */
     waitWhileBusy(DEFAULT_SD_CARD_WRITE_TIMEOUT);
+
+    stats.blocksErased++;
 
     return true;
 }
