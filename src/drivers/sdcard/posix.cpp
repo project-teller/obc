@@ -99,12 +99,12 @@ const char* getFilename()
     return "sdcard.bin";
 }
 
-uint32_t getTotalSize()
+uint64_t getTotalSize()
 {
     return SD_CARD_SIZE;
 }
 
-bool readData(uint8_t* buf, uint32_t address, size_t length)
+bool readData(uint8_t* buf, uint64_t address, size_t length)
 {
     bool result = false;
 

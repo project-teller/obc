@@ -39,6 +39,8 @@ static const uint32_t DEFAULT_SD_CARD_WRITE_TIMEOUT = 250;
 
 /* Constants for size conversions */
 #define BLOCK_SIZE 512
+#define SECTORS_IN_BLOCK 128
+#define SECTOR_SIZE (BLOCK_SIZE * SECTORS_IN_BLOCK)
 
 /* SD card command set */
 #define CMD_GO_IDLE_STATE 0
@@ -74,7 +76,7 @@ static const uint32_t DEFAULT_SD_CARD_WRITE_TIMEOUT = 250;
 #define DATA_TOKEN_RESPONSE_WRITE_ERROR 0x0D
 
 static void convertAddressToBlockAndOffset(
-    uint32_t address, uint32_t& block, uint32_t& offset);
+    uint64_t address, uint32_t& block, uint32_t& offset);
 static const uint8_t* ensureBlockIsCached(uint32_t block);
 static bool eraseBlock(uint32_t block);
 static void prepareCommand(uint8_t* buf, uint8_t cmd, uint32_t arg);
@@ -180,8 +182,8 @@ FilesystemConfig* setup(void)
         sdcard_spi_sync, /* sync */
         /* read_size = */ BLOCK_SIZE,
         /* prog_size = */ BLOCK_SIZE,
-        /* erase_size = */ BLOCK_SIZE,
-        /* erase_count = */ blockCount,
+        /* erase_size = */ SECTOR_SIZE,
+        /* erase_count = */ blockCount / SECTORS_IN_BLOCK,
         /* block_cycles = */ 500,
         /* cache_size = */ BLOCK_SIZE,
         /* lookahead_size = */ BLOCK_SIZE);
@@ -201,12 +203,12 @@ StorageStatistics getStatistics(void)
     return stats;
 }
 
-uint32_t getTotalSize()
+uint64_t getTotalSize()
 {
     return blockCount * BLOCK_SIZE;
 }
 
-bool readData(uint8_t* buf, uint32_t address, size_t length)
+bool readData(uint8_t* buf, uint64_t address, size_t length)
 {
     /* The address is byte-aligned, and the region to read may span multiple
      * blocks, but we can only read entire blocks */
@@ -247,7 +249,7 @@ bool readData(uint8_t* buf, uint32_t address, size_t length)
  * @param address  the address to convert
  * @return the index of the block containing the address
  */
-static void convertAddressToBlockAndOffset(uint32_t address, uint32_t& block, uint32_t& offset)
+static void convertAddressToBlockAndOffset(uint64_t address, uint32_t& block, uint32_t& offset)
 {
     block = address / BLOCK_SIZE;
     offset = address % BLOCK_SIZE;
@@ -884,7 +886,7 @@ static bool eraseBlock(uint32_t block)
     if (sendCommand(CMD_ERASE_WR_BLK_START_ADDR, block) != RESPONSE_OK) {
         return false;
     }
-    if (sendCommand(CMD_ERASE_WR_BLK_END_ADDR, block) != RESPONSE_OK) {
+    if (sendCommand(CMD_ERASE_WR_BLK_END_ADDR, block + SECTORS_IN_BLOCK - 1) != RESPONSE_OK) {
         return false;
     }
 
@@ -906,21 +908,24 @@ static bool eraseBlock(uint32_t block)
 /* ************************************************************************** */
 
 static int sdcard_spi_read(
-    const struct lfs_config* cfg, lfs_block_t block, lfs_off_t off,
+    const struct lfs_config* cfg, lfs_block_t sector, lfs_off_t off,
     void* buffer, lfs_size_t size)
 {
-    assert(off == 0);
-    return teller::drivers::sdcard::readData(reinterpret_cast<uint8_t*>(buffer), block * BLOCK_SIZE, size)
+    assert(off % BLOCK_SIZE == 0);
+    uint64_t address = static_cast<uint64_t>(sector) * SECTOR_SIZE + off;
+    return teller::drivers::sdcard::readData(reinterpret_cast<uint8_t*>(buffer), address, size)
         ? LFS_ERR_OK
         : LFS_ERR_IO;
 }
 
 static int sdcard_spi_write(
-    const struct lfs_config* cfg, lfs_block_t block, lfs_off_t off,
+    const struct lfs_config* cfg, lfs_block_t sector, lfs_off_t off,
     const void* buffer, lfs_size_t size)
 {
-    assert(off == 0);
+    assert(off % BLOCK_SIZE == 0);
     assert(size == BLOCK_SIZE);
+
+    uint32_t block = sector * SECTORS_IN_BLOCK + (off / BLOCK_SIZE);
 
     /* Need to copy the buffer to a temporary write buffer because the SPI
      * transaction will modify it */
@@ -928,8 +933,9 @@ static int sdcard_spi_write(
     return programBlockFromBuffer(block, writeBuf) ? LFS_ERR_OK : LFS_ERR_IO;
 }
 
-static int sdcard_spi_erase(const struct lfs_config* cfg, lfs_block_t block)
+static int sdcard_spi_erase(const struct lfs_config* cfg, lfs_block_t sector)
 {
+    uint32_t block = sector * SECTORS_IN_BLOCK;
     return eraseBlock(block) ? LFS_ERR_OK : LFS_ERR_IO;
 }
 

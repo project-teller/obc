@@ -48,7 +48,7 @@ StorageStatistics getStatistics(void);
 /**
  * @brief Returns the total size of the SD card, in bytes.
  */
-uint32_t getTotalSize(void);
+uint64_t getTotalSize(void);
 
 /**
  * @brief Reads a given number of bytes from the SD card.
@@ -57,6 +57,6 @@ uint32_t getTotalSize(void);
  * @param address the address to read from
  * @param length  the numebr of bytes to read
  */
-bool readData(uint8_t* buf, uint32_t address, size_t length);
+bool readData(uint8_t* buf, uint64_t address, size_t length);
 
 }

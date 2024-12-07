@@ -253,7 +253,7 @@ public:
      * @param address  the address to read from
      * @param length  the number of bytes to read
      */
-    bool readRawData(uint8_t* buf, uint32_t address, size_t length)
+    bool readRawData(uint8_t* buf, uint64_t address, size_t length)
     {
         switch (_area) {
         case STORAGE_AREA_FLASH_MEMORY:
@@ -505,7 +505,7 @@ public:
         _targets = targets;
     }
 
-    bool startReading(storage_area_t area, uint32_t address, uint16_t length, uint8_t seq_no)
+    bool startReading(storage_area_t area, uint64_t address, uint16_t length, uint8_t seq_no)
     {
         if (running() || length == 0) {
             return false;
@@ -569,7 +569,7 @@ public:
 
 private:
     storage_area_t _area;
-    uint32_t _address;
+    uint64_t _address;
     uint16_t _bytesLeft;
     teller::hal::EventFlags _events;
     frames::binary_data_t _binaryData;
@@ -885,7 +885,7 @@ void reportStatus(void)
 }
 
 int startReadingStorage(
-    teller::telem::storage_area_t area, uint32_t address, uint16_t length,
+    teller::telem::storage_area_t area, uint64_t address, uint16_t length,
     uint8_t targets, uint8_t seq_no)
 {
     if (!storageReader.running()) {

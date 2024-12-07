@@ -32,12 +32,12 @@ StorageStatistics getStatistics(void)
     return stats;
 }
 
-uint32_t getTotalSize()
+uint64_t getTotalSize()
 {
     return 0;
 }
 
-bool readData(uint8_t* buf, uint32_t address, size_t length)
+bool readData(uint8_t* buf, uint64_t address, size_t length)
 {
     memset(buf, 0, length);
     return true;

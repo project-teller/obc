@@ -482,6 +482,10 @@ optional<Response> processStoragePacket(const InboundMessage& message)
         break;
 
     case frames::STORAGE_COMMAND_READ:
+        /* TODO(ntamas): there's a deficiency in the protocol here; our commands
+         * can contain a 32-bit address only, and large SD cards need 64-bit
+         * addresses. However, we assume that you probably do not want to
+         * download the raw image of an SD card over the telemetry channel */
         retval = teller::storage::startReadingStorage(
             data.area, data.offset, data.length, (1 << message.index),
             message.envelope.seq_no);

@@ -138,7 +138,7 @@ int convertLittleFSErrorCode(std::optional<littlefs::Error> code);
  * @return POSIX error code; zero if the operation was successful
  */
 int startReadingStorage(
-    teller::telem::storage_area_t area, uint32_t address, uint16_t length,
+    teller::telem::storage_area_t area, uint64_t address, uint16_t length,
     uint8_t targets, uint8_t seq_no = 0);
 
 /**
