@@ -24,7 +24,9 @@ bool init()
 
     /* Camera pin starts from off */
     write(START_CAM, 0);
-    enabled = false;
+
+    /* We assume that the cameras are started automatically when powered on */
+    enabled = true;
 
     logger = getLogger(MODULE_ID_ADS);
     inited = logger != nullptr;
