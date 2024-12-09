@@ -303,7 +303,7 @@ static bool updateStatus()
     if (lastMessageStartedAt == 0) {
         /* No messages yet */
         status = SUBSYSTEM_STATUS_ERROR;
-    } else if (now - lastMessageStartedAt < 100) {
+    } else if (now - lastMessageStartedAt < 300) {
         status = SUBSYSTEM_STATUS_OK;
     } else if (now - lastMessageStartedAt < 3000) {
         status = SUBSYSTEM_STATUS_WARNING;
