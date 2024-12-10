@@ -482,30 +482,46 @@ static bool programFromBuffer(uint32_t offset, const uint8_t* buf, uint16_t leng
         { const_cast<uint8_t*>(buf), dummy_rx_buf, length },
         spi::NO_MORE_TRANSFERS
     };
-    bool success = waitWhileBusy();
+    bool success = false;
+    const int maxTries = 5;
+    int retriesSoFar = 0;
 
-    if (success) {
-        WriteEnabledContext ctx;
-        int code = 0;
-        success = ctx.enable();
+    while (retriesSoFar < maxTries) {
+        success = waitWhileBusy();
 
-        if (!success) {
-            logger->error("programFromBuffer: failed to enable WEL");
-        } else {
-            success = spi::transfer(address, xfer, 0);
+        if (success) {
+            WriteEnabledContext ctx;
+            int code = 0;
+            success = ctx.enable();
+
             if (!success) {
-                code = spi::getLastErrorCode();
-                logger->error("programFromBuffer: HAL error %d", code);
-            }
+                logger->error("programFromBuffer: failed to enable WEL");
+            } else {
+                success = spi::transfer(address, xfer, 0);
+                if (!success) {
+                    code = spi::getLastErrorCode();
+                    logger->error("programFromBuffer: HAL error %d", code);
+                }
 
-            if (!waitWhileBusy()) {
-                success = false;
+                if (!waitWhileBusy()) {
+                    success = false;
+                }
             }
         }
+
+        if (success) {
+            break;
+        }
+
+        retriesSoFar++;
     }
 
     if (success) {
         stats.bytesWritten += length;
+    }
+
+    if (retriesSoFar > 0) {
+        stats.retries++;
     }
 
     return success;

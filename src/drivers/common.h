@@ -20,6 +20,7 @@ typedef struct {
     std::uint32_t bytesRead;
     std::uint32_t bytesWritten;
     std::uint32_t blocksErased;
+    std::uint32_t retries;
 } StorageStatistics;
 
 /**

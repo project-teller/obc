@@ -875,12 +875,13 @@ void reportStatus(void)
         }
 
         logger->info_nowait(
-            "%s: %s, rd: %lu, wr: %lu, e: %lu",
+            "%s: %s, rd: %lu, wr: %lu, e: %lu, re: %lu",
             teller::telem::getStorageAreaName(area),
             opStr,
             stats.bytesRead,
             stats.bytesWritten,
-            stats.blocksErased);
+            stats.blocksErased,
+            stats.retries);
     }
 }
 
