@@ -426,7 +426,7 @@ static bool eraseSector(uint32_t sector)
     uint8_t* end = fillBufferWithAddress(buf + 1, offset);
 
     while (retriesSoFar < maxTries) {
-        bool success = waitWhileBusy();
+        success = waitWhileBusy();
 
         if (success) {
             WriteEnabledContext ctx;
@@ -606,10 +606,18 @@ static int flashmem_write(
 
 static int flashmem_erase(const struct lfs_config* cfg, lfs_block_t sector)
 {
-    return eraseSector(sector) ? LFS_ERR_OK : LFS_ERR_IO;
+    if (eraseSector(sector)) {
+        return LFS_ERR_OK;
+    } else {
+        return LFS_ERR_IO;
+    }
 }
 
 static int flashmem_sync(const struct lfs_config* cfg)
 {
-    return waitWhileBusy() ? LFS_ERR_OK : LFS_ERR_IO;
+    if (waitWhileBusy()) {
+        return LFS_ERR_OK;
+    } else {
+        return LFS_ERR_IO;
+    }
 }
