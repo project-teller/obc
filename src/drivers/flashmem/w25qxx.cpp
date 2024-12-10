@@ -31,6 +31,9 @@ static const spi::address_t address = spi::NO_ADDRESS;
 #define PAGE_SIZE 256
 #define SECTORS_IN_BLOCK (BLOCK_SIZE_IN_KB / SECTOR_SIZE_IN_KB)
 
+/* Number of retries for read, write and erase operations*/
+#define MAX_RETRIES 5
+
 /* Commands in instruction set 1 */
 #define CMD_INVALID 0x00
 #define CMD_PAGE_PROGRAM 0x02
@@ -414,7 +417,6 @@ static bool eraseSector(uint32_t sector)
 {
     teller::drivers::OperationContext ctx(&currentOperation, teller::drivers::OP_ERASE);
     bool success = false;
-    const int maxTries = 5;
     int retriesSoFar = 0;
 
     if (!cfg || sector >= cfg->block_count * SECTORS_IN_BLOCK) {
@@ -425,7 +427,7 @@ static bool eraseSector(uint32_t sector)
     uint8_t buf[6] = { CMD_SECTOR_ERASE_4K };
     uint8_t* end = fillBufferWithAddress(buf + 1, offset);
 
-    while (retriesSoFar < maxTries) {
+    while (retriesSoFar < MAX_RETRIES) {
         success = waitWhileBusy();
 
         if (success) {
@@ -459,7 +461,6 @@ static bool readIntoBuffer(uint32_t offset, uint8_t* buf, uint16_t length)
 {
     teller::drivers::OperationContext ctx(&currentOperation, teller::drivers::OP_READ);
     bool success = false;
-    const int maxTries = 5;
     int retriesSoFar = 0;
 
     /* TODO(ntamas): figure out why it does not work with CMD_FAST_READ! */
@@ -479,7 +480,7 @@ static bool readIntoBuffer(uint32_t offset, uint8_t* buf, uint16_t length)
         spi::NO_MORE_TRANSFERS
     };
 
-    while (retriesSoFar < maxTries) {
+    while (retriesSoFar < MAX_RETRIES) {
         success = waitWhileBusy() && spi::transfer(address, xfer, 0);
 
         if (success) {
@@ -513,10 +514,9 @@ static bool programFromBuffer(uint32_t offset, const uint8_t* buf, uint16_t leng
         spi::NO_MORE_TRANSFERS
     };
     bool success = false;
-    const int maxTries = 5;
     int retriesSoFar = 0;
 
-    while (retriesSoFar < maxTries) {
+    while (retriesSoFar < MAX_RETRIES) {
         success = waitWhileBusy();
 
         if (success) {
