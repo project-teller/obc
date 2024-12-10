@@ -354,6 +354,7 @@ bool transfer(
     bool success = false;
     std::uint32_t events;
     spi_transfer_mode_t xfer_mode;
+    HAL_StatusTypeDef hal_status;
 
     if (!is_spi_address_valid(address)) {
         return false;
@@ -377,7 +378,6 @@ bool transfer(
     if (xfer_mode != SPI_TRANSFER_POLLING) {
         // RTOS kernel is running so we can use event flags
         lock_guard lock(pState->in_use);
-        HAL_StatusTypeDef hal_status;
 
         if ((flags & NO_CHIP_SELECT) == 0) {
             HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_RESET);
@@ -408,13 +408,18 @@ bool transfer(
         if ((flags & NO_CHIP_SELECT) == 0) {
             HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_RESET);
         }
-        if (HAL_SPI_TransmitReceive(&pState->handle, txBuf, rxBuf, size, SPI_TIMEOUT_MSEC) == HAL_OK) {
+
+        hal_status = HAL_SPI_TransmitReceive(&pState->handle, txBuf, rxBuf, size, SPI_TIMEOUT_MSEC);
+        if (hal_status == HAL_OK) {
             success = true;
         }
+
         if ((flags & NO_CHIP_SELECT) == 0) {
             HAL_GPIO_WritePin(csPinCfg->port, csPinCfg->pins, GPIO_PIN_SET);
         }
     }
+
+    last_hal_status = hal_status;
 
     return success;
 }

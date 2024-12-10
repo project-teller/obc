@@ -16,7 +16,7 @@
 #include "modules/telem.h"
 
 // Uncomment the next line to simulate the SCM instead of reading from the SCM UART
-#define SIMULATE_SCM
+// #define SIMULATE_SCM
 
 using namespace teller::hal;
 using namespace teller::log;

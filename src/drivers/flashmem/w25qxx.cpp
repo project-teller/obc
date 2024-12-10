@@ -413,6 +413,9 @@ static uint8_t* fillBufferWithAddress(uint8_t* buf, uint32_t address)
 static bool eraseSector(uint32_t sector)
 {
     teller::drivers::OperationContext ctx(&currentOperation, teller::drivers::OP_ERASE);
+    bool success = false;
+    const int maxTries = 5;
+    int retriesSoFar = 0;
 
     if (!cfg || sector >= cfg->block_count * SECTORS_IN_BLOCK) {
         return false;
@@ -421,19 +424,32 @@ static bool eraseSector(uint32_t sector)
     uint32_t offset = sectorToAddress(sector);
     uint8_t buf[6] = { CMD_SECTOR_ERASE_4K };
     uint8_t* end = fillBufferWithAddress(buf + 1, offset);
-    bool success = waitWhileBusy();
 
-    if (success) {
-        WriteEnabledContext ctx;
-        success = ctx.enable() && spi::transfer(address, buf, static_cast<uint16_t>(end - buf));
+    while (retriesSoFar < maxTries) {
+        bool success = waitWhileBusy();
 
-        if (!waitWhileBusy()) {
-            success = false;
+        if (success) {
+            WriteEnabledContext ctx;
+            success = ctx.enable() && spi::transfer(address, buf, static_cast<uint16_t>(end - buf));
+
+            if (!waitWhileBusy()) {
+                success = false;
+            }
         }
+
+        if (success) {
+            break;
+        }
+
+        retriesSoFar++;
     }
 
     if (success) {
         stats.blocksErased++;
+    }
+
+    if (retriesSoFar > 0) {
+        stats.retries++;
     }
 
     return success;
@@ -442,7 +458,9 @@ static bool eraseSector(uint32_t sector)
 static bool readIntoBuffer(uint32_t offset, uint8_t* buf, uint16_t length)
 {
     teller::drivers::OperationContext ctx(&currentOperation, teller::drivers::OP_READ);
-    bool success;
+    bool success = false;
+    const int maxTries = 5;
+    int retriesSoFar = 0;
 
     /* TODO(ntamas): figure out why it does not work with CMD_FAST_READ! */
     /* Maybe the length of the header buffer? It is not divisible by 4 */
@@ -461,10 +479,22 @@ static bool readIntoBuffer(uint32_t offset, uint8_t* buf, uint16_t length)
         spi::NO_MORE_TRANSFERS
     };
 
-    success = waitWhileBusy() && spi::transfer(address, xfer, 0);
+    while (retriesSoFar < maxTries) {
+        success = waitWhileBusy() && spi::transfer(address, xfer, 0);
+
+        if (success) {
+            break;
+        }
+
+        retriesSoFar++;
+    }
 
     if (success) {
         stats.bytesRead += length;
+    }
+
+    if (retriesSoFar > 0) {
+        stats.retries++;
     }
 
     return success;
