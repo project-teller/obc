@@ -25,6 +25,9 @@ static const spi::address_t address = { .bus = 1, .device = 0 };
 static const spi::address_t address = spi::NO_ADDRESS;
 #endif
 
+/* Number of retries for read, write and erase operations */
+#define MAX_RETRIES 5
+
 /**
  * Default timeout to use when sending SD card commands or reading data.
  * This is according to section 4.6.2.1 of the physical spec.
@@ -755,7 +758,8 @@ static bool readBlockIntoBuffer(uint32_t block, uint8_t* buf)
 {
     teller::drivers::OperationContext ctx(&currentOperation, teller::drivers::OP_READ);
     spi::DeviceSelector selector(address);
-    bool success;
+    int retriesSoFar = 0;
+    bool success = false;
 
     if (!selector.ensureSelected()) {
         return false;
@@ -782,10 +786,22 @@ static bool readBlockIntoBuffer(uint32_t block, uint8_t* buf)
      */
 
     /* Read the block itself */
-    success = readDataBlock(buf, BLOCK_SIZE);
+    while (retriesSoFar < MAX_RETRIES) {
+        success = readDataBlock(buf, BLOCK_SIZE);
+
+        if (success) {
+            break;
+        }
+
+        retriesSoFar++;
+    }
 
     if (success) {
         stats.bytesRead += BLOCK_SIZE;
+    }
+
+    if (retriesSoFar > 0) {
+        stats.retries++;
     }
 
     return success;
@@ -827,7 +843,7 @@ static bool programBlockFromBuffer(uint32_t block, uint8_t* buf)
 {
     teller::drivers::OperationContext ctx(&currentOperation, teller::drivers::OP_WRITE);
     uint8_t response;
-    uint8_t tries = 5;
+    int retriesSoFar = 0;
     bool success = false;
 
     spi::DeviceSelector selector(address);
@@ -838,7 +854,7 @@ static bool programBlockFromBuffer(uint32_t block, uint8_t* buf)
     /* Evict the block from the cache */
     blockCache.evict(block);
 
-    while (tries) {
+    while (retriesSoFar < MAX_RETRIES) {
         /* Send the command to write a block */
         bool sent = sendCommand(CMD_WRITE_SINGLE_BLOCK, block) == RESPONSE_OK && sendDataBlock(buf, BLOCK_SIZE);
         if (sent) {
@@ -855,11 +871,15 @@ static bool programBlockFromBuffer(uint32_t block, uint8_t* buf)
             }
         }
 
-        tries--;
+        retriesSoFar++;
     }
 
     if (success) {
         stats.bytesWritten += BLOCK_SIZE;
+    }
+
+    if (retriesSoFar > 0) {
+        stats.retries++;
     }
 
     return success;
@@ -875,6 +895,9 @@ static bool eraseBlock(uint32_t block)
 {
     teller::drivers::OperationContext ctx(&currentOperation, teller::drivers::OP_ERASE);
     spi::DeviceSelector selector(address);
+    bool success = false;
+    int retriesSoFar = 0;
+
     if (!selector.ensureSelected()) {
         return false;
     }
@@ -882,25 +905,38 @@ static bool eraseBlock(uint32_t block)
     /* Evict the block from the cache */
     blockCache.evict(block);
 
-    /* Send the commands to set the range we want to erase */
-    if (sendCommand(CMD_ERASE_WR_BLK_START_ADDR, block) != RESPONSE_OK) {
-        return false;
+    while (retriesSoFar < MAX_RETRIES) {
+        success = true;
+
+        /* Send the commands to set the range we want to erase and then erase
+         * the range itself */
+        if (sendCommand(CMD_ERASE_WR_BLK_START_ADDR, block) != RESPONSE_OK) {
+            success = false;
+        } else if (sendCommand(CMD_ERASE_WR_BLK_END_ADDR, block + SECTORS_IN_BLOCK - 1) != RESPONSE_OK) {
+            success = false;
+        } else if (sendCommand(CMD_ERASE) != RESPONSE_OK) {
+            success = false;
+        }
+
+        if (success) {
+            break;
+        }
+
+        retriesSoFar++;
     }
-    if (sendCommand(CMD_ERASE_WR_BLK_END_ADDR, block + SECTORS_IN_BLOCK - 1) != RESPONSE_OK) {
-        return false;
+
+    if (success) {
+        /* Wait until idle */
+        waitWhileBusy(DEFAULT_SD_CARD_WRITE_TIMEOUT);
+
+        stats.blocksErased++;
     }
 
-    /* Send the command to erase a block */
-    if (sendCommand(CMD_ERASE) != RESPONSE_OK) {
-        return false;
+    if (retriesSoFar > 0) {
+        stats.retries++;
     }
 
-    /* Wait until idle */
-    waitWhileBusy(DEFAULT_SD_CARD_WRITE_TIMEOUT);
-
-    stats.blocksErased++;
-
-    return true;
+    return success;
 }
 
 /* ************************************************************************** */

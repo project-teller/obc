@@ -31,7 +31,7 @@ static const spi::address_t address = spi::NO_ADDRESS;
 #define PAGE_SIZE 256
 #define SECTORS_IN_BLOCK (BLOCK_SIZE_IN_KB / SECTOR_SIZE_IN_KB)
 
-/* Number of retries for read, write and erase operations*/
+/* Number of retries for read, write and erase operations */
 #define MAX_RETRIES 5
 
 /* Commands in instruction set 1 */
