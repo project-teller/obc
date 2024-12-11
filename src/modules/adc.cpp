@@ -32,9 +32,9 @@ static const float lsbIncrement = reference / 256;
 
 /** Scaling factors for the channels */
 static const float scaling[NUM_CHANNELS] = {
-    1.f/20.f, /* CUR_SUC_LCL1 */
-    1.f/20.f, /* CUR_SUC_LCL2 */
-    1.f/20.f, /* CUR_SUC_LCL3 */
+    1.f / 20.f, /* CUR_SUC_LCL1 */
+    1.f / 20.f, /* CUR_SUC_LCL2 */
+    1.f / 20.f, /* CUR_SUC_LCL3 */
     1.f, /* CUR_CAM */
     0.5f, /* CUR_SCM */
     0.1f, /* CUR_GMM */
