@@ -18,10 +18,11 @@ using namespace teller::telem;
 [[noreturn]] void teller::tasks::adcTask(void* arg)
 {
     bool healthy;
-    uint8_t tries = 0;
+    uint8_t tries;
 
     while (true) {
         healthy = adc::setup();
+        tries = 0;
 
         while (healthy && tries < BASE_ADC_UPDATE_FREQ_HZ * 3) {
             if (adc::update()) {
