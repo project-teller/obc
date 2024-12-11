@@ -165,7 +165,7 @@ const uart_phy_config_t uart_phy_config[] = {
         .irq = USART1_IRQn,
         .dma_tx = nullptr,
         .dma_rx = nullptr,
-        .baud_rate = 115200,
+        .baud_rate = 38400,
     },
 
     /* UART4 towards the RXSM */
