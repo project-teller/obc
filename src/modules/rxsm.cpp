@@ -42,6 +42,11 @@ public:
      */
     signal::signal_t update(bool sods_, bool soe_, bool lo_);
 
+    /**
+     * @brief Returns the time elapsed since liftoff
+     */
+    uint32_t getTimeSinceLiftoffMsec() const;
+
 private:
     /** Majority voter for the SODS signal */
     teller::utils::MajorityVoter sods;
@@ -53,7 +58,7 @@ private:
     teller::utils::MajorityVoter lo;
 
     /** Time when the LO signal came active the last time */
-    std::uint32_t lastLOSignalRisingEdgeTimestamp;
+    std::uint32_t lastLOSignalRisingEdgeTimestamp = 0;
 };
 
 void StateManager::getState(State& state) const
@@ -90,6 +95,11 @@ signal::signal_t StateManager::update(bool sods_, bool soe_, bool lo_)
     }
 
     return static_cast<signal::signal_t>(changed);
+}
+
+uint32_t StateManager::getTimeSinceLiftoffMsec() const
+{
+    return teller::hal::system::getTimeSinceBootMsec() - lastLOSignalRisingEdgeTimestamp;
 }
 
 static StateManager rxsmStateManager;
@@ -129,7 +139,7 @@ void getState(State& state)
 uint32_t getTimeSinceLiftoffMsec(void)
 {
     /* TODO(ntamas) */
-    return 0;
+    return rxsmStateManager.getTimeSinceLiftoffMsec();
 }
 
 void update(bool sods, bool soe, bool lo)
