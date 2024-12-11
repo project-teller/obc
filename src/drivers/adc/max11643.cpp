@@ -42,6 +42,11 @@ bool setup(void)
 {
     uint8_t buf[] = { 0, 0 };
 
+    /* We are using 10 msec delays between steps in this initialization
+     * routine. We do not know whether it is necessary or not but better
+     * safe than sorry */
+    system::delayMsec(10);
+
     /* Default clock mode is 10, meaning that conversions are timed internally
      * and can be started via the SPI bus. This is what we need.
      *
@@ -67,6 +72,8 @@ bool setup(void)
         return false;
     }
 
+    system::delayMsec(10);
+
     /* Setup register: 01 CKSEL[1:0] REFSEL[1:0] X X
      * where CKSEL[1:0] must be 10
      *   and REFSEL[1:0] must be 10 (reference always on, no wake-up delay).
@@ -75,6 +82,8 @@ bool setup(void)
     if (!spi::transfer(address, buf, 1)) {
         return false;
     }
+
+    system::delayMsec(10);
 
     /* Averaging register: 001 AVGON NAVG[1:0] NSCAN[1:0]
      * where AVGON is whether averaging should be on or off
@@ -85,6 +94,8 @@ bool setup(void)
     if (!spi::transfer(address, buf, 1)) {
         return false;
     }
+
+    system::delayMsec(10);
 
     return true;
 }
