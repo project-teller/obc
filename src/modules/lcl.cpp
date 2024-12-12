@@ -27,6 +27,14 @@ static const bool IDLE = false;
 /** Active state of the LLCs */
 static const bool ACTIVE = (!IDLE);
 
+/** Delay between consecutive auto-resets of a LCL, in milliseconds */
+static const int DELAY_BETWEEN_AUTO_RESETS_MSEC = 3000;
+
+/** Maximum number of resets allowed */
+static const int MAX_RESET_COUNT = 5;
+
+static const int NUM_LCLS = teller::lcl::NUM_LCLS;
+
 typedef enum {
     /**
      * Indicates that the auto-reset is disabled for this LCL because
@@ -62,16 +70,17 @@ typedef enum {
 /** Auxiliary information for tracking the auto-reset logic of the LCLs */
 typedef struct {
     lcl_auto_reset_state_t state;
-    uint8_t reset_counter;
+    uint32_t lastResetAt;
+    uint8_t resetCounter;
 } lcl_auto_reset_t;
 
 static Logger* logger;
 
 /** Stores when the last liftoff has started */
-static uint32_t last_liftoff_started_at = 0;
+static uint32_t lastLiftoffStartedAtMsec = 0;
 
 /** Stores the state of the auto-reset logic of the LCLs */
-static lcl_auto_reset_t autoReset[teller::lcl::NUM_LCLS];
+static lcl_auto_reset_t autoReset[NUM_LCLS];
 
 static void clearAutoResetLogic(void);
 static void updateAutoResetLogicAfterTakeoff(void);
@@ -129,15 +138,19 @@ bool triggered(lcl_t lcl)
     }
 }
 
-void reset(lcl_t lcl)
+void reset(lcl_t lcl, lcl_reset_reason_t reason)
 {
     if (lcl >= 0 && lcl < NUM_LCLS) {
-        logger->info("Resetting %s LCL", lcl_names[lcl]);
+        if (reason == RESET_REASON_AUTO) {
+            logger->info("Auto-resetting %s LCL", lcl_names[lcl]);
+        } else {
+            logger->info("Resetting %s LCL", lcl_names[lcl]);
+        }
     }
     resetMultiple(1 << static_cast<uint8_t>(lcl));
 }
 
-void resetMultiple(uint8_t lcls_to_reset)
+void resetMultiple(uint8_t lcls_to_reset, lcl_reset_reason_t reason)
 {
     bool hasAtLeastOne = false;
 
@@ -179,19 +192,78 @@ void updateAutoResetLogic(const teller::rxsm::State& state)
 
 static void clearAutoResetLogic(void)
 {
-    last_liftoff_started_at = 0;
-    for (int i = 0; i < teller::lcl::NUM_LCLS; i++) {
+    lastLiftoffStartedAtMsec = 0;
+    for (int i = 0; i < NUM_LCLS; i++) {
         autoReset[i].state = AUTO_RESET_DISABLED;
-        autoReset[i].reset_counter = 0;
+        autoReset[i].resetCounter = 0;
+        autoReset[i].lastResetAt = 0;
     }
 }
 
 static void updateAutoResetLogicAfterTakeoff()
 {
-    /* TODO(ntamas) */
+    int i;
+    bool triggered;
+
+    /* When LO has just turned on now, we need to record which LCLs are
+     * currently in their nominal state and we only need to track those */
+    if (lastLiftoffStartedAtMsec == 0) {
+        lastLiftoffStartedAtMsec = teller::hal::system::getTimeSinceBootMsec();
+        for (i = 0; i < NUM_LCLS; i++) {
+            triggered = teller::lcl::triggered(static_cast<teller::lcl::lcl_t>(i));
+            if (triggered) {
+                autoReset[i].state = AUTO_RESET_OFF;
+            } else {
+                autoReset[i].state = AUTO_RESET_ON;
+            }
+            autoReset[i].resetCounter = 0;
+            autoReset[i].lastResetAt = 0;
+        }
+    } else {
+        uint32_t now = teller::hal::system::getTimeSinceBootMsec();
+        for (i = 0; i < NUM_LCLS; i++) {
+            triggered = teller::lcl::triggered(static_cast<teller::lcl::lcl_t>(i));
+
+            switch (autoReset[i].state) {
+            case AUTO_RESET_ON:
+                if (triggered) {
+                    if (autoReset[i].resetCounter >= MAX_RESET_COUNT) {
+                        /* No more resets are allowed */
+                        autoReset[i].state = AUTO_RESET_GIVEN_UP;
+                        autoReset[i].resetCounter = 0;
+                    } else {
+                        /* Try a reset now */
+                        teller::lcl::reset(
+                            static_cast<teller::lcl::lcl_t>(i),
+                            teller::lcl::RESET_REASON_AUTO);
+                        autoReset[i].lastResetAt = now;
+                        autoReset[i].state = AUTO_RESET_TRIED_RECENTLY;
+                        autoReset[i].resetCounter++;
+                    }
+                } else {
+                    autoReset[i].resetCounter = 0;
+                }
+                break;
+
+            case AUTO_RESET_TRIED_RECENTLY:
+                if (now - autoReset[i].lastResetAt >= DELAY_BETWEEN_AUTO_RESETS_MSEC) {
+                    autoReset[i].state = AUTO_RESET_ON;
+                }
+                break;
+
+            default:
+                /* Nothing to do */
+                break;
+            }
+        }
+    }
 }
 
 static void updateAutoResetLogicBeforeTakeoff()
 {
-    /* TODO(ntamas) */
+    /* When LO has just turned off now, we need to clear the state of the
+     * auto-reset logic. Otherwise there is nothing to do */
+    if (lastLiftoffStartedAtMsec != 0) {
+        clearAutoResetLogic();
+    }
 }

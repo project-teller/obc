@@ -19,6 +19,14 @@ typedef enum {
 } lcl_t;
 
 /**
+ * @brief Possible reasons of an LCL reset.
+ */
+typedef enum {
+    RESET_REASON_USER,
+    RESET_REASON_AUTO
+} lcl_reset_reason_t;
+
+/**
  * @brief Initializes the module handling the latching current limiters.
  *
  * @return whether the initialization was successful
@@ -38,12 +46,12 @@ bool triggered(lcl_t lcl);
 /**
  * @brief Resets the given LCL.
  */
-void reset(lcl_t lcl);
+void reset(lcl_t lcl, lcl_reset_reason_t reason = RESET_REASON_USER);
 
 /**
  * @brief Resets multiple LCLs identified by bits in a byte.
  */
-void resetMultiple(uint8_t lcls_to_reset);
+void resetMultiple(uint8_t lcls_to_reset, lcl_reset_reason_t reason = RESET_REASON_USER);
 
 /**
  * @brief Sets the duration of the pulse used to reset an LCL.
