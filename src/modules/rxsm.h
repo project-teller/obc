@@ -59,4 +59,9 @@ uint32_t getTimeSinceLiftoffMsec(void);
  */
 void update(bool sods, bool soe, bool lo);
 
+/**
+ * @brief Returns whether the experiment was probably booted after liftoff.
+ */
+bool wasBootedAfterLiftoff(void);
+
 };

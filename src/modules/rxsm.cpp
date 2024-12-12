@@ -30,6 +30,11 @@ public:
     void getState(State& state) const;
 
     /**
+     * @brief Returns the time elapsed since liftoff
+     */
+    uint32_t getTimeSinceLiftoffMsec() const;
+
+    /**
      * @brief Resets the state of the state manager.
      */
     void reset(void);
@@ -43,9 +48,10 @@ public:
     signal::signal_t update(bool sods_, bool soe_, bool lo_);
 
     /**
-     * @brief Returns the time elapsed since liftoff
+     * @brief Returns whether the experiment module was probably booted
+     * after liftoff.
      */
-    uint32_t getTimeSinceLiftoffMsec() const;
+    bool wasBootedAfterLiftoff() const;
 
 private:
     /** Majority voter for the SODS signal */
@@ -57,8 +63,14 @@ private:
     /** Majority voter for the LO signal */
     teller::utils::MajorityVoter lo;
 
-    /** Time when the LO signal came active the last time */
+    /** Time when the LO signal came active the last time; zero = never */
     std::uint32_t lastLOSignalRisingEdgeTimestamp = 0;
+
+    /** Time when the SODS signal came active the last time; zero = never */
+    std::uint32_t lastSODSSignalRisingEdgeTimestamp = 0;
+
+    /** Time when the SOE signal came active the last time; zero = never */
+    std::uint32_t lastSOESignalRisingEdgeTimestamp = 0;
 };
 
 void StateManager::getState(State& state) const
@@ -88,10 +100,16 @@ signal::signal_t StateManager::update(bool sods_, bool soe_, bool lo_)
 
     if (sods.feedAndCheck(sods_)) {
         changed |= signal::SODS;
+        if (sods.get()) {
+            lastSODSSignalRisingEdgeTimestamp = teller::hal::system::getTimeSinceBootMsec();
+        }
     }
 
     if (soe.feedAndCheck(soe_)) {
         changed |= signal::SOE;
+        if (soe.get()) {
+            lastSOESignalRisingEdgeTimestamp = teller::hal::system::getTimeSinceBootMsec();
+        }
     }
 
     return static_cast<signal::signal_t>(changed);
@@ -100,6 +118,18 @@ signal::signal_t StateManager::update(bool sods_, bool soe_, bool lo_)
 uint32_t StateManager::getTimeSinceLiftoffMsec() const
 {
     return teller::hal::system::getTimeSinceBootMsec() - lastLOSignalRisingEdgeTimestamp;
+}
+
+bool StateManager::wasBootedAfterLiftoff() const
+{
+    /* clang-format off */
+    return (
+        lastLOSignalRisingEdgeTimestamp > 0 &&
+        lastLOSignalRisingEdgeTimestamp < 3000 &&
+        lastSODSSignalRisingEdgeTimestamp > 0 &&
+        lastSODSSignalRisingEdgeTimestamp < 3000
+    );
+    /* clang-format on */
 }
 
 static StateManager rxsmStateManager;
@@ -138,7 +168,6 @@ void getState(State& state)
 
 uint32_t getTimeSinceLiftoffMsec(void)
 {
-    /* TODO(ntamas) */
     return rxsmStateManager.getTimeSinceLiftoffMsec();
 }
 
@@ -162,6 +191,11 @@ void update(bool sods, bool soe, bool lo)
             teller::scheduler::stop();
         }
     }
+}
+
+bool wasBootedAfterLiftoff()
+{
+    return rxsmStateManager.wasBootedAfterLiftoff();
 }
 
 static void logCurrentState()
