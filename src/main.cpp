@@ -40,9 +40,9 @@
 #include "tasks/imu.h"
 #include "tasks/logger.h"
 #include "tasks/mag.h"
+#include "tasks/mission.h"
 #include "tasks/mode.h"
 #include "tasks/pins.h"
-#include "tasks/scheduler.h"
 #include "tasks/scm.h"
 #include "tasks/sdcard.h"
 #include "tasks/storage.h"
@@ -112,12 +112,12 @@ static const task_definition_t tasks[] = {
     { .func = debugTask, .name = "debug", .priority = NORMAL, .stack_size = 1024 },
     { .func = storageReaderTask, .name = "storage", .priority = LOW, .stack_size = 4096 },
     { .func = gmmTask, .name = "gmm", .priority = NORMAL, .stack_size = 1024 },
-    { .func = schedulerTask, .name = "scheduler", .priority = LOW, .stack_size = 1024 },
     { .func = scmTask, .name = "scm", .priority = NORMAL, .stack_size = 1024 },
     { .func = uartRxTask, .name = "uartRxTel", .priority = LOW, .stack_size = 1024, .context = &uart_telem_task_args },
     { .func = uartRxTask, .name = "uartRxDbg", .priority = LOW, .stack_size = 1024, .context = &uart_debug_task_args },
     { .func = usbTask, .name = "usb", .priority = LOW, .stack_size = 1024 },
     { .func = adcTask, .name = "adc", .priority = LOW, .stack_size = 2048 },
+    { .func = missionTask, .name = "mission", .priority = LOW, .stack_size = 1024 },
     NO_MORE_TASKS
 };
 

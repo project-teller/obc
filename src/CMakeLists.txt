@@ -111,9 +111,9 @@ add_executable(
 	tasks/imu.cpp
 	tasks/logger.cpp
 	tasks/mag.cpp
+	tasks/mission.cpp
 	tasks/mode.cpp
 	tasks/pins.cpp
-	tasks/scheduler.cpp
 	tasks/scm.cpp
 	tasks/sdcard.cpp
 	tasks/storage.cpp
