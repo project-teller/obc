@@ -30,6 +30,6 @@ using namespace teller::telem;
 
         /* No GMM measurements received for a while, wait a bit and then
          * retry */
-        hal::system::delayMsec(1000);
+        hal::system::delayMsec(10);
     }
 }
