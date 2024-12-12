@@ -233,7 +233,7 @@ static void updateAutoResetLogicAfterTakeoff()
         lastLiftoffStartedAtMsec = teller::hal::system::getTimeSinceBootMsec();
         for (i = 0; i < NUM_LCLS; i++) {
             triggered = teller::lcl::triggered(static_cast<teller::lcl::lcl_t>(i));
-            if (triggered) {
+            if (triggered && !teller::rxsm::wasBootedAfterLiftoff()) {
                 autoReset[i].state = AUTO_RESET_OFF;
             } else {
                 autoReset[i].state = AUTO_RESET_ON;
