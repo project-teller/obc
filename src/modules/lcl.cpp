@@ -30,8 +30,11 @@ static const bool ACTIVE = (!IDLE);
 /** Delay between consecutive auto-resets of a LCL, in milliseconds */
 static const int DELAY_BETWEEN_AUTO_RESETS_MSEC = 3000;
 
+/** Delay between trigger and auto-reset of a LCL, in milliseconds */
+static const int DELAY_BEFORE_AUTO_RESET_MSEC = 3000;
+
 /** Maximum number of resets allowed */
-static const int MAX_RESET_COUNT = 5;
+static const int MAX_RESET_COUNT = 10;
 
 static const int NUM_LCLS = teller::lcl::NUM_LCLS;
 
@@ -61,15 +64,22 @@ typedef enum {
     AUTO_RESET_TRIED_RECENTLY = 3,
 
     /**
+     * Indicates that an LCL was triggered but we have to wait a bit
+     * before trying to turn it back on.
+     */
+    AUTO_RESET_WAITING = 4,
+
+    /**
      * Indicates that we have given up on this LCL, at least for the current
      * liftoff.
      */
-    AUTO_RESET_GIVEN_UP = 4
+    AUTO_RESET_GIVEN_UP = 5
 } lcl_auto_reset_state_t;
 
 /** Auxiliary information for tracking the auto-reset logic of the LCLs */
 typedef struct {
     lcl_auto_reset_state_t state;
+    uint32_t lastTriggerAt;
     uint32_t lastResetAt;
     uint8_t resetCounter;
 } lcl_auto_reset_t;
@@ -197,6 +207,7 @@ static void clearAutoResetLogic(void)
         autoReset[i].state = AUTO_RESET_DISABLED;
         autoReset[i].resetCounter = 0;
         autoReset[i].lastResetAt = 0;
+        autoReset[i].lastTriggerAt = 0;
     }
 }
 
@@ -218,12 +229,12 @@ static void updateAutoResetLogicAfterTakeoff()
             }
             autoReset[i].resetCounter = 0;
             autoReset[i].lastResetAt = 0;
+            autoReset[i].lastTriggerAt = 0;
         }
     } else {
         uint32_t now = teller::hal::system::getTimeSinceBootMsec();
         for (i = 0; i < NUM_LCLS; i++) {
             triggered = teller::lcl::triggered(static_cast<teller::lcl::lcl_t>(i));
-
             switch (autoReset[i].state) {
             case AUTO_RESET_ON:
                 if (triggered) {
@@ -232,16 +243,25 @@ static void updateAutoResetLogicAfterTakeoff()
                         autoReset[i].state = AUTO_RESET_GIVEN_UP;
                         autoReset[i].resetCounter = 0;
                     } else {
-                        /* Try a reset now */
-                        teller::lcl::reset(
-                            static_cast<teller::lcl::lcl_t>(i),
-                            teller::lcl::RESET_REASON_AUTO);
-                        autoReset[i].lastResetAt = now;
-                        autoReset[i].state = AUTO_RESET_TRIED_RECENTLY;
-                        autoReset[i].resetCounter++;
+                        /* Wait until timeout */
+                        autoReset[i].lastTriggerAt = now;
+                        autoReset[i].state = AUTO_RESET_WAITING;
                     }
                 } else {
-                    autoReset[i].resetCounter = 0;
+                    // autoReset[i].resetCounter = 0;
+                }
+                break;
+            case AUTO_RESET_WAITING:
+                if (!triggered) {
+                    autoReset[i].state = AUTO_RESET_ON;
+                } else if (now - autoReset[i].lastTriggerAt >= DELAY_BEFORE_AUTO_RESET_MSEC) {
+                    /* Try a reset now */
+                    teller::lcl::reset(
+                        static_cast<teller::lcl::lcl_t>(i),
+                        teller::lcl::RESET_REASON_AUTO);
+                    autoReset[i].lastResetAt = now;
+                    autoReset[i].state = AUTO_RESET_TRIED_RECENTLY;
+                    autoReset[i].resetCounter++;
                 }
                 break;
 
