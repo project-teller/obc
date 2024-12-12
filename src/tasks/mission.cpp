@@ -1,6 +1,8 @@
 #include "tasks/mission.h"
 
 #include "hal/system.h"
+#include "modules/lcl.h"
+#include "modules/rxsm.h"
 #include "modules/scheduler.h"
 #include "modules/supervisor.h"
 
@@ -17,6 +19,7 @@ using namespace teller::supervisor;
 [[noreturn]] void teller::tasks::missionTask(void* arg)
 {
     TaskRegistration task("mission");
+    rxsm::State rxsmState;
     task.expect(BASE_SCHEDULER_UPDATE_FREQ_HZ - 3, BASE_SCHEDULER_UPDATE_FREQ_HZ + 1);
 
     while (true) {
@@ -25,6 +28,8 @@ using namespace teller::supervisor;
 
         /* Check the status of LCLs and reset them as needed _if_ we are after
          * the liftoff */
+        rxsm::getState(rxsmState);
+        lcl::updateAutoResetLogic(rxsmState);
 
         /* Nudge the task supervisor */
         task.nudge();

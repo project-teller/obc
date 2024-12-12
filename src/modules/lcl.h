@@ -1,5 +1,6 @@
 #pragma once
 
+#include "modules/rxsm.h"
 #include <cstdint>
 
 namespace teller::lcl {
@@ -50,5 +51,11 @@ void resetMultiple(uint8_t lcls_to_reset);
  * Should be used only in unit tests.
  */
 void setResetPulseDurationMsec(uint16_t duration_msec);
+
+/**
+ * @brief Feeds the LCL module with new information about the RXSM pins so it
+ * can reset LCLs appropriately when we are after the takeoff.
+ */
+void updateAutoResetLogic(const teller::rxsm::State& state);
 
 }
