@@ -27,11 +27,22 @@ static const bool IDLE = false;
 /** Active state of the LLCs */
 static const bool ACTIVE = (!IDLE);
 
-/** Delay between consecutive auto-resets of a LCL, in milliseconds */
-static const int DELAY_BETWEEN_AUTO_RESETS_MSEC = 3000;
+/**
+ * Delay after an automatic reset of an LCL before we start inspecting it
+ * again, in milliseconds.
+ */
+static const int DELAY_AFTER_AUTO_RESET_MSEC = 3000;
 
-/** Delay between trigger and auto-reset of a LCL, in milliseconds */
+/**
+ * Delay between the trigger and an automatic reset of a LCL, in milliseconds.
+ */
 static const int DELAY_BEFORE_AUTO_RESET_MSEC = 3000;
+
+/**
+ * Time period that must pass after an automatic LCL reset before we consider
+ * the affected subsystem as recovered.
+ */
+static const int RECOVERY_PERIOD_MSEC = 10000;
 
 /** Maximum number of resets allowed */
 static const int MAX_RESET_COUNT = 10;
@@ -248,7 +259,13 @@ static void updateAutoResetLogicAfterTakeoff()
                         autoReset[i].state = AUTO_RESET_WAITING;
                     }
                 } else {
-                    // autoReset[i].resetCounter = 0;
+                    /* If the LCL remained in nominal state for enough time,
+                     * set the reset counter to zero */
+                    if (autoReset[i].lastResetAt > 0 && now - autoReset[i].lastResetAt >= RECOVERY_PERIOD_MSEC) {
+                        autoReset[i].resetCounter = 0;
+                        autoReset[i].lastResetAt = 0;
+                        autoReset[i].lastTriggerAt = 0;
+                    }
                 }
                 break;
             case AUTO_RESET_WAITING:
@@ -266,7 +283,7 @@ static void updateAutoResetLogicAfterTakeoff()
                 break;
 
             case AUTO_RESET_TRIED_RECENTLY:
-                if (now - autoReset[i].lastResetAt >= DELAY_BETWEEN_AUTO_RESETS_MSEC) {
+                if (now - autoReset[i].lastResetAt >= DELAY_AFTER_AUTO_RESET_MSEC) {
                     autoReset[i].state = AUTO_RESET_ON;
                 }
                 break;
