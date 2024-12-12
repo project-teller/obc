@@ -90,7 +90,7 @@ bool setup(void)
      *   and NAVG[1:0] must be 00, 01, 10 or 11 for 4, 8, 16 and 32 conversions
      *   and NSCAN[1:0] is XX because we are not in scan mode 10.
      * See Table 4 of the datasheet */
-    buf[0] = 0b00111000;
+    buf[0] = 0b00110000;
     if (!spi::transfer(address, buf, 1)) {
         return false;
     }
@@ -134,7 +134,7 @@ bool update(std::uint8_t count, uint16_t* value)
 
     /* Wait for /EOC */
     memset(buf, 0, sizeof(buf));
-    i = 10;
+    i = 30;
     while (!gpio::read(gpio::ADC_READY)) {
         i--;
         if (i == 0) {
