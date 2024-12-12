@@ -122,11 +122,11 @@ bool update(std::uint8_t count, uint16_t* value)
         return false;
     }
 
-    /* Conversion register: 0 CHSEL[3:0] SCAN[1:0] X
+    /* Conversion register: 1 CHSEL[3:0] SCAN[1:0] X
      * where CHSEL[3:0] must be set to the index of the last channel to read
      *   and  SCAN[1:0] must be set to 00 to scan the channels
      * See Table 2 of the datasheet */
-    buf[0] = 0x80 | (count << 3);
+    buf[0] = 0x80 | ((count - 1) << 3);
 
     if (!spi::transfer(address, buf, 1)) {
         return false;
