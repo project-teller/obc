@@ -165,6 +165,8 @@ LogWriter::LogWriter(SmartFileHandle& handle)
     assert(err == SDLOG_SUCCESS);
 
     _init_state++;
+
+    (void)(err); /* prevent a gcc unused variable warning in release builds */
 }
 
 LogWriter::~LogWriter()

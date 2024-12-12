@@ -458,7 +458,8 @@ void operator delete(void* ptr) noexcept
         /* Store the name of the current task that caused a malloc failed event \
          * so we can report it at the next boot */                              \
         teller::debug::getDebugInfo()->errors |= code;                          \
-        strncpy(teller::debug::getDebugInfo()->task, pcTaskName, 16);           \
+        memset(teller::debug::getDebugInfo()->task, 0, 16);                     \
+        memcpy(teller::debug::getDebugInfo()->task, pcTaskName, 16);            \
         teller::debug::getDebugInfo()->task[15] = 0;                            \
                                                                                 \
         teller::hal::notifyFatalError();                                        \

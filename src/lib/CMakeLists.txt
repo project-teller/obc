@@ -5,6 +5,7 @@ add_library(
     littlefs-cpp/lfs_util.c
     littlefs-cpp/littlefs-cpp.cpp
 )
+target_compile_options(lfs PRIVATE -Wno-unused-function)
 target_include_directories(
     lfs PUBLIC littlefs littlefs-cpp
 )
@@ -28,6 +29,7 @@ add_library(
     littlefs/bd/lfs_filebd.c
     littlefs/bd/lfs_rambd.c
 )
+target_compile_options(lfsbd PRIVATE -Wno-unused-variable)
 target_include_directories(
     lfsbd PUBLIC littlefs/bd
 )

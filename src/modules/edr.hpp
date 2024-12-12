@@ -197,6 +197,8 @@ public:
 
         err = sdlog_message_format_add_columns(&_format, names, types, units);
         assert(err == SDLOG_SUCCESS);
+
+        (void)(err); /* prevent a gcc unused variable warning in release builds */
     }
 
     ~FormattedLogRecord()

@@ -22,6 +22,7 @@ public:
     ~mutex()
     {
         osStatus_t status = osMutexDelete(handle);
+        (void)(status); /* prevent a gcc unused variable warning in release builds */
         assert(status == osOK);
     }
 
@@ -31,6 +32,7 @@ public:
     void lock()
     {
         osStatus_t status = osMutexAcquire(handle, osWaitForever);
+        (void)(status); /* prevent a gcc unused variable warning in release builds */
         assert(status == osOK);
     }
 
@@ -43,6 +45,7 @@ public:
     void unlock()
     {
         osStatus_t status = osMutexRelease(handle);
+        (void)(status); /* prevent a gcc unused variable warning in release builds */
         assert(status == osOK);
     }
 
