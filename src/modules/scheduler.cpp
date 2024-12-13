@@ -6,12 +6,16 @@
 #include "modules/cam.h"
 #include "modules/cmd.h"
 #include "modules/lcl.h"
+#include "modules/rxsm.h"
 #include "modules/scheduler.h"
 
 static uint32_t startedAt = 0;
 static uint32_t stoppedAt = 0;
 static bool isClockRunning = false;
 
+/**
+ * @brief Possible types of events in the scheduler.
+ */
 typedef enum {
     EVENT_NOP = 0,
     EVENT_END,
@@ -22,10 +26,37 @@ typedef enum {
     EVENT_ENABLE_DISABLE_CAMERA,
 } scheduler_event_type_t;
 
+/**
+ * @brief Flags that can be attached to an event.
+ */
+typedef enum {
+    /**
+     * Flag indicating that the event should be ignored when we detect that
+     * the OBC was (re)booted after liftoff.
+     *
+     * This flag should be used only on events that are scheduled at least 3
+     * seconds later than the SODS signal. This is because we typically need
+     * a few seconds after boot to detect whether we were booted after liftoff
+     * or not.
+     */
+    EVENT_FLAG_IGNORE_WHEN_BOOTED_AFTER_LIFTOFF = 1
+} scheduler_event_flag_t;
+
+/**
+ * @brief Structure representing a single event in the scheduler.
+ */
 typedef struct {
+    /** The timestamp of the event, in milliseconds since the SODS signal */
     uint32_t timestamp_msec;
+
+    /** The type of the event */
     scheduler_event_type_t type;
+
+    /** The paramter of the event (if any) The exact meaning depends on the event type. */
     uint32_t param;
+
+    /** Additional flags of the event */
+    uint8_t flags;
 } scheduler_event_t;
 
 #define FUTURE std::numeric_limits<uint32_t>::max()
@@ -46,7 +77,8 @@ static const scheduler_event_t events[] = {
     { 1000, EVENT_LCL_RESET, teller::lcl::SCM_LCL },
 
     /* SOE+15s, T-255: calibrate gyroscope */
-    { 15000, EVENT_CALIBRATION, teller::telem::frames::CALIBRATION_GYRO },
+    { 15000, EVENT_CALIBRATION, teller::telem::frames::CALIBRATION_GYRO,
+        EVENT_FLAG_IGNORE_WHEN_BOOTED_AFTER_LIFTOFF },
 
     /* SOE+30s, T-240: enable camera LCL */
     { 30000, EVENT_LCL_RESET, teller::lcl::CAM_LCL },
@@ -148,6 +180,13 @@ void update(void)
 
 static void executeEvent(const scheduler_event_t& event)
 {
+    if (event.flags & EVENT_FLAG_IGNORE_WHEN_BOOTED_AFTER_LIFTOFF) {
+        if (teller::rxsm::wasBootedAfterLiftoff()) {
+            /* Ignore this event */
+            return;
+        }
+    }
+
     switch (event.type) {
     case EVENT_LCL_RESET:
         /* Resetting LCL corresponding to the parameter */
