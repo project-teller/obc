@@ -105,8 +105,6 @@ static const scheduler_event_t eventsRelativeToSODS[] = {
  * The array must be sorted by timestamp.
  */
 static const scheduler_event_t eventsRelativeToLiftoff[] = {
-    /* LO+540s: turn off cameras */
-    { 540000, EVENT_TOGGLE_CAMERA, true },
     NO_MORE_EVENTS,
 };
 
