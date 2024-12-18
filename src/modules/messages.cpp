@@ -67,8 +67,8 @@ void updateClockStatusData(frames::clock_status_data_t* data)
     data->timestampInMsec = system::getTimeSinceBootMsec();
     data->rtcTimestampInMsec = rtc::getTimeMsec();
 
-    data->missionClockInMsec = scheduler::getElapsedTimeMsec();
-    data->missionClockIsRunning = scheduler::isRunning();
+    data->missionClockInMsec = scheduler::getMissionClock()->getElapsedTimeMsec();
+    data->missionClockIsRunning = scheduler::getMissionClock()->isRunning();
 
     rxsm::getState(state);
     data->liftoffTimestampInMsec = rxsm::getTimeSinceLiftoffMsec();

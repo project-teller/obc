@@ -386,17 +386,17 @@ optional<Response> processDebugPacket(const InboundMessage& message)
         break;
 
     case frames::DEBUG_CMD_START_CLOCK:
-        teller::scheduler::start();
+        teller::scheduler::getMissionClock()->start();
         teller::telem::sendClockStatusSoon();
         break;
 
     case frames::DEBUG_CMD_STOP_CLOCK:
-        teller::scheduler::stop();
+        teller::scheduler::getMissionClock()->stop();
         teller::telem::sendClockStatusSoon();
         break;
 
     case frames::DEBUG_CMD_RESET_CLOCK:
-        teller::scheduler::reset();
+        teller::scheduler::getMissionClock()->reset();
         teller::telem::sendClockStatusSoon();
         break;
 

@@ -6,12 +6,11 @@
 #include "modules/cam.h"
 #include "modules/cmd.h"
 #include "modules/lcl.h"
-#include "modules/rxsm.h"
 #include "modules/scheduler.h"
 
-static uint32_t startedAt = 0;
-static uint32_t stoppedAt = 0;
-static bool isClockRunning = false;
+using namespace teller::rxsm::signal;
+
+namespace teller::scheduler {
 
 /**
  * @brief Possible types of events in the scheduler.
@@ -24,6 +23,7 @@ typedef enum {
     EVENT_GPIO_CLEAR,
     EVENT_CALIBRATION,
     EVENT_ENABLE_DISABLE_CAMERA,
+    EVENT_TOGGLE_CAMERA,
 } scheduler_event_type_t;
 
 /**
@@ -45,7 +45,7 @@ typedef enum {
 /**
  * @brief Structure representing a single event in the scheduler.
  */
-typedef struct {
+typedef struct scheduler_event_s {
     /** The timestamp of the event, in milliseconds since the SODS signal */
     uint32_t timestamp_msec;
 
@@ -60,13 +60,17 @@ typedef struct {
 } scheduler_event_t;
 
 #define FUTURE std::numeric_limits<uint32_t>::max()
+#define NO_MORE_EVENTS    \
+    {                     \
+        FUTURE, EVENT_END \
+    }
 
 /**
- * @brief Array of events that the scheduler will execute.
+ * @brief Array of events that the scheduler will execute relative to SOE.
  *
  * The array must be sorted by timestamp.
  */
-static const scheduler_event_t events[] = {
+static const scheduler_event_t eventsRelativeToSOE[] = {
     /* SOE signal: turn on GMM and SUC */
     { 0, EVENT_LCL_RESET, teller::lcl::GMM_LCL },
     { 0, EVENT_LCL_RESET, teller::lcl::SUC_LCL1 },
@@ -83,99 +87,175 @@ static const scheduler_event_t events[] = {
     /* SOE+30s, T-240: enable camera LCL */
     { 30000, EVENT_LCL_RESET, teller::lcl::CAM_LCL },
 
-    /* No more events */
-    { FUTURE, EVENT_NOP },
+    NO_MORE_EVENTS,
 };
 
-#define NUM_EVENTS (sizeof(events) / sizeof(events[0]))
+/**
+ * @brief Array of events that the scheduler will execute relative to SODS.
+ *
+ * The array must be sorted by timestamp.
+ */
+static const scheduler_event_t eventsRelativeToSODS[] = {
+    NO_MORE_EVENTS,
+};
 
 /**
- * @brief Playhead that points to the next event in the event array.
+ * @brief Array of events that the scheduler will execute relative to liftoff.
+ *
+ * The array must be sorted by timestamp.
  */
-static unsigned int nextEventIndex = 0;
+static const scheduler_event_t eventsRelativeToLiftoff[] = {
+    /* LO+540s: turn off cameras */
+    { 540000, EVENT_TOGGLE_CAMERA, true },
+    NO_MORE_EVENTS,
+};
+
+static struct {
+    teller::scheduler::Scheduler sods;
+    teller::scheduler::Scheduler soe;
+    teller::scheduler::Scheduler lo;
+} schedulerList;
 
 static void executeEvent(const scheduler_event_t& event);
 
-namespace teller::scheduler {
-
 bool init(void)
 {
-    stop();
-    reset();
+    schedulerList.sods.setEvents(eventsRelativeToSODS);
+    schedulerList.soe.setEvents(eventsRelativeToSOE);
+    schedulerList.lo.setEvents(eventsRelativeToLiftoff);
     return true;
 }
 
 void destroy(void)
 {
+    schedulerList.sods.clearEvents();
+    schedulerList.soe.clearEvents();
+    schedulerList.lo.clearEvents();
+}
+
+Scheduler* getMissionClock()
+{
+    return &schedulerList.soe;
+}
+
+Scheduler* getSchedulerForRXSMSignal(signal_t signal)
+{
+    switch (signal) {
+    case SOE:
+        return &schedulerList.soe;
+    case SODS:
+        return &schedulerList.sods;
+    case LO:
+        return &schedulerList.lo;
+    }
+
+    return nullptr;
+}
+
+void update(void)
+{
+    schedulerList.soe.executePendingEvents();
+    schedulerList.sods.executePendingEvents();
+    schedulerList.lo.executePendingEvents();
+}
+
+Scheduler::Scheduler()
+    : startedAt(0)
+    , stoppedAt(0)
+    , isClockRunning(false)
+    , events(nullptr)
+    , nextEventIndex(0)
+{
     stop();
     reset();
 }
 
-uint32_t getElapsedTimeMsec(uint32_t now)
+Scheduler::~Scheduler()
+{
+    clearEvents();
+}
+
+void Scheduler::clearEvents()
+{
+    setEvents(nullptr);
+}
+
+uint32_t Scheduler::getElapsedTimeMsec(uint32_t now) const
 {
     if (isClockRunning) {
-        now = now ? now : teller::hal::system::getTimeSinceBootMsec();
+        now = now ? now : this->now();
         return now - startedAt;
     } else {
         return stoppedAt - startedAt;
     }
 }
 
-bool isRunning(void)
+/**
+ * @brief Sets the table of events for this scheduler.
+ *
+ * Should be called only once when the scheduler is initialized.
+ */
+void Scheduler::setEvents(const scheduler_event_t* events)
 {
-    return isClockRunning;
+    if (events == this->events) {
+        return;
+    }
+
+    stop();
+    reset();
+
+    this->events = events;
 }
 
-void reset(void)
+void Scheduler::reset()
 {
-    startedAt = isClockRunning ? teller::hal::system::getTimeSinceBootMsec() : 0;
+    startedAt = isRunning() ? now() : 0;
     stoppedAt = 0;
     nextEventIndex = 0;
 }
 
-void start(void)
+void Scheduler::start()
 {
     if (!isClockRunning) {
-        startedAt = teller::hal::system::getTimeSinceBootMsec() - getElapsedTimeMsec();
+        startedAt = now() - getElapsedTimeMsec();
         stoppedAt = 0;
         isClockRunning = true;
     }
 }
 
-void stop(void)
+void Scheduler::stop()
 {
     if (isClockRunning) {
-        stoppedAt = teller::hal::system::getTimeSinceBootMsec();
+        stoppedAt = now();
         isClockRunning = false;
     }
 }
 
-void update(void)
+uint32_t Scheduler::now() const
+{
+    return teller::hal::system::getTimeSinceBootMsec();
+}
+
+void Scheduler::executePendingEvents()
 {
     uint32_t elapsedTime;
     const scheduler_event_t* nextEvent;
 
-    if (!isClockRunning) {
-        /* No events are executed if the clock is not running */
+    if (!isClockRunning || !events) {
         return;
     }
 
     elapsedTime = getElapsedTimeMsec();
 
-    /* Execute pending events */
-    while (nextEventIndex < NUM_EVENTS) {
+    while (true) {
         nextEvent = &events[nextEventIndex];
-
-        if (nextEvent->timestamp_msec <= elapsedTime) {
-            executeEvent(*nextEvent);
-        } else {
+        if (nextEvent->type == EVENT_END || nextEvent->timestamp_msec > elapsedTime) {
             break;
         }
 
+        executeEvent(*nextEvent);
         nextEventIndex++;
     }
-}
-
 }
 
 static void executeEvent(const scheduler_event_t& event)
@@ -218,7 +298,14 @@ static void executeEvent(const scheduler_event_t& event)
         teller::cam::setEnabled(event.param != 0);
         break;
 
+    case EVENT_TOGGLE_CAMERA:
+        /* Send a pulse to toggle the camera unconditionally */
+        teller::cam::sendPulse();
+        break;
+
     default:
         break;
     }
+}
+
 }

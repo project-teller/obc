@@ -8,6 +8,7 @@
 
 using namespace teller::log;
 using namespace teller::rxsm;
+using namespace teller::scheduler;
 using teller::telem::storage_area_t;
 
 static teller::edr::FormattedLogRecord<uint32_t, bool, bool, bool> logRecord(
@@ -176,19 +177,36 @@ void update(bool sods, bool soe, bool lo)
     signal::signal_t changed = rxsmStateManager.update(sods, soe, lo);
 
     if (changed) {
-        logCurrentState();
-    }
-
-    if (changed & signal::SOE) {
-        /* SOE signal triggers the scheduler */
         State state;
         rxsmStateManager.getState(state);
 
-        if (state.soe) {
-            teller::scheduler::reset();
-            teller::scheduler::start();
-        } else {
-            teller::scheduler::stop();
+        logCurrentState();
+
+        if (changed & signal::SOE) {
+            Scheduler* scheduler = getSchedulerForRXSMSignal(signal::SOE);
+            if (state.soe) {
+                scheduler->restart();
+            } else {
+                scheduler->stop();
+            }
+        }
+
+        if (changed & signal::SODS) {
+            Scheduler* scheduler = getSchedulerForRXSMSignal(signal::SODS);
+            if (state.sods) {
+                scheduler->restart();
+            } else {
+                scheduler->stop();
+            }
+        }
+
+        if (changed & signal::LO) {
+            Scheduler* scheduler = getSchedulerForRXSMSignal(signal::LO);
+            if (state.lo) {
+                scheduler->restart();
+            } else {
+                scheduler->stop();
+            }
         }
     }
 }
