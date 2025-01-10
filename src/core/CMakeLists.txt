@@ -11,6 +11,7 @@ add_library(
     telem/clock_status.cpp
     telem/clock_sync.cpp
     telem/debug.cpp
+    telem/directory_listing.cpp
     telem/echo.cpp
     telem/generic.cpp
     telem/gmm.cpp

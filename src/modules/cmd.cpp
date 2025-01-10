@@ -5,6 +5,7 @@
 #include "core/telem/calibration.h"
 #include "core/telem/clock_sync.h"
 #include "core/telem/debug.h"
+#include "core/telem/directory_listing.h"
 #include "core/telem/echo.h"
 #include "core/telem/lcl_reset.h"
 #include "core/telem/parser.h"
@@ -100,6 +101,7 @@ static optional<Response> processCalibrationPacket(const InboundMessage& message
 static optional<Response> processClockSyncPacket(const InboundMessage& message);
 static optional<Response> processDebugPacket(const InboundMessage& message);
 static bool processEchoPacket(const InboundMessage& message);
+static optional<Response> processDirectoryListingPacket(const InboundMessage& message);
 static optional<Response> processLCLResetRequestPacket(const InboundMessage& message);
 static optional<Response> processStoragePacket(const InboundMessage& message);
 static bool sendResponse(uart_t channel, const envelope_t& envelope, Response response);
@@ -258,6 +260,13 @@ optional<Response> processPacket(const InboundMessage& message)
         IGNORE_UNLESS_FROM_GCS("storage")
         {
             return processStoragePacket(message);
+        }
+        break;
+
+    case frames::DIRECTORY_LISTING:
+        IGNORE_UNLESS_FROM_GCS("directory listing")
+        {
+            return processDirectoryListingPacket(message);
         }
         break;
 
@@ -512,4 +521,17 @@ optional<Response> processStoragePacket(const InboundMessage& message)
     } else {
         return Response::ok();
     }
+}
+
+optional<Response> processDirectoryListingPacket(const InboundMessage& message)
+{
+    frames::directory_listing_request_data_t data;
+
+    if (!frames::validateEncodedDirectoryListingRequestFrame(message.payload, message.length)) {
+        return Response::invalid();
+    }
+
+    frames::decodeDirectoryListingRequestFrame(message.payload, message.length, &data);
+
+    return Response::unsupported();
 }
