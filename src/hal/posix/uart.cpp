@@ -176,6 +176,9 @@ void teller::hal::uart::setSCMFileDescriptor(int fd)
 
 void teller::hal::uart::waitUntilConnected(uart_t index)
 {
+    static std::mutex connectionLock;
+    std::lock_guard<std::mutex> lock(connectionLock);
+
     while (!isConnected(index)) {
         if (index == DEBUG && !debugServerPort.empty()) {
             socketstream client;
