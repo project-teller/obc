@@ -494,90 +494,184 @@ private:
 
 static Filesystems fs;
 
-class StorageReaderState {
+/**
+ * @brief Base class for storage access operations.
+ */
+class StorageAccessOperation {
 public:
-    enum Events {
-        EVT_STARTED = 1,
-    };
+    StorageAccessOperation()
+        : _targets(0)
+    {
+    }
+    virtual ~StorageAccessOperation() { }
 
-    void setTargets(uint8_t targets)
+    /**
+     * @brief Runs a single iteration of the operation.
+     * @return POSIX error code
+     */
+    virtual int iterate() = 0;
+
+    /**
+     * @brief Cancels the operation.
+     */
+    virtual void cancel() = 0;
+
+    /**
+     * @brief Returns whether the operation is still running.
+     */
+    virtual bool running() const = 0;
+
+    /**
+     * @brief Sends a telemetry packet to the configured telemetry targets.
+     */
+    bool sendTelemetry(frames::frame_type_t type, const uint8_t* payload, uint8_t length)
+    {
+        return teller::telem::sendTo(_targets, frames::BINARY_DATA, payload, length);
+    }
+
+    /**
+     * @brief Sets the telemetry targets that the operation should be reporting its progress to.
+     */
+    void setTelemetryTargets(uint8_t targets)
     {
         _targets = targets;
     }
 
-    bool startReading(storage_area_t area, uint64_t address, uint16_t length, uint8_t seq_no)
-    {
-        if (running() || length == 0) {
-            return false;
-        }
+protected:
+    uint8_t _targets;
+};
 
-        _area = area;
-        _address = address;
-        _bytesLeft = length;
-
-        memset(&_binaryData, 0, sizeof(_binaryData));
-
-        _binaryData.frame_type = frames::STORAGE;
-        _binaryData.seq_no = seq_no;
-        _binaryData.fragment_index = 0;
-        _binaryData.max_fragment_index = (length / MAX_BINARY_DATA_FRAGMENT_LENGTH);
-        if (length % MAX_BINARY_DATA_FRAGMENT_LENGTH == 0) {
-            _binaryData.max_fragment_index--;
-        }
-
-        _events.set(EVT_STARTED);
-
-        return true;
-    }
-
-    bool running() const
-    {
-        return _bytesLeft > 0;
-    }
-
-    bool iterate()
-    {
-        const uint8_t limit = MAX_BINARY_DATA_FRAGMENT_LENGTH;
-
-        while (!running()) {
-            _events.waitAny(EVT_STARTED);
-        }
-
-        auto _filesystem = fs.getState(_area, /* ensureMounted = */ false);
-        if (!_filesystem) {
-            return EINVAL;
-        }
-
-        while (running()) {
-            _binaryData.data_length = _bytesLeft > limit ? limit : _bytesLeft;
-            if (!_filesystem->readRawData(_binaryData.data, _address, _binaryData.data_length)) {
-                break;
-            }
-
-            uint8_t length = frames::encodeBinaryDataFrame(&_binaryData, _buf);
-            if (!teller::telem::sendTo(_targets, frames::BINARY_DATA, _buf, length)) {
-                return false;
-            }
-
-            _address += _binaryData.data_length;
-            _bytesLeft -= _binaryData.data_length;
-            _binaryData.fragment_index++;
-        }
-
-        return _bytesLeft == 0;
-    }
+/**
+ * @brief State object of a raw image read operation from a storage area.
+ */
+class RawStorageReadOperation : public StorageAccessOperation {
+public:
+    int start(storage_area_t area, uint64_t address, uint16_t length, uint8_t seq_no);
+    virtual bool running() const override;
+    virtual int iterate() override;
+    virtual void cancel() override;
 
 private:
     storage_area_t _area;
     uint64_t _address;
     uint16_t _bytesLeft;
-    teller::hal::EventFlags _events;
     frames::binary_data_t _binaryData;
     uint8_t _buf[MAX_PAYLOAD_LENGTH];
+};
+
+/**
+ * @brief Object containing the state of storage access operations.
+ *
+ * There is only one instance of this class, and at any point in time it takes
+ * care of _one_ reading operation from the storage, from the following list:
+ *
+ * - listing the contents of a directory
+ * - reading the raw contents of the image on the storage device
+ * - reading the contents of a single file on the storage device
+ *
+ * It is the responsibility of the storage module to call the `iterate()` method
+ * of the single instance of this class to keep the operation running. New
+ * operations can be started with the appropriate methods; starting a new
+ * operation while another one is running will return false. An already-running
+ * operation can be cancelled explicitly with the `cancel()` method.
+ *
+ * Internally, the `iterate()` method of this class delegates the actual work
+ * to a wrapped instance of `RawStorageReadOperation`, `FileReaderState` or
+ * `DirectoryListingState`.
+ */
+class StorageOperationManager {
+public:
+    StorageOperationManager()
+        : _operation(nullptr)
+        , _targets(0)
+    {
+    }
+    ~StorageOperationManager()
+    {
+        cancel();
+    }
+
+    void cancel()
+    {
+        _setOperation(nullptr);
+    }
+
+    int iterate()
+    {
+        int error;
+
+        if (!_operation) {
+            // Nothing to do at the moment, but we need to make this function
+            // an opportunity to switch tasks so we sleep
+            teller::hal::system::delayMsec(50);
+        } else {
+            error = _operation->iterate();
+            if (error) {
+                // Error occurred, cancel the operation
+                _setOperation(nullptr);
+                return error;
+            }
+
+            if (!_operation->running()) {
+                // Operation finished
+                _setOperation(nullptr);
+            }
+        }
+
+        return 0;
+    }
+
+    bool running() const
+    {
+        return _operation ? _operation->running() : false;
+    }
+
+    void setTelemetryTargets(uint8_t targets)
+    {
+        _targets = targets;
+    }
+
+    int startReadingStorage(storage_area_t area, uint64_t address, uint16_t length, uint8_t seq_no)
+    {
+        int error;
+        std::unique_ptr<RawStorageReadOperation> op = std::make_unique<RawStorageReadOperation>();
+
+        if (!op) {
+            return ENOMEM;
+        }
+
+        error = op->start(area, address, length, seq_no);
+        if (error) {
+            return error;
+        }
+
+        _setOperation(op.release());
+
+        return 0;
+    }
+
+    void _setOperation(StorageAccessOperation* op)
+    {
+        if (_operation) {
+            _operation->cancel();
+        }
+
+        if (op) {
+            op->setTelemetryTargets(_targets);
+        }
+
+        _operation.reset(op);
+    }
+
+private:
+    /** The current storage operation */
+    std::unique_ptr<StorageAccessOperation> _operation;
+
+    /** The telemetry targets of the current or next operation */
     uint8_t _targets;
 };
 
-static StorageReaderState storageReader;
+static StorageOperationManager storageAccess;
 
 namespace teller::storage {
 
@@ -889,20 +983,100 @@ int startReadingStorage(
     teller::telem::storage_area_t area, uint64_t address, uint16_t length,
     uint8_t targets, uint8_t seq_no)
 {
-    if (!storageReader.running()) {
-        storageReader.setTargets(targets);
-        storageReader.startReading(area, address, length, seq_no);
-        return 0;
+    int error;
+
+    if (!storageAccess.running()) {
+        storageAccess.setTelemetryTargets(targets);
+        error = storageAccess.startReadingStorage(area, address, length, seq_no);
+        if (error) {
+            return error;
+        }
     } else {
         return EBUSY;
     }
+
+    return 0;
 }
 
 void runStorageReader()
 {
     while (true) {
-        while (storageReader.iterate()) { };
+        if (storageAccess.iterate()) {
+            /* Error during the operation, cancel it */
+            storageAccess.cancel();
+        };
     }
 }
 
+}
+
+/* ************************************************************************* */
+
+/**
+ * @brief State object of a raw image read operation from a storage area.
+ */
+int RawStorageReadOperation::start(storage_area_t area, uint64_t address, uint16_t length, uint8_t seq_no)
+{
+    if (running()) {
+        return EBUSY;
+    }
+
+    if (length == 0) {
+        return EINVAL;
+    }
+
+    _area = area;
+    _address = address;
+    _bytesLeft = length;
+
+    memset(&_binaryData, 0, sizeof(_binaryData));
+
+    _binaryData.frame_type = frames::STORAGE;
+    _binaryData.seq_no = seq_no;
+    _binaryData.fragment_index = 0;
+    _binaryData.max_fragment_index = (length / MAX_BINARY_DATA_FRAGMENT_LENGTH);
+    if (length % MAX_BINARY_DATA_FRAGMENT_LENGTH == 0) {
+        _binaryData.max_fragment_index--;
+    }
+
+    return 0;
+}
+
+bool RawStorageReadOperation::running() const
+{
+    return _bytesLeft > 0;
+}
+
+int RawStorageReadOperation::iterate()
+{
+    const uint8_t limit = MAX_BINARY_DATA_FRAGMENT_LENGTH;
+
+    auto _filesystem = fs.getState(_area, /* ensureMounted = */ false);
+    if (!_filesystem) {
+        return EIO;
+    }
+
+    while (running()) {
+        _binaryData.data_length = _bytesLeft > limit ? limit : _bytesLeft;
+        if (!_filesystem->readRawData(_binaryData.data, _address, _binaryData.data_length)) {
+            break;
+        }
+
+        uint8_t length = frames::encodeBinaryDataFrame(&_binaryData, _buf);
+        if (!sendTelemetry(frames::BINARY_DATA, _buf, length)) {
+            /* Not an error, we'll try later */
+            return 0;
+        }
+
+        _address += _binaryData.data_length;
+        _bytesLeft -= _binaryData.data_length;
+        _binaryData.fragment_index++;
+    }
+
+    return 0;
+}
+
+void RawStorageReadOperation::cancel()
+{
+    _bytesLeft = 0;
 }
