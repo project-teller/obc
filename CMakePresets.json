@@ -16,7 +16,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": {
           "type": "string",
-          "value": "Debug"
+          "value": "Release"
         },
         "TELLER_BOARD": {
           "type": "string",
@@ -38,7 +38,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": {
           "type": "string",
-          "value": "Debug"
+          "value": "Release"
         },
         "TELLER_BOARD": {
           "type": "string",
@@ -59,7 +59,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": {
           "type": "string",
-          "value": "Debug"
+          "value": "Release"
         },
         "TELLER_BOARD": {
           "type": "string",
