@@ -7,6 +7,7 @@
 #include "core/telem/debug.h"
 #include "core/telem/directory_listing.h"
 #include "core/telem/echo.h"
+#include "core/telem/file_download.h"
 #include "core/telem/lcl_reset.h"
 #include "core/telem/parser.h"
 #include "core/telem/storage.h"
@@ -102,6 +103,7 @@ static optional<Response> processClockSyncPacket(const InboundMessage& message);
 static optional<Response> processDebugPacket(const InboundMessage& message);
 static bool processEchoPacket(const InboundMessage& message);
 static optional<Response> processDirectoryListingPacket(const InboundMessage& message);
+static optional<Response> processFileDownloadPacket(const InboundMessage& message);
 static optional<Response> processLCLResetRequestPacket(const InboundMessage& message);
 static optional<Response> processStoragePacket(const InboundMessage& message);
 static bool sendResponse(uart_t channel, const envelope_t& envelope, Response response);
@@ -267,6 +269,13 @@ optional<Response> processPacket(const InboundMessage& message)
         IGNORE_UNLESS_FROM_GCS("directory listing")
         {
             return processDirectoryListingPacket(message);
+        }
+        break;
+
+    case frames::FILE_DOWNLOAD:
+        IGNORE_UNLESS_FROM_GCS("file download")
+        {
+            return processFileDownloadPacket(message);
         }
         break;
 
@@ -537,6 +546,31 @@ optional<Response> processDirectoryListingPacket(const InboundMessage& message)
     retval = teller::storage::startDirectoryListing(
         data.area, data.name, data.start, data.count,
         (1 << message.index), message.envelope.seq_no);
+
+    if (retval) {
+        return Response::failed(retval);
+    } else {
+        return Response::ok();
+    }
+}
+
+optional<Response> processFileDownloadPacket(const InboundMessage& message)
+{
+    frames::file_download_request_data_t data;
+    int retval;
+
+    if (!frames::validateEncodedFileDownloadRequestFrame(message.payload, message.length)) {
+        return Response::invalid();
+    }
+
+    frames::decodeFileDownloadRequestFrame(message.payload, message.length, &data);
+
+    retval = EINVAL;
+    /*
+    retval = teller::storage::startDirectoryListing(
+        data.area, data.path, data.start, data.count,
+        (1 << message.index), message.envelope.seq_no);
+    */
 
     if (retval) {
         return Response::failed(retval);

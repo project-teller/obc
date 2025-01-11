@@ -14,6 +14,7 @@ add_library(
     telem/directory_entry.cpp
     telem/directory_listing.cpp
     telem/echo.cpp
+    telem/file_download.cpp
     telem/generic.cpp
     telem/gmm.cpp
     telem/heartbeat.cpp
@@ -30,6 +31,7 @@ add_library(
     utils/histogram.c
     utils/majority_voter.cpp
     utils/random.c
+    utils/smart_dir_handle.cpp
     utils/smart_file_handle.cpp
     utils/time.c
     utils/varuint.c

@@ -3,11 +3,10 @@
 using namespace littlefs;
 using namespace teller::utils;
 
-#define IS_ERROR_VARIANT(result_) (std::holds_alternative<Error>(result_))
-
 SmartFileHandle::SmartFileHandle(Filesystem* fs, int fd)
     : _fs(fs)
     , _fd(fd)
+    , _inited(false)
     , _closed(false)
 {
     assert(fs != nullptr);
@@ -16,6 +15,7 @@ SmartFileHandle::SmartFileHandle(Filesystem* fs, int fd)
 SmartFileHandle::SmartFileHandle(Filesystem* fs, FileHandle fd)
     : _fs(fs)
     , _fd(fd)
+    , _inited(false)
     , _closed(false)
 {
     assert(fs != nullptr);

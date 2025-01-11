@@ -15,7 +15,7 @@ namespace teller::telem::frames {
  * to read the list of files in a directory on a storage area.
  */
 typedef struct {
-    /** Index of the storage area to erase */
+    /** Index of the storage area */
     storage_area_t area;
 
     /** The start index of the entries to return */

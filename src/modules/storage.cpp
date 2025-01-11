@@ -4,6 +4,7 @@
 
 #include "core/telem/binary_data.h"
 #include "core/telem/directory_entry.h"
+#include "core/utils/smart_dir_handle.h"
 #include "drivers/flashmem.h"
 #include "drivers/sdcard.h"
 #include "hal/event_flags.hpp"
@@ -174,6 +175,14 @@ public:
                 return OP_UNKNOWN;
             }
         }
+    }
+
+    /**
+     * @brief Returns a handle to the filesystem if it is mounted, null otherwise.
+     */
+    littlefs::Filesystem* getFilesystemIfMounted()
+    {
+        return isMounted() ? _fs : nullptr;
     }
 
     /**
@@ -576,6 +585,7 @@ private:
     uint16_t _count;
     frames::directory_entry_data_t _entryData;
     uint8_t _buf[MAX_PAYLOAD_LENGTH];
+    std::unique_ptr<teller::utils::SmartDirHandle> _dir;
 };
 
 /**
@@ -1158,6 +1168,36 @@ int DirectoryListingOperation::start(storage_area_t area, const char* name, uint
         return EINVAL;
     }
 
+    auto fsState = fs.getState(area, /* ensureMounted = */ false);
+    if (!fsState) {
+        return EIO;
+    }
+
+    auto fs = fsState->getFilesystemIfMounted();
+    if (!fs) {
+        return EIO;
+    }
+
+    auto dir = fs->dir_open(name);
+    if (std::holds_alternative<littlefs::Error>(dir)) {
+        return teller::storage::convertLittleFSErrorCode(std::get<littlefs::Error>(dir));
+    }
+
+    _dir = std::make_unique<teller::utils::SmartDirHandle>(fs, std::get<littlefs::DirHandle>(dir));
+    if (!_dir) {
+        return ENOMEM;
+    }
+
+    auto maybe_error = _dir->seek(start);
+    if (maybe_error.has_value()) {
+        if (_dir->hasMoreEntries()) {
+            return teller::storage::convertLittleFSErrorCode(*maybe_error);
+        } else {
+            /* Start index was too large but we can still start the listing;
+             * this will be handled gracefully in iterate() */
+        }
+    }
+
     _area = area;
     _start = start;
     _count = count;
@@ -1174,28 +1214,46 @@ int DirectoryListingOperation::start(storage_area_t area, const char* name, uint
 
 bool DirectoryListingOperation::running() const
 {
-    return _count > 0;
+    return _count > 0 && _dir && _dir->hasMoreEntries();
 }
 
 int DirectoryListingOperation::iterate()
 {
-    auto _filesystem = fs.getState(_area, /* ensureMounted = */ false);
-    if (!_filesystem) {
-        return EIO;
-    }
-
     while (running()) {
-        snprintf(_entryData.name, MAX_DIRECTORY_ENTRY_NAME_LENGTH, "file %03d", _entryData.entry_index);
+        std::string name;
+        littlefs::Type type;
+        size_t size;
 
-        /* TODO(ntamas) */
+        auto maybe_error = _dir->read(name, type, size);
+        if (maybe_error) {
+            /* ENOENT is returned when we reach the end but we do not want to
+             * treat this as an error */
+            if (_dir->hasMoreEntries()) {
+                return teller::storage::convertLittleFSErrorCode(*maybe_error);
+            } else {
+                /* This is the last entry, send a telemetry message with an
+                 * empty filename */
+                _entryData.name[0] = 0;
+                _entryData.max_entry_index = _entryData.entry_index;
+            }
+        } else {
+            snprintf(
+                _entryData.name, MAX_DIRECTORY_ENTRY_NAME_LENGTH,
+                "%s%s", name.c_str(), type == littlefs::Type::DIR ? "/" : "");
+        }
+
         uint8_t length = frames::encodeDirectoryEntryFrame(&_entryData, _buf);
         if (!sendTelemetry(frames::DIRECTORY_ENTRY, _buf, length)) {
             /* Not an error, buffer is full, we'll try later */
             return 0;
         }
 
-        _entryData.entry_index++;
-        _count--;
+        if (_dir->hasMoreEntries()) {
+            _entryData.entry_index++;
+            _count--;
+        } else {
+            cancel();
+        }
     }
 
     return 0;
@@ -1203,5 +1261,6 @@ int DirectoryListingOperation::iterate()
 
 void DirectoryListingOperation::cancel()
 {
+    _dir.reset();
     _count = 0;
 }
