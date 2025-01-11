@@ -56,7 +56,12 @@ void decodeDirectoryListingRequestFrame(
 
 bool validateEncodedDirectoryListingRequestFrame(const uint8_t* encoded, size_t length)
 {
-    return length >= sizeof(directory_listing_request_frame_t);
+    if (length < sizeof(directory_listing_request_frame_t)) {
+        return false;
+    }
+
+    auto frame = reinterpret_cast<const directory_listing_request_frame_t*>(encoded);
+    return frame->count <= 256; /* because the response has a one-byte entry index */
 }
 
 }

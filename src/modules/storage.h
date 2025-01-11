@@ -127,6 +127,22 @@ littlefs::Filesystem* waitUntilUnmounted(teller::telem::storage_area_t area);
 int convertLittleFSErrorCode(std::optional<littlefs::Error> code);
 
 /**
+ * @brief Initiates a background task that starts reading the list of files in
+ *        a directory on the filesystem of a storage area.
+ *
+ * @param  area     the storage area to read
+ * @param  name     the name of the directory to list
+ * @param  start    the index of the first entry to return from the directory
+ * @param  length   the maximum number of entries to return
+ * @param  targets  mask of the telemetry channels to send the data to
+ * @param  seq_no   sequence number of the message that initiated the request
+ * @return POSIX error code; zero if the operation was successful
+ */
+int startDirectoryListing(
+    teller::telem::storage_area_t area, const char* name, uint16_t start, uint16_t count,
+    uint8_t targets, uint8_t seq_no = 0);
+
+/**
  * @brief Initiates a background task that starts streaming the raw contents of
  *        the storage area from a given address.
  *

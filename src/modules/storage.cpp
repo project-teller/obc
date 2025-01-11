@@ -3,6 +3,7 @@
 #include <memory>
 
 #include "core/telem/binary_data.h"
+#include "core/telem/directory_entry.h"
 #include "drivers/flashmem.h"
 #include "drivers/sdcard.h"
 #include "hal/event_flags.hpp"
@@ -526,7 +527,7 @@ public:
      */
     bool sendTelemetry(frames::frame_type_t type, const uint8_t* payload, uint8_t length)
     {
-        return teller::telem::sendTo(_targets, frames::BINARY_DATA, payload, length);
+        return teller::telem::sendTo(_targets, type, payload, length);
     }
 
     /**
@@ -560,6 +561,24 @@ private:
 };
 
 /**
+ * @brief State object of an operation that reads the list of files from a directory.
+ */
+class DirectoryListingOperation : public StorageAccessOperation {
+public:
+    int start(storage_area_t area, const char* name, uint16_t start, uint16_t count, uint8_t seq_no);
+    virtual bool running() const override;
+    virtual int iterate() override;
+    virtual void cancel() override;
+
+private:
+    storage_area_t _area;
+    uint16_t _start;
+    uint16_t _count;
+    frames::directory_entry_data_t _entryData;
+    uint8_t _buf[MAX_PAYLOAD_LENGTH];
+};
+
+/**
  * @brief Object containing the state of storage access operations.
  *
  * There is only one instance of this class, and at any point in time it takes
@@ -583,6 +602,7 @@ class StorageOperationManager {
 public:
     StorageOperationManager()
         : _operation(nullptr)
+        , _seq_no(0)
         , _targets(0)
     {
     }
@@ -626,12 +646,36 @@ public:
         return _operation ? _operation->running() : false;
     }
 
+    void setSequenceNumber(uint8_t seq_no)
+    {
+        _seq_no = seq_no;
+    }
+
     void setTelemetryTargets(uint8_t targets)
     {
         _targets = targets;
     }
 
-    int startReadingStorage(storage_area_t area, uint64_t address, uint16_t length, uint8_t seq_no)
+    int startDirectoryListing(storage_area_t area, const char* name, uint16_t start, uint16_t count)
+    {
+        int error;
+        std::unique_ptr<DirectoryListingOperation> op = std::make_unique<DirectoryListingOperation>();
+
+        if (!op) {
+            return ENOMEM;
+        }
+
+        error = op->start(area, name, start, count, _seq_no);
+        if (error) {
+            return error;
+        }
+
+        _setOperation(op.release());
+
+        return 0;
+    }
+
+    int startReadingStorage(storage_area_t area, uint64_t address, uint16_t length)
     {
         int error;
         std::unique_ptr<RawStorageReadOperation> op = std::make_unique<RawStorageReadOperation>();
@@ -640,7 +684,7 @@ public:
             return ENOMEM;
         }
 
-        error = op->start(area, address, length, seq_no);
+        error = op->start(area, address, length, _seq_no);
         if (error) {
             return error;
         }
@@ -666,6 +710,9 @@ public:
 private:
     /** The current storage operation */
     std::unique_ptr<StorageAccessOperation> _operation;
+
+    /** The sequence number of the message that initiated the current request */
+    uint8_t _seq_no;
 
     /** The telemetry targets of the current or next operation */
     uint8_t _targets;
@@ -979,6 +1026,26 @@ void reportStatus(void)
     }
 }
 
+int startDirectoryListing(
+    teller::telem::storage_area_t area, const char* name, uint16_t start, uint16_t count,
+    uint8_t targets, uint8_t seq_no)
+{
+    int error;
+
+    if (!storageAccess.running()) {
+        storageAccess.setTelemetryTargets(targets);
+        storageAccess.setSequenceNumber(seq_no);
+        error = storageAccess.startDirectoryListing(area, name, start, count);
+        if (error) {
+            return error;
+        }
+    } else {
+        return EBUSY;
+    }
+
+    return 0;
+}
+
 int startReadingStorage(
     teller::telem::storage_area_t area, uint64_t address, uint16_t length,
     uint8_t targets, uint8_t seq_no)
@@ -987,7 +1054,8 @@ int startReadingStorage(
 
     if (!storageAccess.running()) {
         storageAccess.setTelemetryTargets(targets);
-        error = storageAccess.startReadingStorage(area, address, length, seq_no);
+        storageAccess.setSequenceNumber(seq_no);
+        error = storageAccess.startReadingStorage(area, address, length);
         if (error) {
             return error;
         }
@@ -1012,9 +1080,6 @@ void runStorageReader()
 
 /* ************************************************************************* */
 
-/**
- * @brief State object of a raw image read operation from a storage area.
- */
 int RawStorageReadOperation::start(storage_area_t area, uint64_t address, uint16_t length, uint8_t seq_no)
 {
     if (running()) {
@@ -1064,7 +1129,7 @@ int RawStorageReadOperation::iterate()
 
         uint8_t length = frames::encodeBinaryDataFrame(&_binaryData, _buf);
         if (!sendTelemetry(frames::BINARY_DATA, _buf, length)) {
-            /* Not an error, we'll try later */
+            /* Not an error, buffer is full, we'll try later */
             return 0;
         }
 
@@ -1079,4 +1144,64 @@ int RawStorageReadOperation::iterate()
 void RawStorageReadOperation::cancel()
 {
     _bytesLeft = 0;
+}
+
+/* ************************************************************************* */
+
+int DirectoryListingOperation::start(storage_area_t area, const char* name, uint16_t start, uint16_t count, uint8_t seq_no)
+{
+    if (running()) {
+        return EBUSY;
+    }
+
+    if (count == 0) {
+        return EINVAL;
+    }
+
+    _area = area;
+    _start = start;
+    _count = count;
+
+    memset(&_entryData, 0, sizeof(_entryData));
+
+    _entryData.frame_type = frames::DIRECTORY_LISTING;
+    _entryData.seq_no = seq_no;
+    _entryData.entry_index = 0;
+    _entryData.max_entry_index = _count - 1; /* TODO */
+
+    return 0;
+}
+
+bool DirectoryListingOperation::running() const
+{
+    return _count > 0;
+}
+
+int DirectoryListingOperation::iterate()
+{
+    auto _filesystem = fs.getState(_area, /* ensureMounted = */ false);
+    if (!_filesystem) {
+        return EIO;
+    }
+
+    while (running()) {
+        snprintf(_entryData.name, MAX_DIRECTORY_ENTRY_NAME_LENGTH, "file %03d", _entryData.entry_index);
+
+        /* TODO(ntamas) */
+        uint8_t length = frames::encodeDirectoryEntryFrame(&_entryData, _buf);
+        if (!sendTelemetry(frames::DIRECTORY_ENTRY, _buf, length)) {
+            /* Not an error, buffer is full, we'll try later */
+            return 0;
+        }
+
+        _entryData.entry_index++;
+        _count--;
+    }
+
+    return 0;
+}
+
+void DirectoryListingOperation::cancel()
+{
+    _count = 0;
 }

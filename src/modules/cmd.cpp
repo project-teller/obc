@@ -526,6 +526,7 @@ optional<Response> processStoragePacket(const InboundMessage& message)
 optional<Response> processDirectoryListingPacket(const InboundMessage& message)
 {
     frames::directory_listing_request_data_t data;
+    int retval;
 
     if (!frames::validateEncodedDirectoryListingRequestFrame(message.payload, message.length)) {
         return Response::invalid();
@@ -533,5 +534,13 @@ optional<Response> processDirectoryListingPacket(const InboundMessage& message)
 
     frames::decodeDirectoryListingRequestFrame(message.payload, message.length, &data);
 
-    return Response::unsupported();
+    retval = teller::storage::startDirectoryListing(
+        data.area, data.name, data.start, data.count,
+        (1 << message.index), message.envelope.seq_no);
+
+    if (retval) {
+        return Response::failed(retval);
+    } else {
+        return Response::ok();
+    }
 }

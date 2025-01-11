@@ -2,6 +2,12 @@
 
 #include "core/telem/generic.h"
 
+namespace teller::telem {
+
+const int MAX_DIRECTORY_LISTING_NAME_LENGTH = MAX_PAYLOAD_LENGTH - 5;
+
+};
+
 namespace teller::telem::frames {
 
 /**
@@ -25,7 +31,7 @@ typedef struct {
      * entries. The buffer has a length of \c MAX_PAYLOAD_LENGTH - 4 to allow
      * for the trailing zero in the string, but the trailing zero is not transmitted.
      */
-    char name[MAX_PAYLOAD_LENGTH - 4];
+    char name[MAX_DIRECTORY_LISTING_NAME_LENGTH + 1];
 } directory_listing_request_data_t;
 
 /**
