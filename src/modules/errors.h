@@ -17,6 +17,9 @@ typedef enum {
 
     /* Insignificant errors have codes >= 32 */
     TEMPERATURE_SENSOR_FAILED = 32,
+
+    /* Largest error code that is possible */
+    SIMULATED_ERROR = 63,
 } error_t;
 
 void init(void);
@@ -69,6 +72,11 @@ bool hasAnyErrors(void);
  *         zero if no error conditions are present
  */
 error_t getError(void);
+
+/**
+ * @brief Writes a log entry cntaining the current error code.
+ */
+void logCurrentError();
 
 #define TELLER_CHECK_OOM(ptr)                                            \
     {                                                                    \

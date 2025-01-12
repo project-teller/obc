@@ -115,6 +115,18 @@ void sendRequest(const LogRequest& request, storage_area_t area)
     recorders[area].record(request);
 }
 
+void sendRequestNonblocking(const LogRequest& request)
+{
+    recorders[STORAGE_AREA_FLASH_MEMORY].recordNonblocking(request);
+    recorders[STORAGE_AREA_SD_CARD].recordNonblocking(request);
+}
+
+void sendRequestNonblocking(const LogRequest& request, storage_area_t area)
+{
+    assert(area > STORAGE_AREA_UNKNOWN && area < NUM_STORAGE_AREAS);
+    recorders[area].recordNonblocking(request);
+}
+
 void unregisterCallback(event_t event, event_callback_t* callback)
 {
     if (event == EVENT_LOG_OPENED) {

@@ -85,6 +85,16 @@ void sendRequest(const LogRequest& request);
 void sendRequest(const LogRequest& request, teller::telem::storage_area_t area);
 
 /**
+ * @brief Sends a new request to all attached experiment data recorder instances in a non-blocking manner.
+ */
+void sendRequestNonblocking(const LogRequest& request);
+
+/**
+ * @brief Sends a new request to a single attached experiment data recorder in a non-blocking manner.
+ */
+void sendRequestNonblocking(const LogRequest& request, teller::telem::storage_area_t area);
+
+/**
  * @brief Unregisters an existing callback from an event.
  */
 void unregisterCallback(event_t event, event_callback_t* callback);
@@ -148,6 +158,24 @@ public:
     {
         if (running()) {
             if (!_queue.send_with_timeout(request, _timeout)) {
+                _dropped++;
+            }
+        }
+    }
+
+    /**
+     * @brief Enqueues a new request to be logged in the experiment log, without blocking.
+     *
+     * Returns when the request is enqueued, \em not when the request is actually
+     * written to the log. No-op if the data recorder is in a detached state.
+     * Drops the request immediately if there is no space in the request queue.
+     *
+     * @param request  The request to enqueue.
+     */
+    void recordNonblocking(const LogRequest& request)
+    {
+        if (running()) {
+            if (!_queue.send_or_drop(request)) {
                 _dropped++;
             }
         }
@@ -233,6 +261,16 @@ public:
         request->format = &_format;
         if (sdlog_message_format_encode(&_format, request->message, &request->length, args...) == SDLOG_SUCCESS) {
             teller::edr::sendRequest(*request);
+        }
+    }
+
+    void writeNonblocking(Args... args) const
+    {
+        std::unique_ptr<LogRequest> request = std::make_unique<LogRequest>();
+
+        request->format = &_format;
+        if (sdlog_message_format_encode(&_format, request->message, &request->length, args...) == SDLOG_SUCCESS) {
+            teller::edr::sendRequestNonblocking(*request);
         }
     }
 

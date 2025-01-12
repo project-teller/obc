@@ -1,14 +1,20 @@
 #include <cmath>
 
+#include "core/log_records.h"
+
 #include "hal/led.h"
 #include "hal/mutex.hpp"
+#include "hal/system.h"
+
 #include "modules/debug.h"
+#include "modules/edr.hpp"
 #include "modules/errors.h"
 
 #define ERROR_BIT(x) (1ULL << (x - 1))
 
 using namespace teller::debug;
 using namespace teller::hal;
+using namespace teller::log;
 
 /** Bitmask specifying which error codes are currently active */
 static uint64_t errorCodes = 0;
@@ -22,8 +28,12 @@ static teller::errors::error_t singleError = teller::errors::NO_ERROR;
  */
 static mutex errorCodeMutex;
 
+static void logError(teller::errors::error_t code, bool present = true);
 static void updateErrorLED();
 static void updateSingleError();
+
+static teller::edr::FormattedLogRecord<uint32_t, uint8_t, uint8_t>
+    logRecord(LOG_RECORD_ERR, "ERR", "TimeMS,Code,Present", "IBB", "s--", "C--");
 
 void teller::errors::init()
 {
@@ -65,6 +75,7 @@ void teller::errors::setError(teller::errors::error_t code, bool present)
 
     if (notify) {
         updateErrorLED();
+        logError(code, present);
     }
 }
 
@@ -97,6 +108,22 @@ bool teller::errors::hasAnyErrors()
 teller::errors::error_t teller::errors::getError()
 {
     return singleError;
+}
+
+void logCurrentError()
+{
+    logError(teller::errors::getError());
+}
+
+static void logError(teller::errors::error_t code, bool present)
+{
+    // This is a fragile place -- the error we are trying to log might actually
+    // indicate that some queue is full or blocked so we log only in a
+    // nonblocking manner
+    logRecord.writeNonblocking(
+        system::getTimeSinceBootMsec(),
+        static_cast<uint8_t>(code),
+        present ? 1 : 0);
 }
 
 static void updateErrorLED()

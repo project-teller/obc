@@ -17,6 +17,7 @@
 #include "modules/cam.h"
 #include "modules/cmd.h"
 #include "modules/edr.hpp"
+#include "modules/errors.h"
 #include "modules/imu.h"
 #include "modules/lcl.h"
 #include "modules/log.h"
@@ -429,6 +430,12 @@ optional<Response> processDebugPacket(const InboundMessage& message)
 
     case frames::DEBUG_CMD_REPORT_STORAGE_STATUS:
         teller::storage::reportStatus();
+        break;
+
+    case frames::DEBUG_CMD_TOGGLE_SIMULATED_ERROR:
+        teller::errors::setError(
+            teller::errors::SIMULATED_ERROR,
+            !teller::errors::hasError(teller::errors::SIMULATED_ERROR));
         break;
 
     default:
