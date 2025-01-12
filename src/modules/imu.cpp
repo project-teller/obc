@@ -33,7 +33,6 @@ static teller::edr::FormattedLogRecord<uint32_t, uint8_t, float, float, float, f
 
 /**
  * @brief Class representing the status of the gyro calibration.
- *
  */
 class GyroCalibration {
 

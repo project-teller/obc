@@ -7,6 +7,7 @@
 #include "hal/mutex.hpp"
 #include "hal/queue.hpp"
 #include "hal/uart.h"
+#include "modules/adc.h"
 #include "modules/edr.hpp"
 #include "modules/errors.h"
 #include "modules/messages.h"
@@ -93,6 +94,20 @@ static FormattedLogRecord<uint32_t, uint8_t, uint8_t> brdLogRecord(
 /** Log message format for the status of the onboard RTC */
 static FormattedLogRecord<uint32_t, uint32_t, uint32_t, uint64_t> clkLogRecord(
     LOG_RECORD_CLK, "CLK", "TimeMS,MissionMS,LiftoffMS,RTCTimeMS", "IIIQ", "ssss", "CCCC");
+
+/** Log message format for the measured voltages on the LCLs */
+static teller::edr::FormattedLogRecord<uint32_t, int16_t, int16_t, int16_t, int16_t, int16_t, int16_t, int16_t>
+    voltageLogRecord(
+        LOG_RECORD_LCLV, "LCLV",
+        "TimeMS,V_60V_1,V_60V_2,V_60V_3,V_28V,V_12V,V_5V,V_3V3,I_SUC1,I_SUC2,I_SUC3,I_CAM,I_SCM,I_GMM",
+        "Ihhhhhhh", "svvvvvvv", "CBBBBBBB");
+
+/** Log message format for the measured currents on the LCLs */
+static teller::edr::FormattedLogRecord<uint32_t, int16_t, int16_t, int16_t, int16_t, int16_t, int16_t>
+    currentLogRecord(
+        LOG_RECORD_LCLI, "LCLI",
+        "TimeMS,I_SUC1,I_SUC2,I_SUC3,I_CAM,I_SCM,I_GMM",
+        "Ihhhhhh", "sAAAAAA", "CDDDDDD");
 
 namespace teller::telem {
 
@@ -301,7 +316,28 @@ static void sendADCMeasurements(uint8_t* payload)
     updateADCMeasurements(&adc_measurement);
     send(frames::ADC, payload, encodeADCFrame(&adc_measurement, payload));
 
-    /* TODO(ntamas): log ADC status regularly in the onboard log! */
+#define TO_CENTIVOLT(NAME) static_cast<int16_t>(adc_measurement.measurements.byName.NAME * 100)
+    voltageLogRecord.write(
+        adc_measurement.timestampInMsec,
+        TO_CENTIVOLT(voltage60V1),
+        TO_CENTIVOLT(voltage60V2),
+        TO_CENTIVOLT(voltage60V3),
+        TO_CENTIVOLT(voltage28V),
+        TO_CENTIVOLT(voltage12V),
+        TO_CENTIVOLT(voltage5V),
+        TO_CENTIVOLT(voltage3V3));
+#undef TO_CENTIVOLT
+
+#define TO_100_MICROAMPS(NAME) static_cast<int16_t>(adc_measurement.measurements.byName.NAME * 10000)
+    currentLogRecord.write(
+        adc_measurement.timestampInMsec,
+        TO_100_MICROAMPS(currentSUCLCL1),
+        TO_100_MICROAMPS(currentSUCLCL2),
+        TO_100_MICROAMPS(currentSUCLCL3),
+        TO_100_MICROAMPS(currentCAM),
+        TO_100_MICROAMPS(currentSCM),
+        TO_100_MICROAMPS(currentGMM));
+#undef TO_100_MICROAMPS
 }
 
 static void sendIMUMeasurement(uint8_t* payload)

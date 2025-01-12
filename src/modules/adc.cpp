@@ -1,12 +1,14 @@
 #include <cstring>
 
-#include "modules/adc.h"
-#include "modules/log.h"
-
 #include "core/telem/generic.h"
+
 #include "drivers/adc.h"
+
 #include "hal/board.h"
 #include "hal/system.h"
+
+#include "modules/adc.h"
+#include "modules/log.h"
 
 using namespace teller::adc;
 using namespace teller::log;
