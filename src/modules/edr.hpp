@@ -101,6 +101,9 @@ struct LogRequest {
 /** Number of log requests that can be enqueued without dropping messages */
 const int QUEUE_SIZE = 16;
 
+/** Number of milliseconds to wait for log requests to be written to the log */
+const int LOG_TIMEOUT_MS = 100;
+
 /**
  * @brief Class that is responsible for recording experiment data into log files
  * on a filesystem.
@@ -115,23 +118,38 @@ class ExperimentDataRecorder {
 public:
     explicit ExperimentDataRecorder()
         : _queue(QUEUE_SIZE)
+        , _timeout(LOG_TIMEOUT_MS)
+        , _dropped(0)
     {
     }
     ~ExperimentDataRecorder();
+
+    /**
+     * @brief Returns the number of dropped log records and resets the counter.
+     */
+    uint32_t getAndClearDroppedCounter()
+    {
+        uint32_t dropped = _dropped;
+        _dropped = 0;
+        return dropped;
+    }
 
     /**
      * @brief Enqueues a new request to be logged in the experiment log.
      *
      * Returns when the request is enqueued, \em not when the request is actually
      * written to the log. No-op if the data recorder is in a detached state.
-     * Blocks indefinitely if the request queue is full.
+     * Blocks with a timeout if the request queue is full, and then increases a
+     * counter if the request was dropped.
      *
      * @param request  The request to enqueue.
      */
     void record(const LogRequest& request)
     {
         if (running()) {
-            _queue.send(request);
+            if (!_queue.send_with_timeout(request, _timeout)) {
+                _dropped++;
+            }
         }
     }
 
@@ -170,6 +188,8 @@ private:
     std::unique_ptr<littlefs::FileConfig> _file_config;
     bool _running;
     teller::hal::BlockingQueue<LogRequest> _queue;
+    uint32_t _timeout;
+    uint32_t _dropped;
 
     [[nodiscard]] std::variant<littlefs::Error, size_t> _getLastLogIndex();
     [[nodiscard]] std::optional<littlefs::Error> _run(teller::telem::storage_area_t area);
