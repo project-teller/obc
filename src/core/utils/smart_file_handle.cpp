@@ -6,7 +6,7 @@ using namespace teller::utils;
 SmartFileHandle::SmartFileHandle(Filesystem* fs, int fd)
     : _fs(fs)
     , _fd(fd)
-    , _inited(false)
+    , _inited(true)
     , _closed(false)
 {
     assert(fs != nullptr);
@@ -15,7 +15,7 @@ SmartFileHandle::SmartFileHandle(Filesystem* fs, int fd)
 SmartFileHandle::SmartFileHandle(Filesystem* fs, FileHandle fd)
     : _fs(fs)
     , _fd(fd)
-    , _inited(false)
+    , _inited(true)
     , _closed(false)
 {
     assert(fs != nullptr);

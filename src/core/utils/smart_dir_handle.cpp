@@ -6,7 +6,7 @@ using namespace teller::utils;
 SmartDirHandle::SmartDirHandle(Filesystem* fs, DirHandle dd)
     : _fs(fs)
     , _dd(dd)
-    , _inited(false)
+    , _inited(true)
     , _closed(false)
     , _ended(false)
     , _index(0)
