@@ -3,8 +3,10 @@
 #include <cstdarg>
 #include <cstdio>
 
+#include "core/log_records.h"
 #include "core/telem/generic.h"
 #include "hal/mutex.hpp"
+#include "modules/edr.hpp"
 
 namespace teller::log {
 
@@ -45,7 +47,7 @@ Logger* getLogger(teller::telem::module_id_t module);
  * Shortcut for cases when you do not want to construct a logger object. You
  * should use the \ref Logger class instead where possible.
  */
-bool sendToTelemetry(
+bool sendToTelemetryAndOnboardLog(
     teller::telem::module_id_t module, teller::telem::log_level_t level,
     const char* message, uint32_t timeout = teller::telem::DEFAULT_TELEMETRY_TIMEOUT);
 
@@ -64,7 +66,7 @@ public:
         teller::telem::log_level_t level, const char* message,
         std::uint32_t timeout) const
     {
-        return teller::log::sendToTelemetry(_module, level, message, timeout);
+        return teller::log::sendToTelemetryAndOnboardLog(_module, level, message, timeout);
     }
 
     bool vsend(

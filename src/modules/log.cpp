@@ -1,6 +1,7 @@
 #include <cstring>
 
 #include "core/telem/text_message.h"
+#include "hal/system.h"
 #include "modules/imu.h"
 #include "modules/log.h"
 #include "modules/mag.h"
@@ -38,6 +39,9 @@ task_t tasks[] = {
 static uint8_t payload[MAX_PAYLOAD_LENGTH];
 static Logger loggers[NUM_MODULES];
 
+static teller::edr::FormattedLogRecord<uint32_t, uint8_t, uint8_t, const char*>
+    logRecord(LOG_RECORD_LOG, "LOG", "TimeMS,Module,Level,Message", "IBBZ", "s---", "C---");
+
 bool init()
 {
     size_t n = sizeof(loggers) / sizeof(loggers[0]);
@@ -68,7 +72,7 @@ Logger* getLogger(teller::telem::module_id_t module)
     return &loggers[module];
 }
 
-bool sendToTelemetry(
+bool sendToTelemetryAndOnboardLog(
     teller::telem::module_id_t module, teller::telem::log_level_t level,
     const char* message, uint32_t timeout)
 {
@@ -83,6 +87,9 @@ bool sendToTelemetry(
         frames::TEXT_MESSAGE, payload,
         frames::encodeTextMessageFrame(&data, payload),
         timeout);
+
+    logRecord.writeNonblocking(
+        teller::hal::system::getTimeSinceBootMsec(), module, level, message);
 
     return true;
 }

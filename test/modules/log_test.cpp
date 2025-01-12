@@ -30,7 +30,7 @@ TEST_F(LogTest, sendRawMessage)
 {
     hal::uart::UARTOutputRedirector redirect(hal::uart::RXSM);
 
-    ASSERT_TRUE(log::sendToTelemetry(
+    ASSERT_TRUE(log::sendToTelemetryAndOnboardLog(
         telem::MODULE_ID_GMM, telem::LOG_LEVEL_WARNING, "dummy message"));
     ASSERT_TRUE(telem::processNext());
 

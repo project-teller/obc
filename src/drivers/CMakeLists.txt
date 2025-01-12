@@ -22,5 +22,6 @@ target_link_libraries(
     obc-drivers PUBLIC
     obc-core
     obc-hal
+    sdlog
     ${DRIVER_LIBRARIES}
 )
