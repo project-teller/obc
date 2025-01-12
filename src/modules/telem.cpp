@@ -90,6 +90,10 @@ task_t tasks[] = {
 static FormattedLogRecord<uint32_t, uint8_t, uint8_t> brdLogRecord(
     LOG_RECORD_BRD, "BRD", "TimeMS,Voltage,Temp", "IBb", "sOO", "CA0");
 
+/** Log message format for the status of the onboard RTC */
+static FormattedLogRecord<uint32_t, uint32_t, uint32_t, uint64_t> clkLogRecord(
+    LOG_RECORD_CLK, "CLK", "TimeMS,MissionMS,LiftoffMS,RTCTimeMS", "IIIQ", "ssss", "CCCC");
+
 namespace teller::telem {
 
 bool init()
@@ -283,7 +287,11 @@ static void sendClockStatus(uint8_t* payload)
     updateClockStatusData(&clock_status);
     send(frames::CLOCK_STATUS, payload, encodeClockStatusFrame(&clock_status, payload));
 
-    /* TODO(ntamas): log clock status regularly in the onboard log! */
+    clkLogRecord.write(
+        clock_status.timestampInMsec,
+        clock_status.missionClockIsRunning ? clock_status.missionClockInMsec : 0,
+        clock_status.liftoffHappened ? clock_status.liftoffTimestampInMsec : 0,
+        clock_status.rtcTimestampInMsec);
 }
 
 static void sendADCMeasurements(uint8_t* payload)
