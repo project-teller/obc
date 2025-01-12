@@ -3,6 +3,7 @@
 #include "core/telem/text_message.h"
 #include "modules/imu.h"
 #include "modules/log.h"
+#include "modules/mag.h"
 #include "modules/telem.h"
 
 using namespace teller::telem;
@@ -30,6 +31,7 @@ typedef struct {
  */
 task_t tasks[] = {
     { 1, teller::imu::log },
+    { 10, teller::mag::log },
     NO_MORE_TASKS
 };
 

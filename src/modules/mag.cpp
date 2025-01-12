@@ -20,11 +20,11 @@ static subsystem_status_t status = SUBSYSTEM_STATUS_CRITICAL;
 static measurement_3d_t magneticVector;
 static float temperature = 0.0f;
 
-static teller::edr::FormattedLogRecord<uint32_t, uint8_t, float, float, float>
+static teller::edr::FormattedLogRecord<uint32_t, uint8_t, float, float, float, int8_t>
     logRecord(
-        LOG_RECORD_IMU, "MAG",
+        LOG_RECORD_MAG, "MAG",
         "TimeMS,I,MagX,MagY,MagZ,Temp",
-        "IBffff", "s#GGGO", "C-CCC0");
+        "IBfffb", "s#GGGO", "C-CCCA");
 
 static Logger* logger;
 
@@ -77,10 +77,19 @@ bool update()
 
 void log()
 {
+    static uint32_t lastTimestamp = 0;
+
+    if (magneticVector.timestampInMsec == lastTimestamp) {
+        // No new measurement
+        return;
+    }
+
+    lastTimestamp = magneticVector.timestampInMsec;
     logRecord.write(
         magneticVector.timestampInMsec,
         0, /* first magnetometer */
-        magneticVector.value.x, magneticVector.value.y, magneticVector.value.z);
+        magneticVector.value.x, magneticVector.value.y, magneticVector.value.z,
+        static_cast<int8_t>(temperature * 10));
 }
 
 }

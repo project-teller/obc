@@ -170,6 +170,14 @@ bool update()
 
 void log()
 {
+    static uint32_t lastTimestamp = 0;
+
+    if (acceleration.timestampInMsec == lastTimestamp) {
+        // No new measurement
+        return;
+    }
+
+    lastTimestamp = acceleration.timestampInMsec;
     logRecord.write(
         std::max(acceleration.timestampInMsec, angularVelocity.timestampInMsec),
         0, /* first IMU */
