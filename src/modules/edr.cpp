@@ -41,6 +41,11 @@ static ExperimentDataRecorder recorders[NUM_STORAGE_AREAS];
 static const LogRequest stopRecorderRequest = { 0 };
 
 /**
+ * @brief Time between consecutive sync operations, in milliseconds.
+ */
+#define SYNC_INTERVAL_MS 5000
+
+/**
  * @brief List of callbacks to be called when a log is opened.
  */
 static std::list<event_callback_t*> callbacks;
@@ -149,11 +154,13 @@ private:
     sdlog_ostream_t _stream;
     sdlog_writer_t _writer;
     int _init_state;
+    uint32_t _last_sync_at;
 };
 
 LogWriter::LogWriter(SmartFileHandle& handle)
     : _handle(handle)
     , _init_state(0)
+    , _last_sync_at(0)
 {
     sdlog_error_t err;
 
@@ -214,7 +221,13 @@ std::optional<littlefs::Error> LogWriter::write(const LogRequest& request)
 
 std::optional<littlefs::Error> LogWriter::_flush_raw()
 {
-    return _handle.sync();
+    uint32_t now = teller::hal::system::getTimeSinceBootMsec();
+    if (_last_sync_at + SYNC_INTERVAL_MS < now) {
+        _last_sync_at = now;
+        return _handle.sync();
+    } else {
+        return {};
+    }
 }
 
 std::variant<littlefs::Error, size_t> LogWriter::_write_raw(const uint8_t* data, size_t length)
@@ -237,12 +250,9 @@ static sdlog_error_t log_writer_write(
 
 static sdlog_error_t log_writer_flush(sdlog_ostream_t* self)
 {
-    /*
     LogWriter* writer = reinterpret_cast<LogWriter*>(self->context);
     auto result = writer->_flush_raw();
-    return std::holds_alternative<littlefs::Error>(result) ? SDLOG_EIO : SDLOG_SUCCESS;
-    */
-    return SDLOG_SUCCESS;
+    return result ? SDLOG_EIO : SDLOG_SUCCESS;
 }
 
 /* ************************************************************************* */
@@ -352,7 +362,7 @@ std::optional<littlefs::Error> ExperimentDataRecorder::_run(storage_area_t area)
     auto maybeLogIndex = _getLastLogIndex();
     RETURN_IF_ERROR_VARIANT(maybeLogIndex);
 
-    logIndex = std::get<size_t>(maybeLogIndex);
+    logIndex = std::get<size_t>(maybeLogIndex) + 1;
     auto result = _updateLastLogIndex(logIndex);
     RETURN_IF_ERROR(result);
 

@@ -1167,7 +1167,7 @@ int RawStorageReadOperation::start(storage_area_t area, uint64_t address, uint16
     _binaryData.seq_no = seq_no;
     _binaryData.fragment_index = 0;
     _binaryData.max_fragment_index = (length / MAX_BINARY_DATA_FRAGMENT_LENGTH);
-    if (length % MAX_BINARY_DATA_FRAGMENT_LENGTH == 0) {
+    if (length > 0 && length % MAX_BINARY_DATA_FRAGMENT_LENGTH == 0) {
         _binaryData.max_fragment_index--;
     }
 
@@ -1388,7 +1388,7 @@ int FileDownloadOperation::start(
     _binaryData.seq_no = seq_no;
     _binaryData.fragment_index = 0;
     _binaryData.max_fragment_index = (length / MAX_BINARY_DATA_FRAGMENT_LENGTH);
-    if (length % MAX_BINARY_DATA_FRAGMENT_LENGTH == 0) {
+    if (length > 0 && length % MAX_BINARY_DATA_FRAGMENT_LENGTH == 0) {
         _binaryData.max_fragment_index--;
     }
 
