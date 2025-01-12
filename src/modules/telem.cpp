@@ -272,7 +272,7 @@ static void sendHeartbeat(uint8_t* payload)
 
     brdLogRecord.write(
         heartbeat.timestampInMsec,
-        static_cast<uint8_t>(heartbeat.voltageInVolts * 0.1),
+        static_cast<uint8_t>(heartbeat.voltageInVolts * 10),
         static_cast<int8_t>(heartbeat.temperatureInCelsius));
 }
 
