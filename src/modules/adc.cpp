@@ -5,6 +5,7 @@
 
 #include "core/telem/generic.h"
 #include "drivers/adc.h"
+#include "hal/board.h"
 #include "hal/system.h"
 
 using namespace teller::adc;
@@ -84,6 +85,9 @@ bool update()
     for (uint8_t i = 0; i < NUM_CHANNELS; i++) {
         scaledValues[i] = rawValues[i] * lsbIncrement * scaling[i];
     }
+
+    // Forward the value corresponding to the 3.3V rail to the board module
+    teller::hal::board::updateBoardVoltage(scaledValues[12]);
 
     return true;
 }
