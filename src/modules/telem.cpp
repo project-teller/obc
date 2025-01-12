@@ -86,7 +86,7 @@ task_t tasks[] = {
     NO_MORE_TASKS
 };
 
-/** Log message format for board voltage and temperature */
+/** Log message format for board voltage (3.3V) and temperature */
 static FormattedLogRecord<uint32_t, uint8_t, uint8_t> brdLogRecord(
     LOG_RECORD_BRD, "BRD", "TimeMS,Voltage,Temp", "IBb", "sOO", "CA0");
 
@@ -270,13 +270,10 @@ static void sendHeartbeat(uint8_t* payload)
     updateHeartbeatData(&heartbeat);
     send(frames::HEARTBEAT, payload, encodeHeartbeatFrame(&heartbeat, payload));
 
-    /* TODO(ntamas): uncommnt this! */
-    /*
     brdLogRecord.write(
         heartbeat.timestampInMsec,
         static_cast<uint8_t>(heartbeat.voltageInVolts * 0.1),
         static_cast<int8_t>(heartbeat.temperatureInCelsius));
-    */
 }
 
 static void sendClockStatus(uint8_t* payload)
