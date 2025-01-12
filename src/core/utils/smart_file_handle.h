@@ -30,6 +30,21 @@ public:
     std::variant<littlefs::Error, size_t> read(void* read_buf, size_t bytes_to_read);
 
     /**
+     * @brief Sets the read/write pointer of the file to the position indicated by the parameters.
+     *
+     * @param offset  the offset to move to
+     * @param whence  the reference point for the offset
+     * @return the new offset in the file, or a LittleFS error code
+     */
+    std::variant<littlefs::Error, size_t> seek(
+        int offset, littlefs::WhenceFlag whence = littlefs::WhenceFlag::SET);
+
+    /**
+     * @brief Returns the size of the file.
+     */
+    std::variant<littlefs::Error, size_t> size();
+
+    /**
      * @brief Syncs the file handle with the on-disk representation.
      */
     std::optional<littlefs::Error> sync();

@@ -127,8 +127,8 @@ littlefs::Filesystem* waitUntilUnmounted(teller::telem::storage_area_t area);
 int convertLittleFSErrorCode(std::optional<littlefs::Error> code);
 
 /**
- * @brief Initiates a background task that starts reading the list of files in
- *        a directory on the filesystem of a storage area.
+ * @brief Initiates a background task that reads the list of files in a
+ *        directory on the filesystem of a storage area.
  *
  * @param  area     the storage area to read
  * @param  name     the name of the directory to list
@@ -143,8 +143,25 @@ int startDirectoryListing(
     uint8_t targets, uint8_t seq_no = 0);
 
 /**
- * @brief Initiates a background task that starts streaming the raw contents of
- *        the storage area from a given address.
+ * @brief Initiates a background task that reads the contents of a file on the
+ *        filesystem of a storage area.
+ *
+ * @param  area     the storage area to read
+ * @param  path     the full path of the file to read
+ * @param  offset   the offset to start reading from
+ * @param  length   the number of bytes to read
+ * @param  targets  mask of the telemetry channels to send the data to
+ * @param  seq_no   sequence number of the message that initiated the request
+ * @param  file_size  when not null, the total size of the file is returned here
+ * @return POSIX error code; zero if the operation was successful
+ */
+int startFileDownload(
+    teller::telem::storage_area_t area, const char* path, uint32_t offset, uint16_t length,
+    uint8_t targets, uint8_t seq_no = 0, uint32_t* file_size = nullptr);
+
+/**
+ * @brief Initiates a background task that reads the raw contents of the storage
+ *        area from a given address.
  *
  * @param  area     the storage area to read
  * @param  address  the address to read from
@@ -153,7 +170,7 @@ int startDirectoryListing(
  * @param  seq_no   sequence number of the message that initiated the request
  * @return POSIX error code; zero if the operation was successful
  */
-int startReadingStorage(
+int startRawStorageDownload(
     teller::telem::storage_area_t area, uint64_t address, uint16_t length,
     uint8_t targets, uint8_t seq_no = 0);
 

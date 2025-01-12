@@ -19,7 +19,7 @@ namespace teller::telem::frames {
  */
 typedef struct __attribute__((packed)) {
     uint8_t area;
-    uint16_t start;
+    uint32_t start;
     uint16_t length;
 } file_download_request_frame_t;
 

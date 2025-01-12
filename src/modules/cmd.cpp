@@ -504,7 +504,7 @@ optional<Response> processStoragePacket(const InboundMessage& message)
          * can contain a 32-bit address only, and large SD cards need 64-bit
          * addresses. However, we assume that you probably do not want to
          * download the raw image of an SD card over the telemetry channel */
-        retval = teller::storage::startReadingStorage(
+        retval = teller::storage::startRawStorageDownload(
             data.area, data.offset, data.length, (1 << message.index),
             message.envelope.seq_no);
         break;
@@ -558,6 +558,7 @@ optional<Response> processFileDownloadPacket(const InboundMessage& message)
 {
     frames::file_download_request_data_t data;
     int retval;
+    uint32_t size;
 
     if (!frames::validateEncodedFileDownloadRequestFrame(message.payload, message.length)) {
         return Response::invalid();
@@ -565,16 +566,14 @@ optional<Response> processFileDownloadPacket(const InboundMessage& message)
 
     frames::decodeFileDownloadRequestFrame(message.payload, message.length, &data);
 
-    retval = EINVAL;
-    /*
-    retval = teller::storage::startDirectoryListing(
-        data.area, data.path, data.start, data.count,
-        (1 << message.index), message.envelope.seq_no);
-    */
+    retval = teller::storage::startFileDownload(
+        data.area, data.path, data.start, data.length,
+        (1 << message.index), message.envelope.seq_no,
+        &size);
 
     if (retval) {
         return Response::failed(retval);
     } else {
-        return Response::ok();
+        return Response::ok(size);
     }
 }

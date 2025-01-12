@@ -18,7 +18,7 @@ typedef struct {
     /** Index of the storage area */
     storage_area_t area;
 
-    /** The start offset to start reading from the file */
+    /** The offset to start reading from the file */
     uint32_t start;
 
     /** The maximum number of bytes to return */

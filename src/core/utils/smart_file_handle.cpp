@@ -55,6 +55,16 @@ std::variant<Error, size_t> SmartFileHandle::read(void* read_buf, size_t bytes_t
     return _fs->read(_fd, read_buf, bytes_to_read);
 }
 
+std::variant<littlefs::Error, size_t> SmartFileHandle::seek(int offset, littlefs::WhenceFlag whence)
+{
+    return _fs->seek(_fd, offset, whence);
+}
+
+std::variant<littlefs::Error, size_t> SmartFileHandle::size()
+{
+    return _fs->size(_fd);
+}
+
 std::optional<Error> SmartFileHandle::sync()
 {
     return _fs->sync(_fd);

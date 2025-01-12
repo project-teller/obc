@@ -5,6 +5,7 @@
 #include "core/telem/binary_data.h"
 #include "core/telem/directory_entry.h"
 #include "core/utils/smart_dir_handle.h"
+#include "core/utils/smart_file_handle.h"
 #include "drivers/flashmem.h"
 #include "drivers/sdcard.h"
 #include "hal/event_flags.hpp"
@@ -580,12 +581,29 @@ public:
     virtual void cancel() override;
 
 private:
-    storage_area_t _area;
     uint16_t _start;
     uint16_t _count;
     frames::directory_entry_data_t _entryData;
     uint8_t _buf[MAX_PAYLOAD_LENGTH];
     std::unique_ptr<teller::utils::SmartDirHandle> _dir;
+};
+
+/**
+ * @brief State object of an operation that reads the list of files from a directory.
+ */
+class FileDownloadOperation : public StorageAccessOperation {
+public:
+    int start(storage_area_t area, const char* path, uint32_t start,
+        uint16_t count, uint8_t seq_no, uint32_t* file_size);
+    virtual bool running() const override;
+    virtual int iterate() override;
+    virtual void cancel() override;
+
+private:
+    uint16_t _bytesLeft;
+    frames::binary_data_t _binaryData;
+    uint8_t _buf[MAX_PAYLOAD_LENGTH];
+    std::unique_ptr<teller::utils::SmartFileHandle> _file;
 };
 
 /**
@@ -685,7 +703,26 @@ public:
         return 0;
     }
 
-    int startReadingStorage(storage_area_t area, uint64_t address, uint16_t length)
+    int startFileDownload(storage_area_t area, const char* path, uint64_t address, uint16_t length, uint32_t* file_size)
+    {
+        int error;
+        std::unique_ptr<FileDownloadOperation> op = std::make_unique<FileDownloadOperation>();
+
+        if (!op) {
+            return ENOMEM;
+        }
+
+        error = op->start(area, path, address, length, _seq_no, file_size);
+        if (error) {
+            return error;
+        }
+
+        _setOperation(op.release());
+
+        return 0;
+    }
+
+    int startRawStorageDownload(storage_area_t area, uint64_t address, uint16_t length)
     {
         int error;
         std::unique_ptr<RawStorageReadOperation> op = std::make_unique<RawStorageReadOperation>();
@@ -1056,7 +1093,27 @@ int startDirectoryListing(
     return 0;
 }
 
-int startReadingStorage(
+int startFileDownload(
+    teller::telem::storage_area_t area, const char* path, uint32_t offset, uint16_t length,
+    uint8_t targets, uint8_t seq_no, uint32_t* file_size)
+{
+    int error;
+
+    if (!storageAccess.running()) {
+        storageAccess.setTelemetryTargets(targets);
+        storageAccess.setSequenceNumber(seq_no);
+        error = storageAccess.startFileDownload(area, path, offset, length, file_size);
+        if (error) {
+            return error;
+        }
+    } else {
+        return EBUSY;
+    }
+
+    return 0;
+}
+
+int startRawStorageDownload(
     teller::telem::storage_area_t area, uint64_t address, uint16_t length,
     uint8_t targets, uint8_t seq_no)
 {
@@ -1065,7 +1122,7 @@ int startReadingStorage(
     if (!storageAccess.running()) {
         storageAccess.setTelemetryTargets(targets);
         storageAccess.setSequenceNumber(seq_no);
-        error = storageAccess.startReadingStorage(area, address, length);
+        error = storageAccess.startRawStorageDownload(area, address, length);
         if (error) {
             return error;
         }
@@ -1198,7 +1255,6 @@ int DirectoryListingOperation::start(storage_area_t area, const char* name, uint
         }
     }
 
-    _area = area;
     _start = start;
     _count = count;
 
@@ -1207,7 +1263,7 @@ int DirectoryListingOperation::start(storage_area_t area, const char* name, uint
     _entryData.frame_type = frames::DIRECTORY_LISTING;
     _entryData.seq_no = seq_no;
     _entryData.entry_index = 0;
-    _entryData.max_entry_index = _count - 1; /* TODO */
+    _entryData.max_entry_index = _count - 1; /* will be updated when the listing ends */
 
     return 0;
 }
@@ -1263,4 +1319,132 @@ void DirectoryListingOperation::cancel()
 {
     _dir.reset();
     _count = 0;
+}
+
+/* ************************************************************************* */
+
+int FileDownloadOperation::start(
+    storage_area_t area, const char* name, uint32_t offset, uint16_t length,
+    uint8_t seq_no, uint32_t* file_size)
+{
+    uint32_t size = 0;
+
+    if (running()) {
+        return EBUSY;
+    }
+
+    if (length == 0) {
+        return EINVAL;
+    }
+
+    auto fsState = fs.getState(area, /* ensureMounted = */ false);
+    if (!fsState) {
+        return EIO;
+    }
+
+    auto fs = fsState->getFilesystemIfMounted();
+    if (!fs) {
+        return EIO;
+    }
+
+    auto handle = fs->open(name, littlefs::OpenFlag::RDONLY);
+    if (std::holds_alternative<littlefs::Error>(handle)) {
+        return teller::storage::convertLittleFSErrorCode(std::get<littlefs::Error>(handle));
+    }
+
+    _file = std::make_unique<teller::utils::SmartFileHandle>(fs, std::get<littlefs::FileHandle>(handle));
+    if (!_file) {
+        return ENOMEM;
+    }
+
+    auto new_offset_or_error = _file->seek(offset);
+    if (std::holds_alternative<littlefs::Error>(new_offset_or_error)) {
+        return teller::storage::convertLittleFSErrorCode(std::get<littlefs::Error>(new_offset_or_error));
+    }
+
+    size_t real_offset = std::get<size_t>(new_offset_or_error);
+    if (real_offset != offset) {
+        return EIO;
+    }
+
+    auto file_size_or_error = _file->size();
+    if (std::holds_alternative<littlefs::Error>(file_size_or_error)) {
+        return teller::storage::convertLittleFSErrorCode(std::get<littlefs::Error>(file_size_or_error));
+    }
+
+    size = std::get<size_t>(file_size_or_error);
+    if (size <= real_offset) {
+        length = 0;
+    } else {
+        if (size - real_offset < length) {
+            length = size - real_offset;
+        }
+    }
+    _bytesLeft = length;
+
+    memset(&_binaryData, 0, sizeof(_binaryData));
+
+    _binaryData.frame_type = frames::FILE_DOWNLOAD;
+    _binaryData.seq_no = seq_no;
+    _binaryData.fragment_index = 0;
+    _binaryData.max_fragment_index = (length / MAX_BINARY_DATA_FRAGMENT_LENGTH);
+    if (length % MAX_BINARY_DATA_FRAGMENT_LENGTH == 0) {
+        _binaryData.max_fragment_index--;
+    }
+
+    if (file_size) {
+        *file_size = size;
+    }
+
+    return 0;
+}
+
+bool FileDownloadOperation::running() const
+{
+    return _bytesLeft > 0;
+}
+
+int FileDownloadOperation::iterate()
+{
+    const uint8_t limit = MAX_BINARY_DATA_FRAGMENT_LENGTH;
+    uint8_t bytes_requested;
+
+    while (running()) {
+        bytes_requested = _bytesLeft > limit ? limit : _bytesLeft;
+
+        auto result = _file->read(_binaryData.data, bytes_requested);
+        if (std::holds_alternative<littlefs::Error>(result)) {
+            cancel();
+            break;
+        }
+        _binaryData.data_length = static_cast<uint8_t>(std::get<size_t>(result));
+
+        if (_binaryData.data_length == 0) {
+            /* End of file, shorten the max fragment index */
+            _binaryData.max_fragment_index = _binaryData.fragment_index;
+        }
+
+        uint8_t length = frames::encodeBinaryDataFrame(&_binaryData, _buf);
+        if (!sendTelemetry(frames::BINARY_DATA, _buf, length)) {
+            /* Not an error, buffer is full, we'll try later */
+            return 0;
+        }
+
+        if (_binaryData.data_length == 0) {
+            /* End of file */
+            cancel();
+            break;
+        }
+
+        _bytesLeft -= _binaryData.data_length;
+        _binaryData.fragment_index++;
+    }
+
+    return 0;
+}
+
+void FileDownloadOperation::cancel()
+{
+    _file.reset();
+    _bytesLeft = 0;
 }
