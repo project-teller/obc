@@ -125,9 +125,17 @@ const int LOG_TIMEOUT_MS = 100;
  */
 class ExperimentDataRecorder {
 
+private:
+    enum State {
+        STATE_DISABLED = 0,
+        STATE_STARTING = 1,
+        STATE_RUNNING = 2
+    };
+
 public:
     explicit ExperimentDataRecorder()
-        : _queue(QUEUE_SIZE)
+        : _state(STATE_DISABLED)
+        , _queue(QUEUE_SIZE)
         , _timeout(LOG_TIMEOUT_MS)
         , _dropped(0)
     {
@@ -156,7 +164,7 @@ public:
      */
     void record(const LogRequest& request)
     {
-        if (running()) {
+        if (running() || starting()) {
             if (!_queue.send_with_timeout(request, _timeout)) {
                 _dropped++;
             }
@@ -174,7 +182,7 @@ public:
      */
     void recordNonblocking(const LogRequest& request)
     {
-        if (running()) {
+        if (running() || starting()) {
             if (!_queue.send_or_drop(request)) {
                 _dropped++;
             }
@@ -201,7 +209,12 @@ public:
     /**
      * @brief Returns whether the experiment data recorder is currently running.
      */
-    bool running() { return _running; }
+    bool running() { return _state == STATE_RUNNING; }
+
+    /**
+     * @brief Returns whether the experiment data recorder is currently starting.
+     */
+    bool starting() { return _state == STATE_STARTING; }
 
     /**
      * @brief Closes the experiment data recorder.
@@ -214,7 +227,7 @@ public:
 private:
     littlefs::Filesystem* _fs;
     std::unique_ptr<littlefs::FileConfig> _file_config;
-    bool _running;
+    State _state;
     teller::hal::BlockingQueue<LogRequest> _queue;
     uint32_t _timeout;
     uint32_t _dropped;

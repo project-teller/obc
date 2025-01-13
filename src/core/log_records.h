@@ -16,6 +16,7 @@ typedef enum {
     LOG_RECORD_RXSM = 11,
     LOG_RECORD_SCM = 12,
     LOG_RECORD_SYS = 13,
+    LOG_RECORD_PARM = 14,
 } log_record_id_t;
 
 }

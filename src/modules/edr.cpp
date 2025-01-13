@@ -389,6 +389,9 @@ std::optional<littlefs::Error> ExperimentDataRecorder::_run(storage_area_t area)
     SmartFileHandle fd(this->_fs, std::get<littlefs::FileHandle>(maybeFileHandle));
     LogWriter writer(fd);
 
+    /* Enter the "starting" state so callbacks can write their log records */
+    _state = STATE_STARTING;
+
     /* Call all callbacks to let modules print initial log records. We have to
      * be careful here; the callback should not create too many messages that
      * would block the _queue before we start draining them.
@@ -404,11 +407,11 @@ std::optional<littlefs::Error> ExperimentDataRecorder::_run(storage_area_t area)
     /* Enter the main loop and start processing requests */
     std::optional<littlefs::Error> maybeError = std::nullopt;
 
-    _running = true;
+    _state = STATE_RUNNING;
     while (_queue.receive(request) && !IS_END_OF_QUEUE(request) && !maybeError) {
         maybeError = writer.write(request);
     }
-    _running = false;
+    _state = STATE_DISABLED;
 
     return maybeError;
 }

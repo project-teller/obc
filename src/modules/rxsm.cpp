@@ -11,7 +11,14 @@ using namespace teller::rxsm;
 using namespace teller::scheduler;
 using teller::telem::storage_area_t;
 
-static teller::edr::FormattedLogRecord<uint32_t, bool, bool, bool> logRecord(
+/**
+ * PARM log record for sake of compatibility with ArduPilot logs.
+ * Apparently plot.ardupilot.org needs this.
+ */
+static teller::edr::FormattedLogRecord<uint64_t, const char*, float> parmLogRecord(
+    LOG_RECORD_PARM, "PARM", "TimeUS,Name,Value", "QNf", "s--", "F--");
+
+static teller::edr::FormattedLogRecord<uint32_t, bool, bool, bool> rxsmLogRecord(
     LOG_RECORD_RXSM, "RXSM", "TimeMS,SODS,SOE,LO", "IBBB", "s---", "C---");
 
 namespace teller::rxsm {
@@ -221,13 +228,16 @@ static void logCurrentState()
     State state;
 
     rxsmStateManager.getState(state);
-    logRecord.write(
+    rxsmLogRecord.write(
         teller::hal::system::getTimeSinceBootMsec(),
         state.sods, state.soe, state.lo);
 }
 
 static void onLogOpened(storage_area_t area)
 {
+    uint64_t timestampInUsec = teller::hal::system::getTimeSinceBootMsec() * 1000ULL;
+    /* Hack for sake of compatibility with ArduPilot logs */
+    parmLogRecord.write(timestampInUsec, "TELLER", 1);
     logCurrentState();
 }
 
