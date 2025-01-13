@@ -23,6 +23,7 @@
 #include "modules/log.h"
 #include "modules/scheduler.h"
 #include "modules/storage.h"
+#include "modules/supervisor.h"
 #include "modules/telem.h"
 
 using namespace std;
@@ -448,6 +449,10 @@ optional<Response> processDebugPacket(const InboundMessage& message)
         } else {
             teller::telem::setTelemetryLevel(TELEMETRY_LEVEL_FULL);
         }
+        break;
+
+    case frames::DEBUG_CMD_REPORT_STACK_USAGE:
+        teller::supervisor::reportStackUsage();
         break;
 
     default:

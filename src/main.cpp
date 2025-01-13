@@ -436,7 +436,7 @@ static bool startTasks()
 #include "stm32_hal.h"
 
 static osPriority_t convertPriorityToFreeRTOS(task_priority_t prio);
-static bool startTask(const task_definition_t* task);
+static bool startTask(const task_definition_t* task, osThreadId_t* handle);
 
 /* Make sure that the new and delete operators use the allocators from FreeRTOS */
 void* operator new(std::size_t count)
@@ -481,14 +481,19 @@ static void initialize()
     osKernelInitialize();
 }
 
+using teller::supervisor::registerTaskHandle;
+
 static bool startTasks()
 {
     bool success = true;
+    osThreadId_t threadId;
+
     for (const task_definition_t* task = tasks; task->func; task++) {
-        if (!startTask(task)) {
+        if (!startTask(task, &threadId) || !registerTaskHandle(task->name, threadId)) {
             success = false;
         }
     }
+
     return success;
 }
 
@@ -513,15 +518,22 @@ static osPriority_t convertPriorityToFreeRTOS(task_priority_t prio)
     }
 }
 
-static bool startTask(const task_definition_t* task)
+static bool startTask(const task_definition_t* task, osThreadId_t* handle)
 {
     osThreadAttr_t attr = {
         .name = task->name,
         .stack_size = task->stack_size,
         .priority = convertPriorityToFreeRTOS(task->priority),
     };
+    osThreadId_t threadId;
 
-    return osThreadNew(task->func, task->context, &attr) != nullptr;
+    threadId = osThreadNew(task->func, task->context, &attr);
+
+    if (handle) {
+        *handle = threadId;
+    }
+
+    return threadId != nullptr;
 }
 
 extern "C" void vApplicationTickHook(void)

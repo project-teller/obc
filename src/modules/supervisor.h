@@ -105,4 +105,18 @@ bool checkQueues(void);
  */
 bool checkTasks(uint32_t timestamp = 0);
 
+#ifndef TELLER_BOARD_POSIX
+
+/**
+ * @brief Registers a task handle for reporting its stack usage.
+ */
+bool registerTaskHandle(const char* name, osThreadId_t handle);
+
+#endif
+
+/**
+ * @brief Reports the high water marks on the stack sizes of the individual tasks.
+ */
+void reportStackUsage(void);
+
 };

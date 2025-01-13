@@ -255,6 +255,51 @@ bool checkTasks(uint32_t timestamp)
     return result;
 }
 
+#ifdef TELLER_BOARD_POSIX
+
+void reportStackUsage()
+{
+    /* nop */
+}
+
+#else
+
+#define NUM_TASKS 32
+
+static const char* taskNames[NUM_TASKS];
+static osThreadId_t taskHandles[NUM_TASKS];
+static uint8_t totalRegisteredTaskHandles = 0;
+
+bool registerTaskHandle(const char* name, osThreadId_t handle)
+{
+    if (totalRegisteredTaskHandles >= NUM_TASKS) {
+        return false;
+    }
+
+    taskNames[totalRegisteredTaskHandles] = name;
+    taskHandles[totalRegisteredTaskHandles] = handle;
+    totalRegisteredTaskHandles++;
+
+    return true;
+}
+
+void reportStackUsage(void)
+{
+    uint8_t i;
+    osThreadId_t handle;
+
+    for (i = 0; i < totalRegisteredTaskHandles; i++) {
+        handle = taskHandles[i];
+
+        uint32_t avail = osThreadGetStackSpace(handle);
+        logger->info_nowait("%s: %d bytes left", taskNames[i], avail);
+
+        teller::hal::system::delayMsec(10);
+    }
+}
+
+#endif
+
 }
 
 /* ************************************************************************** */
