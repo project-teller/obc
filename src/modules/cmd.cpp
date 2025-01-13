@@ -442,6 +442,14 @@ optional<Response> processDebugPacket(const InboundMessage& message)
         teller::edr::reportStatus();
         break;
 
+    case frames::DEBUG_CMD_TOGGLE_TELEMETRY_LEVEL:
+        if (teller::telem::getTelemetryLevel() == TELEMETRY_LEVEL_FULL) {
+            teller::telem::setTelemetryLevel(TELEMETRY_LEVEL_MINIMAL);
+        } else {
+            teller::telem::setTelemetryLevel(TELEMETRY_LEVEL_FULL);
+        }
+        break;
+
     default:
         return Response::invalid();
     }

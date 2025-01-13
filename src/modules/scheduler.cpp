@@ -7,6 +7,7 @@
 #include "modules/cmd.h"
 #include "modules/lcl.h"
 #include "modules/scheduler.h"
+#include "modules/telem.h"
 
 using namespace teller::rxsm::signal;
 
@@ -24,6 +25,7 @@ typedef enum {
     EVENT_CALIBRATION,
     EVENT_ENABLE_DISABLE_CAMERA,
     EVENT_TOGGLE_CAMERA,
+    EVENT_SET_TELEMETRY_LEVEL,
 } scheduler_event_type_t;
 
 /**
@@ -71,11 +73,12 @@ typedef struct scheduler_event_s {
  * The array must be sorted by timestamp.
  */
 static const scheduler_event_t eventsRelativeToSOE[] = {
-    /* SOE signal: turn on GMM and SUC */
+    /* SOE signal: turn on GMM and SUC, ensure full telemetry */
     { 0, EVENT_LCL_RESET, teller::lcl::GMM_LCL },
     { 0, EVENT_LCL_RESET, teller::lcl::SUC_LCL1 },
     { 0, EVENT_LCL_RESET, teller::lcl::SUC_LCL2 },
     { 0, EVENT_LCL_RESET, teller::lcl::SUC_LCL3 },
+    { 0, EVENT_SET_TELEMETRY_LEVEL, teller::telem::TELEMETRY_LEVEL_FULL },
 
     /* SOE+1s: turn on SCM */
     { 1000, EVENT_LCL_RESET, teller::lcl::SCM_LCL },
@@ -96,6 +99,7 @@ static const scheduler_event_t eventsRelativeToSOE[] = {
  * The array must be sorted by timestamp.
  */
 static const scheduler_event_t eventsRelativeToSODS[] = {
+    { 0, EVENT_SET_TELEMETRY_LEVEL, teller::telem::TELEMETRY_LEVEL_FULL },
     NO_MORE_EVENTS,
 };
 
@@ -105,6 +109,7 @@ static const scheduler_event_t eventsRelativeToSODS[] = {
  * The array must be sorted by timestamp.
  */
 static const scheduler_event_t eventsRelativeToLiftoff[] = {
+    { 0, EVENT_SET_TELEMETRY_LEVEL, teller::telem::TELEMETRY_LEVEL_FULL },
     NO_MORE_EVENTS,
 };
 
@@ -299,6 +304,12 @@ static void executeEvent(const scheduler_event_t& event)
     case EVENT_TOGGLE_CAMERA:
         /* Send a pulse to toggle the camera unconditionally */
         teller::cam::sendPulse();
+        break;
+
+    case EVENT_SET_TELEMETRY_LEVEL:
+        /* Set the telemetry level */
+        teller::telem::setTelemetryLevel(
+            static_cast<teller::telem::telemetry_level_t>(event.param));
         break;
 
     default:

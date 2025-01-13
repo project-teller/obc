@@ -24,6 +24,9 @@ typedef struct {
     /** Bitmask indicating the UARTs to write the message to */
     uint8_t targets;
 
+    /** Type of the telemetry message */
+    uint8_t type;
+
     /** Data to write to the UART */
     uint8_t* data;
 
@@ -45,6 +48,9 @@ typedef struct {
 /** Bitmask indicating which UARTs we are sending telemetry to */
 static uint8_t telemetry_channel_mask = 0;
 
+/** Telemetry level of detail */
+static telemetry_level_t telemetry_level = TELEMETRY_LEVEL_FULL;
+
 /** Sequence number of next message */
 static uint8_t seq_no = 0;
 
@@ -57,13 +63,17 @@ static const int QUEUE_SIZE = 64;
 /** Queue in which the enqueued messages are stored */
 static BlockingQueue<OutboundMessage> out_queue(QUEUE_SIZE);
 
+static bool isEssentialFrameType(uint8_t type);
+
 static void sendHeartbeat(uint8_t* payload);
 static void sendClockStatus(uint8_t* payload);
 static void sendADCMeasurements(uint8_t* payload);
 static void sendIMUMeasurement(uint8_t* payload);
 static void sendMAGMeasurement(uint8_t* payload);
 
-static bool sendLowLevel(uint8_t targets, uint8_t* buf, uint8_t length, uint32_t timeout);
+static bool sendLowLevel(
+    uint8_t targets, uint8_t type, uint8_t* buf, uint8_t length,
+    uint32_t timeout);
 
 #define NO_MORE_TASKS \
     {                 \
@@ -125,6 +135,7 @@ bool init()
 {
     seq_no = 0;
     telemetry_channel_mask = 0;
+    telemetry_level = TELEMETRY_LEVEL_FULL;
 
     requestTelemetry(uart::RXSM);
 
@@ -144,11 +155,17 @@ void destroy()
 
     seq_no = 0;
     telemetry_channel_mask = 0;
+    telemetry_level = TELEMETRY_LEVEL_FULL;
 }
 
 BlockingQueueBase* getQueue()
 {
     return &out_queue;
+}
+
+telemetry_level_t getTelemetryLevel()
+{
+    return telemetry_level;
 }
 
 bool processNext()
@@ -160,12 +177,18 @@ bool processNext()
     }
 
     if (message.data != nullptr) {
-        if (message.targets & (1 << uart::RXSM)) {
-            uart::write(uart::RXSM, message.data, message.length);
-        }
+        /* Drop the telemetry message if we are sending minimal telemetry only
+         * and this is not an essential message */
+        bool shouldSend = telemetry_level == TELEMETRY_LEVEL_FULL || isEssentialFrameType(message.type);
 
-        if (message.targets & (1 << uart::DEBUG)) {
-            uart::write(uart::DEBUG, message.data, message.length);
+        if (shouldSend) {
+            if (message.targets & (1 << uart::RXSM)) {
+                uart::write(uart::RXSM, message.data, message.length);
+            }
+
+            if (message.targets & (1 << uart::DEBUG)) {
+                uart::write(uart::DEBUG, message.data, message.length);
+            }
         }
 
         teller::hal::memory::free(message.data);
@@ -248,7 +271,7 @@ bool sendTo(uint8_t targets, envelope_t envelope, const uint8_t* payload, uint8_
             goto cleanup;
         }
 
-        success = sendLowLevel(targets, buf, length + 8, timeout);
+        success = sendLowLevel(targets, envelope.frame_type, buf, length + 8, timeout);
     }
 
 cleanup:
@@ -257,6 +280,14 @@ cleanup:
     }
 
     return success;
+}
+
+void setTelemetryLevel(telemetry_level_t level)
+{
+    if (level >= NUM_TELEMETRY_LEVELS) {
+        level = TELEMETRY_LEVEL_MINIMAL;
+    }
+    telemetry_level = level;
 }
 
 void stopTelemetry(uart::uart_t index)
@@ -277,10 +308,34 @@ void sendClockStatusSoon(void)
 
 /* ************************************************************************* */
 
-bool sendLowLevel(uint8_t targets, uint8_t* buf, uint8_t length, uint32_t timeout)
+/**
+ * @brief Returns whether a frame type is essential and should be sent even if
+ * the telemetry level is set to minimal.
+ */
+static bool isEssentialFrameType(uint8_t type)
+{
+    /* clang-format off */
+    return (
+        type == frames::HEARTBEAT ||
+        type == frames::TEXT_MESSAGE ||
+        type == frames::CLOCK_STATUS ||
+        type == frames::ACK ||
+        type == frames::BINARY_DATA ||
+        type == frames::DIRECTORY_ENTRY ||
+        type == frames::ADC
+    );
+    /* clang-format on */
+}
+
+/* ************************************************************************* */
+
+bool sendLowLevel(
+    uint8_t targets, uint8_t type, uint8_t* buf, uint8_t length,
+    uint32_t timeout)
 {
     OutboundMessage message = {
         .targets = targets,
+        .type = type,
         .data = buf,
         .length = length
     };

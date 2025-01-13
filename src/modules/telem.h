@@ -7,6 +7,15 @@
 namespace teller::telem {
 
 /**
+ * @brief Enum specifying the implemented telemetry levels.
+ */
+typedef enum {
+    TELEMETRY_LEVEL_FULL = 0,
+    TELEMETRY_LEVEL_MINIMAL = 1,
+    NUM_TELEMETRY_LEVELS
+} telemetry_level_t;
+
+/**
  * Initializes the data structures required by the telemetry module.
  *
  * @return whether the initialization was successful
@@ -17,6 +26,11 @@ namespace teller::telem {
  * Destroys the data structures required by the telemetry module.
  */
 void destroy(void);
+
+/**
+ * @brief Returns the current telemetry level.
+ */
+telemetry_level_t getTelemetryLevel(void);
 
 /**
  * @brief Returns a pointer to the outbound queue of the telemetry subsystem.
@@ -135,7 +149,12 @@ bool sendTo(
     std::uint8_t length, std::uint32_t timeout = DEFAULT_TELEMETRY_TIMEOUT);
 
 /**
- * @brief Stops the telemetry stream onthe UART with the given index.
+ * @brief Sets the global telemetry level to the given value.
+ */
+void setTelemetryLevel(telemetry_level_t level);
+
+/**
+ * @brief Stops the telemetry stream on the UART with the given index.
  */
 void stopTelemetry(teller::hal::uart::uart_t index);
 
