@@ -43,7 +43,7 @@ static const LogRequest stopRecorderRequest = { 0 };
 /**
  * @brief Time between consecutive sync operations, in milliseconds.
  */
-#define SYNC_INTERVAL_MS 5000
+#define SYNC_INTERVAL_MS 30000
 
 /**
  * @brief List of callbacks to be called when a log is opened.
