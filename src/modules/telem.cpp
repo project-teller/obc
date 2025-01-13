@@ -109,6 +109,10 @@ static teller::edr::FormattedLogRecord<uint32_t, int16_t, int16_t, int16_t, int1
         "TimeMS,I_SUC1,I_SUC2,I_SUC3,I_CAM,I_SCM,I_GMM",
         "Ihhhhhh", "sAAAAAA", "CDDDDDD");
 
+/** Log message format for the status of each subsystem */
+static FormattedLogRecord<uint32_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t> sysLogRecord(
+    LOG_RECORD_SYS, "SYS", "TimeMS,GMM,SCM,CAM,IMU,MAG,STO", "IBBBBBB", "s------", "C------");
+
 namespace teller::telem {
 
 bool init()
@@ -293,6 +297,15 @@ static void sendHeartbeat(uint8_t* payload)
         heartbeat.timestampInMsec,
         static_cast<uint8_t>(heartbeat.voltageInVolts * 10),
         static_cast<int8_t>(heartbeat.temperatureInCelsius));
+
+    sysLogRecord.write(
+        heartbeat.timestampInMsec,
+        heartbeat.subsystemStatus.gmm,
+        heartbeat.subsystemStatus.scm,
+        heartbeat.subsystemStatus.cam,
+        heartbeat.subsystemStatus.imu,
+        heartbeat.subsystemStatus.mag,
+        heartbeat.subsystemStatus.sto);
 }
 
 static void sendClockStatus(uint8_t* payload)
