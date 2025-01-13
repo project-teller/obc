@@ -24,9 +24,6 @@ typedef struct {
     /** Bitmask indicating the UARTs to write the message to */
     uint8_t targets;
 
-    /** Type of the telemetry message */
-    uint8_t type;
-
     /** Data to write to the UART */
     uint8_t* data;
 
@@ -177,18 +174,12 @@ bool processNext()
     }
 
     if (message.data != nullptr) {
-        /* Drop the telemetry message if we are sending minimal telemetry only
-         * and this is not an essential message */
-        bool shouldSend = telemetry_level == TELEMETRY_LEVEL_FULL || isEssentialFrameType(message.type);
+        if (message.targets & (1 << uart::RXSM)) {
+            uart::write(uart::RXSM, message.data, message.length);
+        }
 
-        if (shouldSend) {
-            if (message.targets & (1 << uart::RXSM)) {
-                uart::write(uart::RXSM, message.data, message.length);
-            }
-
-            if (message.targets & (1 << uart::DEBUG)) {
-                uart::write(uart::DEBUG, message.data, message.length);
-            }
+        if (message.targets & (1 << uart::DEBUG)) {
+            uart::write(uart::DEBUG, message.data, message.length);
         }
 
         teller::hal::memory::free(message.data);
@@ -249,6 +240,14 @@ bool sendTo(uint8_t targets, envelope_t envelope, const uint8_t* payload, uint8_
 
     if (payload == nullptr) {
         length = 0;
+    }
+
+    /* Drop the telemetry message if we are sending minimal telemetry only
+     * and this is not an essential message */
+    bool shouldSend = telemetry_level == TELEMETRY_LEVEL_FULL || isEssentialFrameType(envelope.frame_type);
+    if (!shouldSend) {
+        /* ...but pretend that we sent it */
+        return true;
     }
 
     buf_length = getMessageSizeForPayloadLength(length);
@@ -335,7 +334,6 @@ bool sendLowLevel(
 {
     OutboundMessage message = {
         .targets = targets,
-        .type = type,
         .data = buf,
         .length = length
     };
