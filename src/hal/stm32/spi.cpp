@@ -332,7 +332,7 @@ bool setClockSpeed(std::uint8_t bus, std::uint32_t speed, std::uint32_t* result)
 
 exit:
     if (success && result) {
-        *result = speed;
+        *result = currentSpeed;
     }
 
     return success;

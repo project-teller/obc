@@ -477,6 +477,7 @@ static uint32_t tryInitialization(void)
     spi::DeviceSelector selector(address);
     uint8_t response;
     uint8_t tries;
+    uint32_t clockSpeed;
 
 restart:
 
@@ -649,8 +650,12 @@ restart:
     blockCount = (blockCount + 1) << 10; /* assert BLOCK_SIZE == (1 << 9) */
 
     /* We can try raising the SPI clock speed now to, say, 6.4 MHz */
-    if (!spi::setClockSpeed(address.bus, 6400000)) {
+    if (!spi::setClockSpeed(address.bus, 6400000, &clockSpeed)) {
         return 0;
+    }
+
+    if (logger) {
+        logger->info("SD card clock speed set to %.2f MHz", clockSpeed / 1000000.0f);
     }
 
     return blockCount;
