@@ -95,6 +95,12 @@ static FormattedLogRecord<uint32_t, uint8_t, uint8_t> brdLogRecord(
 static FormattedLogRecord<uint32_t, uint32_t, uint32_t, uint64_t> clkLogRecord(
     LOG_RECORD_CLK, "CLK", "TimeMS,MissionMS,LiftoffMS,RTCTimeMS", "IIIQ", "ssss", "CCCC");
 
+/** Log message format for the status of each LCL */
+static teller::edr::FormattedLogRecord<uint32_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t, uint8_t>
+    lclLogRecord(
+        LOG_RECORD_LCL, "LCL",
+        "TimeMS,GMM,SCM,SUC1,SUC2,SUC3,CAM", "IBBBBBB", "s------", "C------");
+
 /** Log message format for the measured voltages on the LCLs */
 static teller::edr::FormattedLogRecord<uint32_t, int16_t, int16_t, int16_t, int16_t, int16_t, int16_t, int16_t>
     voltageLogRecord(
@@ -285,6 +291,8 @@ bool sendLowLevel(uint8_t targets, uint8_t* buf, uint8_t length, uint32_t timeou
 
 using teller::telem::send;
 
+static frames::heartbeat_data_t previousHeartbeat;
+
 static void sendHeartbeat(uint8_t* payload)
 {
     frames::heartbeat_data_t heartbeat;
@@ -298,6 +306,17 @@ static void sendHeartbeat(uint8_t* payload)
         static_cast<uint8_t>(heartbeat.voltageInVolts * 10),
         static_cast<int8_t>(heartbeat.temperatureInCelsius));
 
+    if (memcmp(&previousHeartbeat.lclStatusBits, &heartbeat.lclStatusBits, sizeof(heartbeat.lclStatusBits)) != 0) {
+        lclLogRecord.write(
+            heartbeat.timestampInMsec,
+            heartbeat.lclStatusBits.gmm,
+            heartbeat.lclStatusBits.scm,
+            heartbeat.lclStatusBits.suc1,
+            heartbeat.lclStatusBits.suc2,
+            heartbeat.lclStatusBits.suc3,
+            heartbeat.lclStatusBits.cam);
+    }
+
     sysLogRecord.write(
         heartbeat.timestampInMsec,
         heartbeat.subsystemStatus.gmm,
@@ -306,6 +325,8 @@ static void sendHeartbeat(uint8_t* payload)
         heartbeat.subsystemStatus.imu,
         heartbeat.subsystemStatus.mag,
         heartbeat.subsystemStatus.sto);
+
+    previousHeartbeat = heartbeat;
 }
 
 static void sendClockStatus(uint8_t* payload)
