@@ -648,8 +648,8 @@ restart:
     blockCount = (blockCount << 8) | buf[9];
     blockCount = (blockCount + 1) << 10; /* assert BLOCK_SIZE == (1 << 9) */
 
-    /* We can try raising the SPI clock speed now to, say, 800 kHz */
-    if (!spi::setClockSpeed(address.bus, 3200000)) {
+    /* We can try raising the SPI clock speed now to, say, 6.4 MHz */
+    if (!spi::setClockSpeed(address.bus, 6400000)) {
         return 0;
     }
 

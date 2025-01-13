@@ -155,7 +155,7 @@ const spi_bus_config_t spi_config[] = {
             { GPIOA, GPIO_PIN_15 },
             NO_MORE_GPIO_CFG
         },
-        .clock_speed = 3000000,
+        .clock_speed = 6000000,
         .mode = 0,
         .transfer_mode = SPI_TRANSFER_DMA,
         .irq = SPI1_IRQn,
