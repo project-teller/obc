@@ -18,15 +18,23 @@ using teller::utils::SmartFileHandle;
 
 using namespace teller::telem;
 
+static teller::log::Logger* logger = nullptr;
+
 namespace teller::edr {
 
 bool init()
 {
+    logger = teller::log::getLogger(MODULE_ID_EDR);
+    if (!logger) {
+        return false;
+    }
+
     return true;
 }
 
 void destroy()
 {
+    logger = nullptr;
 }
 
 /**
@@ -90,6 +98,28 @@ bool registerCallback(event_t event, event_callback_t* callback)
         return true;
     } else {
         return false;
+    }
+}
+
+void reportStatus()
+{
+    bool anyDropped = false;
+
+    for (size_t i = 0; i < NUM_STORAGE_AREAS; i++) {
+        teller::telem::storage_area_t area = static_cast<teller::telem::storage_area_t>(i);
+        uint32_t dropped = recorders[i].getDroppedCounter();
+
+        if (dropped > 0) {
+            anyDropped = true;
+            logger->warning_nowait(
+                "%s: dropped %d log records so far",
+                teller::telem::getStorageAreaName(area),
+                dropped);
+        }
+    }
+
+    if (!anyDropped) {
+        logger->info_nowait("no dropped log records");
     }
 }
 

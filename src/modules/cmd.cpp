@@ -438,6 +438,10 @@ optional<Response> processDebugPacket(const InboundMessage& message)
             !teller::errors::hasError(teller::errors::SIMULATED_ERROR));
         break;
 
+    case frames::DEBUG_CMD_REPORT_EDR_STATUS:
+        teller::edr::reportStatus();
+        break;
+
     default:
         return Response::invalid();
     }

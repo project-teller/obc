@@ -60,6 +60,12 @@ void destroy(void);
 [[nodiscard]] bool registerCallback(event_t event, event_callback_t* callback);
 
 /**
+ * @brief Reports the status of each experiment data recorder instance as text
+ * messages in the telemetry streams.
+ */
+void reportStatus(void);
+
+/**
  * @brief Requests the experiment data recorder corresponding to the given area
  * to be stopped.
  *
@@ -145,9 +151,17 @@ public:
     /**
      * @brief Returns the number of dropped log records and resets the counter.
      */
+    uint32_t getDroppedCounter()
+    {
+        return _dropped;
+    }
+
+    /**
+     * @brief Returns the number of dropped log records and resets the counter.
+     */
     uint32_t getAndClearDroppedCounter()
     {
-        uint32_t dropped = _dropped;
+        uint32_t dropped = getDroppedCounter();
         _dropped = 0;
         return dropped;
     }
