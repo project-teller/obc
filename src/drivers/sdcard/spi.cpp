@@ -71,6 +71,7 @@ static const uint32_t DEFAULT_SD_CARD_WRITE_TIMEOUT = 250;
 #define RESPONSE_ERASE_SEQUENCE_ERROR 0x10
 #define RESPONSE_ADDRESS_ERROR 0x20
 #define RESPONSE_PARAMETER_ERROR 0x40
+#define RESPONSE_BUSY 0xFF
 
 /* Data tokens */
 #define DATA_TOKEN 0xfe
@@ -336,7 +337,7 @@ static uint8_t sendCommand(uint8_t cmd, uint32_t arg, uint8_t* buf, uint8_t size
     if (waitWhileBusy(timeout)) {
         return sendCommandAssumingNotBusy(cmd, arg, buf, size, timeout);
     } else {
-        return 0xFF;
+        return RESPONSE_BUSY;
     }
 }
 
@@ -590,6 +591,8 @@ restart:
         response = sendCommand(CMD_READ_OCR, 0x00, buf, 4);
         if (response == RESPONSE_OK) {
             break;
+        } else if (response == RESPONSE_BUSY) {
+            /* this is okay, repeat the command */
         } else if (response == (RESPONSE_IDLE | RESPONSE_ILLEGAL_COMMAND)) {
             /* hmmm, this happens sometimes, let's wait a bit and restart */
             system::delayMsec(100);
@@ -617,6 +620,8 @@ restart:
         response = sendCommand(CMD_SEND_CSD, 0x00);
         if (response == RESPONSE_OK) {
             break;
+        } else if (response == RESPONSE_BUSY) {
+            /* this is okay, repeat the command */
         } else if (response == (RESPONSE_IDLE | RESPONSE_ILLEGAL_COMMAND)) {
             /* hmmm, this happens sometimes, let's wait a bit and restart */
             system::delayMsec(100);
