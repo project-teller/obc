@@ -438,6 +438,7 @@ std::optional<littlefs::Error> ExperimentDataRecorder::_run(storage_area_t area)
     std::optional<littlefs::Error> maybeError = std::nullopt;
 
     _state = STATE_RUNNING;
+    logger->info("%s: logging to %s", getStorageAreaName(area), fname);
     while (_queue.receive(request) && !IS_END_OF_QUEUE(request) && !maybeError) {
         maybeError = writer.write(request);
     }
