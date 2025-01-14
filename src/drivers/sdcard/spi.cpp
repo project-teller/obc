@@ -81,7 +81,7 @@ static const uint32_t DEFAULT_SD_CARD_WRITE_TIMEOUT = 250;
 static void convertAddressToBlockAndOffset(
     uint64_t address, uint32_t& block, uint32_t& offset);
 static const uint8_t* ensureBlockIsCached(uint32_t block);
-static bool eraseBlock(uint32_t block);
+static bool eraseSectorFromBlock(uint32_t block);
 static void prepareCommand(uint8_t* buf, uint8_t cmd, uint32_t arg);
 static bool programBlockFromBuffer(uint32_t block, uint8_t* buf);
 static bool readBlockIntoBuffer(uint32_t block, uint8_t* buf);
@@ -891,12 +891,12 @@ static bool programBlockFromBuffer(uint32_t block, uint8_t* buf)
 }
 
 /**
- * @brief Erases the block with the given index.
+ * @brief Erases an entire sector of the SD card starting from the block with the given index.
  *
  * @param block  the index of the block to erase
  * @return whether the operation was successful
  */
-static bool eraseBlock(uint32_t block)
+static bool eraseSectorFromBlock(uint32_t block)
 {
     teller::drivers::OperationContext ctx(&currentOperation, teller::drivers::OP_ERASE);
     spi::DeviceSelector selector(address);
@@ -977,7 +977,7 @@ static int sdcard_spi_write(
 static int sdcard_spi_erase(const struct lfs_config* cfg, lfs_block_t sector)
 {
     uint32_t block = sector * SECTORS_IN_BLOCK;
-    return eraseBlock(block) ? LFS_ERR_OK : LFS_ERR_IO;
+    return eraseSectorFromBlock(block) ? LFS_ERR_OK : LFS_ERR_IO;
 }
 
 static int sdcard_spi_sync(const struct lfs_config* cfg)
