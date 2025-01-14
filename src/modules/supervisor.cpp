@@ -264,15 +264,13 @@ void reportStackUsage()
 
 #else
 
-#define NUM_TASKS 32
-
-static const char* taskNames[NUM_TASKS];
-static osThreadId_t taskHandles[NUM_TASKS];
+static const char* taskNames[MAX_TASKS];
+static osThreadId_t taskHandles[MAX_TASKS];
 static uint8_t totalRegisteredTaskHandles = 0;
 
 bool registerTaskHandle(const char* name, osThreadId_t handle)
 {
-    if (totalRegisteredTaskHandles >= NUM_TASKS) {
+    if (totalRegisteredTaskHandles >= MAX_TASKS) {
         return false;
     }
 
