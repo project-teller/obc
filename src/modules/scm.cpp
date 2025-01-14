@@ -294,7 +294,7 @@ static void sendSCMMeasurement(uint8_t* payload)
 
 /**
  * Updates the subsystem status based on the timestamp of the last
- * received message from the GMM.
+ * received message from the SCM.
  */
 static bool updateStatus()
 {
