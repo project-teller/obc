@@ -70,6 +70,9 @@ if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND TELLER_ENABLE_CODE_COVERAGE)
     )
 endif()
 
+# Add switch to enable or disable linker map files
+option(TELLER_ENABLE_LINKER_MAP "Enable generation of linker map files" OFF)
+
 # Traverse subdirectories
 add_subdirectory(lib)
 add_subdirectory(src)

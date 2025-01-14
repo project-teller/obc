@@ -133,7 +133,7 @@ target_link_libraries(
 	${TARGET_NAME} PRIVATE
 	obc-modules
 )
-if(NOT ${TARGET_MCU} STREQUAL "POSIX")
+if(TELLER_ENABLE_LINKER_MAP AND NOT ${TARGET_MCU} STREQUAL "POSIX")
 	target_link_options(${TARGET_NAME} PRIVATE "-Wl,-Map=${TARGET_NAME}.map")
 endif()
 
