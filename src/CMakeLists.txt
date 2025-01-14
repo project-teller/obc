@@ -133,6 +133,9 @@ target_link_libraries(
 	${TARGET_NAME} PRIVATE
 	obc-modules
 )
+if(NOT ${TARGET_MCU} STREQUAL "POSIX")
+	target_link_options(${TARGET_NAME} PRIVATE "-Wl,-Map=${TARGET_NAME}.map")
+endif()
 
 # Disable exceptions and RTTI, enable warnings and treat them as errors
 set_property(TARGET ${TARGET_NAME} PROPERTY CXX_EXCEPTIONS OFF)
