@@ -139,7 +139,12 @@ bool transfer(
  */
 bool unselect(address_t address);
 
-int getLastErrorCode(void);
+/**
+ * @brief Returns the last error code returned by the HAL for the given SPI address.
+ *
+ * @param address  the address
+ */
+int getLastErrorCode(address_t address);
 
 /**
  * @brief RAII helper class that selects an SPI device.

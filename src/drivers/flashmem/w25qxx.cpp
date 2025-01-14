@@ -529,7 +529,7 @@ static bool programFromBuffer(uint32_t offset, const uint8_t* buf, uint16_t leng
             } else {
                 success = spi::transfer(address, xfer, 0);
                 if (!success) {
-                    code = spi::getLastErrorCode();
+                    code = spi::getLastErrorCode(address);
                     logger->error("programFromBuffer: HAL error %d", code);
                 }
 

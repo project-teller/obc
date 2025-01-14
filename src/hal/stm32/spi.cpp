@@ -242,7 +242,7 @@ static uint32_t getPeripheralClockFreqForBus(std::uint8_t bus);
 static SPI_HandleTypeDef* spi_handle_ptrs[7];
 static spi_bus_state_t spi_state[NUM_SPI_BUSES];
 
-static HAL_StatusTypeDef last_hal_status;
+static HAL_StatusTypeDef last_hal_status[NUM_SPI_BUSES];
 
 namespace teller::hal::spi {
 
@@ -255,9 +255,9 @@ bool init()
         if (!configure_spi_bus(i, &spi_state[i], &spi_config[i])) {
             return false;
         }
-    }
 
-    last_hal_status = HAL_OK;
+        last_hal_status[i] = HAL_OK;
+    }
 
     return true;
 }
@@ -419,7 +419,7 @@ bool transfer(
         }
     }
 
-    last_hal_status = hal_status;
+    last_hal_status[address.bus] = hal_status;
 
     return success;
 }
@@ -543,7 +543,7 @@ bool transfer(
         }
     }
 
-    last_hal_status = hal_status;
+    last_hal_status[address.bus] = hal_status;
 
     return success;
 }
@@ -553,9 +553,14 @@ bool unselect(address_t address)
     return select(address, false);
 }
 
-int getLastErrorCode(void)
+int getLastErrorCode(address_t address)
 {
-    return static_cast<int>(last_hal_status);
+    // We only maintain an error code per SPI bus
+    if (is_spi_address_valid(address)) {
+        return static_cast<int>(last_hal_status[address.bus]);
+    } else {
+        return 0;
+    }
 }
 
 }
