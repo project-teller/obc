@@ -1,5 +1,4 @@
 #include <cerrno>
-#include <iostream>
 #include <memory>
 
 #include "core/telem/binary_data.h"
