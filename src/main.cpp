@@ -96,27 +96,27 @@ static uart_rx_task_args_t uart_debug_task_args = {
 };
 
 static const task_definition_t tasks[] = {
-    { .func = blinkTask, .name = "blinker", .priority = LOW, .stack_size = 1024 },
+    { .func = blinkTask, .name = "blinker", .priority = LOW, .stack_size = 512 },
     { .func = pinsTask, .name = "pins", .priority = NORMAL, .stack_size = 1024 },
     { .func = temperatureTask, .name = "temperature", .priority = LOW, .stack_size = 1024 },
     { .func = uartTxTask, .name = "uartTx", .priority = HIGH, .stack_size = 2048 },
     { .func = supervisorTask, .name = "supervisor", .priority = LOW, .stack_size = 1024 },
     { .func = telemetryTask, .name = "telem", .priority = NORMAL, .stack_size = 2048 },
-    { .func = commandTask, .name = "cmd", .priority = LOW, .stack_size = 4096 },
+    { .func = commandTask, .name = "cmd", .priority = LOW, .stack_size = 3072 },
     { .func = flashMemoryTask, .name = "flashmem", .priority = HIGH, .stack_size = 4096 },
     { .func = sdCardTask, .name = "sdcard", .priority = HIGH, .stack_size = 4096 },
     { .func = imuTask, .name = "imu", .priority = NORMAL, .stack_size = 1024 },
     { .func = magTask, .name = "mag", .priority = NORMAL, .stack_size = 1024 },
-    { .func = loggerTask, .name = "log", .priority = NORMAL, .stack_size = 2048 },
+    { .func = loggerTask, .name = "log", .priority = NORMAL, .stack_size = 1024 },
     { .func = modeManagerTask, .name = "mode", .priority = NORMAL, .stack_size = 1024 },
-    { .func = debugTask, .name = "debug", .priority = NORMAL, .stack_size = 1024 },
+    { .func = debugTask, .name = "debug", .priority = NORMAL, .stack_size = 512 },
     { .func = storageReaderTask, .name = "storage", .priority = LOW, .stack_size = 4096 },
     { .func = gmmTask, .name = "gmm", .priority = NORMAL, .stack_size = 1024 },
     { .func = scmTask, .name = "scm", .priority = NORMAL, .stack_size = 1024 },
     { .func = uartRxTask, .name = "uartRxTel", .priority = LOW, .stack_size = 1024, .context = &uart_telem_task_args },
     { .func = uartRxTask, .name = "uartRxDbg", .priority = LOW, .stack_size = 1024, .context = &uart_debug_task_args },
     { .func = usbTask, .name = "usb", .priority = LOW, .stack_size = 1024 },
-    { .func = adcTask, .name = "adc", .priority = LOW, .stack_size = 2048 },
+    { .func = adcTask, .name = "adc", .priority = LOW, .stack_size = 1024 },
     { .func = missionTask, .name = "mission", .priority = LOW, .stack_size = 1024 },
     NO_MORE_TASKS
 };
