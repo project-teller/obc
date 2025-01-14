@@ -451,8 +451,8 @@ optional<Response> processDebugPacket(const InboundMessage& message)
         }
         break;
 
-    case frames::DEBUG_CMD_REPORT_STACK_USAGE:
-        teller::supervisor::reportStackUsage();
+    case frames::DEBUG_CMD_REPORT_MEMORY_USAGE:
+        teller::supervisor::reportMemoryUsage();
         break;
 
     default:

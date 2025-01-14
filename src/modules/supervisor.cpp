@@ -257,7 +257,7 @@ bool checkTasks(uint32_t timestamp)
 
 #ifdef TELLER_BOARD_POSIX
 
-void reportStackUsage()
+void reportMemoryUsage()
 {
     /* nop */
 }
@@ -281,16 +281,21 @@ bool registerTaskHandle(const char* name, osThreadId_t handle)
     return true;
 }
 
-void reportStackUsage(void)
+void reportMemoryUsage(void)
 {
     uint8_t i;
     osThreadId_t handle;
+    const char* msg = "%s: %d bytes left";
+    uint32_t avail;
+
+    avail = xPortGetFreeHeapSize();
+    logger->info_nowait(msg, "RAM", avail);
 
     for (i = 0; i < totalRegisteredTaskHandles; i++) {
         handle = taskHandles[i];
 
-        uint32_t avail = osThreadGetStackSpace(handle);
-        logger->info_nowait("%s: %d bytes left", taskNames[i], avail);
+        avail = osThreadGetStackSpace(handle);
+        logger->info_nowait(msg, taskNames[i], avail);
 
         teller::hal::system::delayMsec(10);
     }

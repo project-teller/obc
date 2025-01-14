@@ -117,6 +117,6 @@ bool registerTaskHandle(const char* name, osThreadId_t handle);
 /**
  * @brief Reports the high water marks on the stack sizes of the individual tasks.
  */
-void reportStackUsage(void);
+void reportMemoryUsage(void);
 
 };
