@@ -326,7 +326,7 @@ static bool readDataBlock(uint8_t* buf, size_t size, uint8_t token, uint32_t tim
  * @param buf  buffer in which to place the part of the response after the
  *        initial response byte. null for R1 responses that have no additional
  *        content
- * @param size size of the buffer, i.e. the expected number of additional bytes
+ * @param size size of the buffer, i.e. the expected number of \em additional bytes
  *        after the first response byte
  * @param timeout  maximum number of milliseconds to wait for the SD card to
  *        become ready
@@ -478,7 +478,10 @@ static uint32_t tryInitialization(void)
     spi::DeviceSelector selector(address);
     uint8_t response;
     uint8_t tries;
+    uint8_t numRestarts;
     uint32_t clockSpeed;
+
+    numRestarts = 0;
 
 restart:
 
@@ -512,7 +515,7 @@ restart:
 
         /* Step 2: send reset command and read response */
         response = sendCommandAssumingNotBusy(CMD_GO_IDLE_STATE);
-        if (response == RESPONSE_IDLE || response == RESPONSE_OK) {
+        if (response == RESPONSE_IDLE) {
             break;
         }
 
@@ -524,7 +527,7 @@ restart:
         if (tries < 5) {
             system::delayMsec(100);
         } else {
-            logger->error("%s: reset failed", name);
+            logger->error("%s: reset failed, response: %d", name, response);
             return 0;
         }
 
@@ -583,7 +586,7 @@ restart:
     }
 
     /* Step 5: read OCR register. We are expecting an R3 response, which is
-     * 4 bytes long. During initialization, bit 31 of the OCR register
+     * 5 bytes long. During initialization, bit 31 of the OCR register
      * (Card Power Up Status) must be 1. At that point we can check bit 30,
      * which should also be 1 for an SDHC/SDXC card. */
     tries = 0;
@@ -596,7 +599,11 @@ restart:
         } else if (response == (RESPONSE_IDLE | RESPONSE_ILLEGAL_COMMAND)) {
             /* hmmm, this happens sometimes, let's wait a bit and restart */
             system::delayMsec(100);
-            goto restart;
+            numRestarts++;
+            if (numRestarts < 10) {
+                logger->info("%s: restart init (at OCD), response: %d", name, response);
+                goto restart;
+            }
         }
 
         if (tries < 5) {
@@ -625,10 +632,14 @@ restart:
         } else if (response == (RESPONSE_IDLE | RESPONSE_ILLEGAL_COMMAND)) {
             /* hmmm, this happens sometimes, let's wait a bit and restart */
             system::delayMsec(100);
-            goto restart;
+            numRestarts++;
+            if (numRestarts < 10) {
+                logger->info("%s: restart init (at CSD), response: %d", name, response);
+                goto restart;
+            }
         }
 
-        if (tries < 5) {
+        if (tries < 20) {
             system::delayMsec(10);
         } else {
             logger->error("%s: cannot read CSD register", name);
