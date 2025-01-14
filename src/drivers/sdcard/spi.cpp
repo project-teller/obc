@@ -570,10 +570,12 @@ restart:
 
     /* Step 4: initiate initialization, setting the HCS flag, which corresponds
      * to fast transfer rates. */
-    for (uint8_t i = 0; i < 10; i++) {
+    for (uint8_t i = 0; i < 20; i++) {
+        logger->info("%s: sending OP_COND", name);
         response = sendAppCommand(CMD_APP_SEND_OP_COND, 0x40000000);
         if (response == RESPONSE_IDLE) {
             /* this is okay, repeat the command */
+            system::delayMsec(100);
         } else if (response == RESPONSE_OK) {
             /* this is what we were waiting for; see:
              * https://electronics.stackexchange.com/a/238217
@@ -591,13 +593,18 @@ restart:
      * which should also be 1 for an SDHC/SDXC card. */
     tries = 0;
     while (true) {
+        logger->info("%s: reading OCR register", name);
         response = sendCommand(CMD_READ_OCR, 0x00, buf, 4);
         if (response == RESPONSE_OK) {
             break;
         } else if (response == RESPONSE_BUSY) {
             /* this is okay, repeat the command */
+            system::delayMsec(100);
+            logger->info("%s: busy during OCD query", name, response);
         } else if (response == (RESPONSE_IDLE | RESPONSE_ILLEGAL_COMMAND)) {
             /* hmmm, this happens sometimes, let's wait a bit and restart */
+            buf[0] = 0xc0;
+            break;
             system::delayMsec(100);
             numRestarts++;
             if (numRestarts < 10) {
@@ -624,11 +631,14 @@ restart:
     /* Step 6: read CSD register to determine the size of the card */
     tries = 0;
     while (true) {
+        logger->info("%s: reading CSD register", name);
         response = sendCommand(CMD_SEND_CSD, 0x00);
         if (response == RESPONSE_OK) {
             break;
         } else if (response == RESPONSE_BUSY) {
             /* this is okay, repeat the command */
+            system::delayMsec(100);
+            logger->info("%s: busy during CSD query", name, response);
         } else if (response == (RESPONSE_IDLE | RESPONSE_ILLEGAL_COMMAND)) {
             /* hmmm, this happens sometimes, let's wait a bit and restart */
             system::delayMsec(100);
