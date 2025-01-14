@@ -133,8 +133,13 @@ target_link_libraries(
 	${TARGET_NAME} PRIVATE
 	obc-modules
 )
-if(TELLER_ENABLE_LINKER_MAP AND NOT ${TARGET_MCU} STREQUAL "POSIX")
-	target_link_options(${TARGET_NAME} PRIVATE "-Wl,-Map=${TARGET_NAME}.map")
+
+# On STM32, print memory allocation and optionally a linker map
+if(NOT ${TARGET_MCU} STREQUAL "POSIX")
+	target_link_options(${TARGET_NAME} PRIVATE "-Wl,--print-memory-usage")
+	if(TELLER_ENABLE_LINKER_MAP)
+		target_link_options(${TARGET_NAME} PRIVATE "-Wl,-Map=${TARGET_NAME}.map")
+	endif()
 endif()
 
 # Disable exceptions and RTTI, enable warnings and treat them as errors
