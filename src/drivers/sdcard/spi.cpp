@@ -532,8 +532,8 @@ restart:
         }
 
         /* Initialization failed -- we will try again after a delay */
-        if (tries < 5) {
-            system::delayMsec(100);
+        if (tries < 10) {
+            system::delayMsec(50);
         } else {
             logger->error("%s: reset failed, response: %d", name, response);
             return 0;
@@ -579,7 +579,6 @@ restart:
     /* Step 4: initiate initialization, setting the HCS flag, which corresponds
      * to fast transfer rates. */
     for (uint8_t i = 0; i < 20; i++) {
-        logger->info("%s: sending OP_COND", name);
         response = sendAppCommand(CMD_APP_SEND_OP_COND, 0x40000000);
         if (response == RESPONSE_IDLE) {
             /* this is okay, repeat the command */
