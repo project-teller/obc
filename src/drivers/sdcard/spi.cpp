@@ -42,6 +42,7 @@ static const uint32_t DEFAULT_SD_CARD_WRITE_TIMEOUT = 250;
 
 /* Constants for size conversions */
 #define BLOCK_SIZE 512
+#define BLOCK_BIT_SHIFT_TO_MB 11 /* number of bits one needs to shift BLOCK_SIZE to get to 1 Mb */
 #define SECTORS_IN_BLOCK 128
 #define SECTOR_SIZE (BLOCK_SIZE * SECTORS_IN_BLOCK)
 
@@ -175,8 +176,15 @@ FilesystemConfig* setup(void)
         return nullptr;
     }
 
+    /* If the SD card is larger than 1 GB, pretend that it is only 1 GB.
+     * We won't need larger than that but the performance of LittleFS drops
+     * dramatically as the underlying storage area grows */
+    if ((blockCount >> BLOCK_BIT_SHIFT_TO_MB) > 1024) {
+        blockCount = 1024UL << BLOCK_BIT_SHIFT_TO_MB;
+    }
+
     if (logger) {
-        logger->info("%s: found (%d MB)", name, (blockCount >> 11));
+        logger->info("%s: found (%d MB)", name, (blockCount >> BLOCK_BIT_SHIFT_TO_MB));
     }
 
     fsCfg = std::make_unique<FilesystemConfig>(
@@ -190,7 +198,7 @@ FilesystemConfig* setup(void)
         /* erase_count = */ blockCount / SECTORS_IN_BLOCK,
         /* block_cycles = */ 500,
         /* cache_size = */ BLOCK_SIZE,
-        /* lookahead_size = */ BLOCK_SIZE);
+        /* lookahead_size = */ 16);
     return fsCfg.get();
 }
 
