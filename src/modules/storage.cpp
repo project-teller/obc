@@ -1407,6 +1407,14 @@ int FileDownloadOperation::iterate()
 {
     const uint8_t limit = MAX_BINARY_DATA_FRAGMENT_LENGTH;
     uint8_t bytes_requested;
+    size_t pos;
+
+    auto result = _file->tell();
+    if (std::holds_alternative<littlefs::Error>(result)) {
+        cancel();
+        return teller::storage::convertLittleFSErrorCode(std::get<littlefs::Error>(result));
+    }
+    pos = std::get<size_t>(result);
 
     while (running()) {
         bytes_requested = _bytesLeft > limit ? limit : _bytesLeft;
@@ -1425,7 +1433,12 @@ int FileDownloadOperation::iterate()
 
         uint8_t length = frames::encodeBinaryDataFrame(&_binaryData, _buf);
         if (!sendTelemetry(frames::BINARY_DATA, _buf, length)) {
-            /* Not an error, buffer is full, we'll try later */
+            /* Not an error, buffer is full, we'll try later. Rewind the file */
+            auto result = _file->seek(pos);
+            if (std::holds_alternative<littlefs::Error>(result)) {
+                cancel();
+                break;
+            }
             return 0;
         }
 
@@ -1436,6 +1449,7 @@ int FileDownloadOperation::iterate()
         }
 
         _bytesLeft -= _binaryData.data_length;
+        pos += _binaryData.data_length;
         _binaryData.fragment_index++;
     }
 
