@@ -50,6 +50,13 @@ public:
     std::optional<littlefs::Error> sync();
 
     /**
+     * @brief Returns the position of the read/write pointer of the file.
+     *
+     * @return the position in the file, or a LittleFS error code
+     */
+    std::variant<littlefs::Error, size_t> tell();
+
+    /**
      * @brief Writes the given number of bytes to the file handle.
      *
      * @param buf   the buffer to write

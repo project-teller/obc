@@ -70,6 +70,11 @@ std::optional<Error> SmartFileHandle::sync()
     return _fs->sync(_fd);
 }
 
+std::variant<Error, size_t> SmartFileHandle::tell()
+{
+    return _fs->tell(_fd);
+}
+
 std::variant<Error, size_t> SmartFileHandle::write(void* write_buf, size_t bytes_to_write)
 {
     return _fs->write(_fd, write_buf, bytes_to_write);
