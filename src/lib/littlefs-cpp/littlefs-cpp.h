@@ -1,6 +1,9 @@
 /*
  * This file is based on the 107-Arduino-littlefs wrapper from the following URL:
  * https://raw.githubusercontent.com/107-systems/107-Arduino-littlefs/main/src/107-Arduino-littlefs.h
+ *
+ * Locking around LittleFS functions was added to allow concurrent access to the
+ * filesystem from multiple FreeRTOS tasks.
  */
 
 /**
@@ -150,15 +153,11 @@ private:
     std::map<size_t, std::shared_ptr<lfs_file_t>> _file_desc_map;
     size_t _dir_dsc_cnt;
     std::map<size_t, std::shared_ptr<lfs_dir_t>> _dir_desc_map;
+    void* _mutex;
 
 public:
-    Filesystem(FilesystemConfig& cfg)
-        : _cfg { cfg }
-        , _file_dsc_cnt { 0 }
-        , _dir_dsc_cnt { 0 }
-    {
-        memset(&_lfs, 0, sizeof(_lfs));
-    }
+    Filesystem(FilesystemConfig& cfg);
+    ~Filesystem();
 
 #ifndef LFS_READONLY
     [[nodiscard]] std::optional<Error> format();
