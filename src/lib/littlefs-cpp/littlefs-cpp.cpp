@@ -19,9 +19,10 @@
 #include "hal/mutex.hpp"
 
 using teller::hal::lock_guard;
+using teller::hal::mutex;
 
 #define LOCK_FS \
-    lock_guard lock(*static_cast<teller::hal::mutex*>(_mutex))
+    lock_guard<mutex> lock(*static_cast<mutex*>(_mutex))
 
 /**************************************************************************************
  * NAMESPACE
@@ -40,12 +41,12 @@ Filesystem::Filesystem(FilesystemConfig& cfg)
 {
     memset(&_lfs, 0, sizeof(_lfs));
 
-    _mutex = new teller::hal::mutex();
+    _mutex = new mutex();
 }
 
 Filesystem::~Filesystem()
 {
-    delete static_cast<teller::hal::mutex*>(_mutex);
+    delete static_cast<mutex*>(_mutex);
 }
 
 #ifndef LFS_READONLY

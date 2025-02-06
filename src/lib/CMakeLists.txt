@@ -9,6 +9,12 @@ target_compile_options(lfs PRIVATE -Wno-unused-function)
 target_include_directories(
     lfs PUBLIC littlefs littlefs-cpp
 )
+target_link_libraries(
+    lfs PUBLIC obc-hal
+)
+target_include_directories(
+    lfs PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/.. # because of config.h
+)
 if(TARGET_MCU_FREERTOS_MODULE)
     target_compile_definitions(
         # We want to use pvPortMalloc() from FreeRTOS
@@ -16,12 +22,6 @@ if(TARGET_MCU_FREERTOS_MODULE)
     )
     target_include_directories(
         lfs PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/.. # because of FreeRTOSConfig.h
-    )
-    target_include_directories(
-        lfs PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/.. # because of config.h
-    )
-    target_link_libraries(
-        lfs PUBLIC obc-hal
     )
 endif()
 
