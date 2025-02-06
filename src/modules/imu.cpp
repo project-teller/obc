@@ -208,8 +208,8 @@ void log()
  * and the X and Y axes have to be swapped to convert from the sensor frame to
  * the body frame or vice versa.
  *
- * @param sensor
- * @param body
+ * @param sensor  The measurement in the sensor frame.
+ * @param body    The measurement in the body frame.
  */
 static void convertFromSensorToBodyFrame(Vector3f& sensor, Vector3f& body)
 {

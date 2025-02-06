@@ -17,6 +17,7 @@ using namespace teller::telem;
 
 static subsystem_status_t status = SUBSYSTEM_STATUS_CRITICAL;
 
+static measurement_3d_t rawMagneticVector;
 static measurement_3d_t magneticVector;
 static float temperature = 0.0f;
 
@@ -25,6 +26,8 @@ static teller::edr::FormattedLogRecord<uint32_t, uint8_t, float, float, float, i
         LOG_RECORD_MAG, "MAG",
         "TimeMS,I,MagX,MagY,MagZ,Temp",
         "IBfffb", "s#GGGO", "C-CCCA");
+
+static void convertFromSensorToBodyFrame(Vector3f& sensor, Vector3f& body);
 
 static Logger* logger;
 
@@ -68,9 +71,12 @@ bool setup()
 
 bool update()
 {
-    status = teller::drivers::mag::update(magneticVector, temperature)
+    status = teller::drivers::mag::update(rawMagneticVector, temperature)
         ? SUBSYSTEM_STATUS_OK
         : SUBSYSTEM_STATUS_ERROR;
+
+    magneticVector.timestampInMsec = rawMagneticVector.timestampInMsec;
+    convertFromSensorToBodyFrame(rawMagneticVector.value, magneticVector.value);
 
     return status == SUBSYSTEM_STATUS_OK;
 }
@@ -92,4 +98,20 @@ void log()
         static_cast<int8_t>(temperature * 10));
 }
 
+}
+
+/**
+ * @brief Converts a measurement from the sensor frame to the body frame.
+ *
+ * The conversion still needs to be worked out. Until then, this function
+ * simply copies the input to the output.
+ *
+ * @param sensor  The measurement in the sensor frame.
+ * @param body    The measurement in the body frame.
+ */
+static void convertFromSensorToBodyFrame(Vector3f& sensor, Vector3f& body)
+{
+    body.x = sensor.x;
+    body.y = sensor.y;
+    body.z = sensor.z;
 }
