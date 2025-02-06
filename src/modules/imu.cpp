@@ -18,6 +18,7 @@ using namespace teller::telem;
 
 static subsystem_status_t status = SUBSYSTEM_STATUS_CRITICAL;
 
+static measurement_3d_t rawAcceleration;
 static measurement_3d_t acceleration;
 static measurement_3d_t rawAngularVelocity;
 static measurement_3d_t angularVelocity;
@@ -30,6 +31,8 @@ static teller::edr::FormattedLogRecord<uint32_t, uint8_t, float, float, float, f
         LOG_RECORD_IMU, "IMU",
         "TimeMS,I,AccX,AccY,AccZ,GyrX,GyrY,GyrZ",
         "IBffffff", "s#EEEooo", "C-000000");
+
+static void convertFromSensorToBodyFrame(Vector3f& sensor, Vector3f& body);
 
 /**
  * @brief Class representing the status of the gyro calibration.
@@ -148,7 +151,7 @@ void startGyroCalibration(void)
 
 bool update()
 {
-    status = teller::drivers::imu::update(acceleration, rawAngularVelocity)
+    status = teller::drivers::imu::update(rawAcceleration, rawAngularVelocity)
         ? SUBSYSTEM_STATUS_OK
         : SUBSYSTEM_STATUS_ERROR;
 
@@ -160,8 +163,13 @@ bool update()
         }
     }
 
-    /* Apply gyro offset to measurement */
+    /* Convert raw measurements from IMU frame to body frame */
+    acceleration.timestampInMsec = rawAcceleration.timestampInMsec;
     angularVelocity.timestampInMsec = rawAngularVelocity.timestampInMsec;
+    convertFromSensorToBodyFrame(rawAcceleration.value, acceleration.value);
+    convertFromSensorToBodyFrame(rawAngularVelocity.value, angularVelocity.value);
+
+    /* Apply gyro offset to measurement */
     angularVelocity.value = rawAngularVelocity.value - gyroOffset;
 
     return status == SUBSYSTEM_STATUS_OK;
@@ -184,4 +192,28 @@ void log()
         angularVelocity.value.x, angularVelocity.value.y, angularVelocity.value.z);
 }
 
+}
+
+/**
+ * @brief Converts a measurement from the sensor frame to the body frame.
+ *
+ * In the REXUS coordinate system, X is the longitudinal axis (positive up),
+ * Z points away from the launcher rail, and Y is oriented such that the XYZ
+ * axes form a right-handed coordinate system.
+ *
+ * On the IMU, the X and the Y axes are in the plane of the sensor and the
+ * Z axis points out of the sensor, away from the PCB.
+ *
+ * In a Blender model, it can be worked out that all axes need to be inverted
+ * and the X and Y axes have to be swapped to convert from the sensor frame to
+ * the body frame or vice versa.
+ *
+ * @param sensor
+ * @param body
+ */
+static void convertFromSensorToBodyFrame(Vector3f& sensor, Vector3f& body)
+{
+    body.x = -sensor.y;
+    body.y = -sensor.x;
+    body.z = -sensor.z;
 }
