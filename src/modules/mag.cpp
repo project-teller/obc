@@ -103,15 +103,14 @@ void log()
 /**
  * @brief Converts a measurement from the sensor frame to the body frame.
  *
- * The conversion still needs to be worked out. Until then, this function
- * simply copies the input to the output.
+ * Szilard worked this out on Discord and I believe him. :)
  *
  * @param sensor  The measurement in the sensor frame.
  * @param body    The measurement in the body frame.
  */
 static void convertFromSensorToBodyFrame(Vector3f& sensor, Vector3f& body)
 {
-    body.x = sensor.x;
-    body.y = sensor.y;
-    body.z = sensor.z;
+    body.x = sensor.y;
+    body.y = sensor.x;
+    body.z = -sensor.z;
 }
