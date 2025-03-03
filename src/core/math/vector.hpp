@@ -32,27 +32,27 @@ public:
         return *this;
     }
 
-    Vector3<T> operator+(const Vector3<T>& other)
+    Vector3<T> operator+(const Vector3<T>& other) const
     {
         return Vector3<T>(x + other.x, y + other.y, z + other.z);
     }
 
-    Vector3<T> operator-(const Vector3<T>& other)
+    Vector3<T> operator-(const Vector3<T>& other) const
     {
         return Vector3<T>(x - other.x, y - other.y, z - other.z);
     }
 
-    Vector3<T> operator-()
+    Vector3<T> operator-() const
     {
         return (*this) * -1;
     }
 
-    Vector3<T> operator*(T factor)
+    Vector3<T> operator*(T factor) const
     {
         return Vector3<T>(x * factor, y * factor, z * factor);
     }
 
-    Vector3<T> operator/(T factor)
+    Vector3<T> operator/(T factor) const
     {
         return Vector3<T>(x / factor, y / factor, z / factor);
     }
@@ -121,6 +121,25 @@ public:
     bool operator!=(const Vector3<T>& other) const
     {
         return !(*this == other);
+    }
+
+    Vector3<T> abs() const
+    {
+        return Vector3<T>(std::abs(x), std::abs(y), std::abs(z));
+    }
+
+    Vector3<T> elementwiseDiv(const Vector3<T>& other) const
+    {
+        return Vector3<T>(x / other.x, y / other.y, z / other.z);
+    }
+
+    int argmax() const
+    {
+        if (y > x) {
+            return (z > y) ? 2 : 1;
+        } else {
+            return (z > x) ? 2 : 0;
+        }
     }
 };
 
