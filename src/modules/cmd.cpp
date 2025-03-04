@@ -455,6 +455,14 @@ optional<Response> processDebugPacket(const InboundMessage& message)
         teller::supervisor::reportMemoryUsage();
         break;
 
+    case frames::DEBUG_CMD_SIMULATE_FLASHMEM_ERROR:
+        teller::edr::simulateIOError(STORAGE_AREA_FLASH_MEMORY);
+        break;
+
+    case frames::DEBUG_CMD_SIMULATE_SDCARD_ERROR:
+        teller::edr::simulateIOError(STORAGE_AREA_SD_CARD);
+        break;
+
     default:
         return Response::invalid();
     }

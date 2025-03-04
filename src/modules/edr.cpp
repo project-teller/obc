@@ -58,10 +58,16 @@ static const LogRequest stopRecorderRequest = { 0 };
  */
 static std::list<event_callback_t*> callbacks;
 
+static const uint8_t MAX_REMOUNTS = 5;
+
 [[noreturn]] void manage(storage_area_t area)
 {
     teller::log::Logger* log = teller::log::getLogger(MODULE_ID_EDR);
     const char* name = getStorageAreaName(area);
+    uint32_t lastSuccessfulMountAt = 0;
+    uint8_t remountCounter = 0;
+    bool hasIoError = false;
+    bool shouldRemount;
 
     /* Apparently a small delay is needed at boot to avoid problems with
      * the initialization */
@@ -73,12 +79,24 @@ static std::list<event_callback_t*> callbacks;
 
         fs = storage::waitUntilMounted(area);
         log->info("%s: mounted", name);
+        lastSuccessfulMountAt = teller::hal::system::getTimeSinceBootMsec();
 
         auto maybeError = recorders[area].run(fs, area);
-        if (maybeError.has_value()) {
+        hasIoError = maybeError.has_value();
+
+        // If the recorder stayed alive for more than 10 seconds, we
+        // reset the remount counter
+        if (teller::hal::system::getTimeSinceBootMsec() - lastSuccessfulMountAt > 10000) {
+            remountCounter = 0;
+        }
+
+        if (hasIoError) {
             log->error(
                 "%s: IO error, code = %d", name,
                 teller::storage::convertLittleFSErrorCode(*maybeError));
+        } else {
+            // Reset the remount counter if the EDR terminated nominally
+            remountCounter = 0;
         }
 
         retval = storage::unmountStorage(area);
@@ -87,7 +105,24 @@ static std::list<event_callback_t*> callbacks;
         }
 
         storage::waitUntilUnmounted(area);
-        log->warning("%s: unmounted, waiting for remount", name);
+
+        shouldRemount = remountCounter <= MAX_REMOUNTS && hasIoError;
+        if (shouldRemount) {
+            while (remountCounter < MAX_REMOUNTS) {
+                remountCounter++;
+                log->warning("%s: unmounted, trying to remount, attempt %d", name, remountCounter);
+                teller::hal::system::delayMsec(1000);
+
+                retval = storage::mountStorage(area);
+                if (retval) {
+                    log->error("%s: remount failed, code = %d", name, retval);
+                } else {
+                    break;
+                }
+            }
+        } else {
+            log->warning("%s: unmounted, waiting for remount", name);
+        }
     }
 }
 
@@ -155,6 +190,12 @@ void sendRequestNonblocking(const LogRequest& request, storage_area_t area)
 {
     assert(area > STORAGE_AREA_UNKNOWN && area < NUM_STORAGE_AREAS);
     recorders[area].recordNonblocking(request);
+}
+
+void simulateIOError(teller::telem::storage_area_t area)
+{
+    assert(area > STORAGE_AREA_UNKNOWN && area < NUM_STORAGE_AREAS);
+    recorders[area].simulateIOError();
 }
 
 void unregisterCallback(event_t event, event_callback_t* callback)
@@ -332,6 +373,13 @@ std::optional<littlefs::Error> ExperimentDataRecorder::run(littlefs::Filesystem*
     return result;
 }
 
+void ExperimentDataRecorder::simulateIOError()
+{
+    LogRequest request = { 0 };
+    request.message[0] = 42;
+    _queue.send(request);
+}
+
 void ExperimentDataRecorder::stop()
 {
     _queue.close();
@@ -439,7 +487,15 @@ std::optional<littlefs::Error> ExperimentDataRecorder::_run(storage_area_t area)
 
     _state = STATE_RUNNING;
     logger->info("%s: logging to %s", getStorageAreaName(area), fname);
-    while (_queue.receive(request) && !IS_END_OF_QUEUE(request) && !maybeError) {
+    while (_queue.receive(request) && !maybeError) {
+        if (IS_END_OF_QUEUE(request)) {
+            if (request.message[0] == 42) {
+                // Simulate an IO error for testing purposes
+                maybeError = littlefs::Error::IO;
+            }
+            break;
+        }
+
         maybeError = writer.write(request);
     }
     _state = STATE_DISABLED;

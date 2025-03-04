@@ -101,6 +101,11 @@ void sendRequestNonblocking(const LogRequest& request);
 void sendRequestNonblocking(const LogRequest& request, teller::telem::storage_area_t area);
 
 /**
+ * @brief Simulates an IO error on the EDR of the given storage area.
+ */
+void simulateIOError(teller::telem::storage_area_t area);
+
+/**
  * @brief Unregisters an existing callback from an event.
  */
 void unregisterCallback(event_t event, event_callback_t* callback);
@@ -224,6 +229,11 @@ public:
      * @brief Returns whether the experiment data recorder is currently running.
      */
     bool running() { return _state == STATE_RUNNING; }
+
+    /**
+     * @brief Simulates an IO error on the experiment data recorder.
+     */
+    void simulateIOError();
 
     /**
      * @brief Returns whether the experiment data recorder is currently starting.
