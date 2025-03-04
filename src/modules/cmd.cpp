@@ -202,7 +202,8 @@ bool performCalibration(teller::telem::frames::calibration_procedure_t procedure
         return true;
 
     case frames::CALIBRATION_ACCEL:
-        return false;
+        teller::imu::startAccelerometerCalibration();
+        return true;
 
     default:
         return false;

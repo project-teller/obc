@@ -38,6 +38,11 @@ teller::telem::subsystem_status_t getSubsystemStatus(void);
 bool setup(bool logErrors);
 
 /**
+ * @brief Starts the calibration of the accelerometer.
+ */
+void startAccelerometerCalibration(void);
+
+/**
  * @brief Starts the calibration of the gyroscope.
  */
 void startGyroCalibration(void);
