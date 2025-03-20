@@ -420,7 +420,9 @@ bool update()
 
     if (gyroCalibration.isRunning() && gyroCalibration.feedMeasurement(rawAngularVelocity)) {
         /* Gyro calibration ended, store the offset */
-        gyroCalibration.getOffset(gyroOffset);
+        Vector3f rawGyroOffset;
+        gyroCalibration.getOffset(rawGyroOffset);
+        convertFromSensorToBodyFrame(rawGyroOffset, gyroOffset);
         if (logger != nullptr) {
             logger->info("Gyro calibrated");
         }
@@ -442,7 +444,7 @@ bool update()
     convertFromSensorToBodyFrame(rawAngularVelocity.value, angularVelocity.value);
 
     /* Apply gyro offset to measurement */
-    angularVelocity.value = rawAngularVelocity.value - gyroOffset;
+    angularVelocity.value -= gyroOffset;
 
     return status == SUBSYSTEM_STATUS_OK;
 }
