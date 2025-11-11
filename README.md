@@ -33,3 +33,9 @@ There are three build presets available:
 - `host` - builds the code for the host machine (Linux and macOS tested, Windows probably not supported)
 
 [1]: https://cmake.org
+
+## License
+
+The code in this repository is licensed under the GNU General Public License, version 3.
+If you would like to use the code but the license is not suitable for you, get in touch
+with us for alternative licensing options.
