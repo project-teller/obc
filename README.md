@@ -21,6 +21,7 @@ Install [CMake][1], then run this from the root of the repo:
 mkdir build
 cd build
 cmake --preset default -B . -S ..
+cmake --build .
 ```
 
 CMake will take care of fetching all required dependencies (including the STM32 SDKs) and
